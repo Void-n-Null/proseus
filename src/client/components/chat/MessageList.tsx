@@ -1,5 +1,6 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useMemo } from "react";
 import type { ActivePath, ChatNode, Speaker } from "../../../shared/types.ts";
+import { getSiblingInfo } from "../../../shared/tree.ts";
 import { useIsStreaming } from "../../stores/streaming.ts";
 import MessageItem from "./MessageItem.tsx";
 import EtherealMessage from "./EtherealMessage.tsx";
@@ -23,6 +24,13 @@ export default function MessageList({
 
   const nodes = activePath?.nodes ?? [];
 
+  // Pre-compute sibling info for each node in the active path.
+  // This moves the nodeMap dependency out of MessageItem so its
+  // memo comparator can work with simple value types.
+  const siblingInfos = useMemo(() => {
+    return nodes.map((node) => getSiblingInfo(node.id, nodeMap));
+  }, [nodes, nodeMap]);
+
   return (
     <div
       ref={scrollRef}
@@ -43,7 +51,7 @@ export default function MessageList({
             key={node.id}
             node={node}
             speaker={speakerMap.get(node.speaker_id)}
-            nodeMap={nodeMap}
+            siblingInfo={siblingInfos[index] ?? null}
             chatId={chatId}
             isFirstInGroup={isFirstInGroup}
             isLast={isLast}

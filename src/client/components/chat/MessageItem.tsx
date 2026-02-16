@@ -9,7 +9,7 @@ import MessageActions from "./MessageActions.tsx";
 interface MessageItemProps {
   node: ChatNode;
   speaker: Speaker | undefined;
-  nodeMap: Map<string, ChatNode>;
+  siblingInfo: { index: number; total: number } | null;
   chatId: string;
   isFirstInGroup: boolean;
   isLast: boolean;
@@ -19,7 +19,7 @@ const MessageItem = React.memo(
   function MessageItem({
     node,
     speaker,
-    nodeMap,
+    siblingInfo,
     chatId,
     isFirstInGroup,
     isLast,
@@ -108,7 +108,11 @@ const MessageItem = React.memo(
             onEditCancel={handleEditCancel}
           />
 
-          <MessageBranch nodeId={node.id} nodeMap={nodeMap} chatId={chatId} />
+          <MessageBranch
+            nodeId={node.id}
+            siblingInfo={siblingInfo}
+            chatId={chatId}
+          />
         </div>
 
         {/* Hover actions */}
@@ -125,7 +129,9 @@ const MessageItem = React.memo(
     prev.node.id === next.node.id &&
     prev.node.message === next.node.message &&
     prev.node.updated_at === next.node.updated_at &&
-    prev.isFirstInGroup === next.isFirstInGroup,
+    prev.isFirstInGroup === next.isFirstInGroup &&
+    prev.siblingInfo?.index === next.siblingInfo?.index &&
+    prev.siblingInfo?.total === next.siblingInfo?.total,
 );
 
 export default MessageItem;

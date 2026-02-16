@@ -1,28 +1,20 @@
-import React, { useMemo, useCallback } from "react";
-import type { ChatNode } from "../../../shared/types.ts";
-import { getSiblingInfo } from "../../../shared/tree.ts";
+import React, { useCallback } from "react";
 import { useChatMutations } from "../../hooks/useMutations.ts";
 
 interface MessageBranchProps {
   nodeId: string;
-  nodeMap: Map<string, ChatNode>;
+  siblingInfo: { index: number; total: number } | null;
   chatId: string;
 }
 
 export default function MessageBranch({
   nodeId,
-  nodeMap,
+  siblingInfo,
   chatId,
 }: MessageBranchProps) {
-  const siblingInfo = useMemo(
-    () => getSiblingInfo(nodeId, nodeMap),
-    [nodeId, nodeMap],
-  );
-
   const { swipeSibling } = useChatMutations(chatId);
 
   const handlePrev = useCallback(() => {
-    // Swipe endpoint takes the current node's id
     swipeSibling.mutate({ nodeId, direction: "prev" });
   }, [swipeSibling, nodeId]);
 

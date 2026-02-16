@@ -6,7 +6,7 @@ interface ChatHeaderProps {
   messageCount: number;
 }
 
-export default function ChatHeader({
+const ChatHeader = React.memo(function ChatHeader({
   chatName,
   speakerNames,
   messageCount,
@@ -55,4 +55,6 @@ export default function ChatHeader({
       </div>
     </div>
   );
-}
+});
+
+export default ChatHeader;

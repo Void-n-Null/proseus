@@ -20,6 +20,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 *.db-wal
 *.db-shm
 
+# opencode session files
+_tmp_*
+
 # dotenv environment variable files
 .env
 .env.development.local

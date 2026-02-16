@@ -1,16 +1,39 @@
 import index from "../client/index.html";
 import api from "./api.ts";
+import db from "./db/index.ts";
+import type { WsContext } from "../shared/ws-types.ts";
+import { StreamManager } from "./services/stream-manager.ts";
+import { createWebSocketHandler } from "./ws.ts";
 
-const server = Bun.serve({
+const streamManager = new StreamManager(db);
+
+const server = Bun.serve<WsContext>({
   port: 3000,
   routes: {
     "/": index,
   },
-  fetch: api.fetch,
+  fetch(req, server) {
+    // WebSocket upgrade for /ws
+    const url = new URL(req.url);
+    if (url.pathname === "/ws") {
+      const upgraded = server.upgrade(req, {
+        data: { subscribedChats: new Set<string>() },
+      });
+      if (upgraded) return;
+      return new Response("WebSocket upgrade failed", { status: 400 });
+    }
+
+    // Everything else goes to Hono
+    return api.fetch(req);
+  },
+  websocket: createWebSocketHandler(streamManager),
   development: {
     hmr: true,
     console: true,
   },
 });
+
+// Stream manager needs the server instance for pub/sub broadcasting
+streamManager.setServer(server);
 
 console.log(`Proseus running at http://localhost:${server.port}`);

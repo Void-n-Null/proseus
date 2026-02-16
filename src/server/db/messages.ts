@@ -37,6 +37,12 @@ function getNodeRow(db: Database, id: string): NodeRow | null {
     .get({ $id: id }) as NodeRow | null;
 }
 
+/**
+ * ID format: 12-char alphanumeric [0-9A-Za-z].
+ * Used to validate client-provided IDs.
+ */
+const ID_PATTERN = /^[0-9A-Za-z]{12}$/;
+
 export function addMessage(
   db: Database,
   input: {
@@ -45,10 +51,28 @@ export function addMessage(
     message: string;
     speaker_id: string;
     is_bot: boolean;
+    /** Client-provided ID. Must be 12-char alphanumeric and unique. */
+    id?: string | null;
     client_id?: string | null;
   },
 ): { node: ChatNode; updated_parent: ChatNode | null } {
-  const id = generateId();
+  let id: string;
+
+  if (input.id) {
+    // Validate format
+    if (!ID_PATTERN.test(input.id)) {
+      throw new Error(`Invalid node ID format: ${input.id}`);
+    }
+    // Check for collision
+    const existing = getNodeRow(db, input.id);
+    if (existing) {
+      throw new Error(`Node ID already exists: ${input.id}`);
+    }
+    id = input.id;
+  } else {
+    id = generateId();
+  }
+
   const now = Date.now();
 
   let node: ChatNode;

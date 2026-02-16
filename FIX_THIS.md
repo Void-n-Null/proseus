@@ -257,7 +257,7 @@ Proseus shares design DNA with its sister project `proseus-ai`. Same forge metap
 | Animation | Motion | 12.x | AnimatePresence icon morphs, drop-shadow transitions |
 | Validation | Zod | 4.x | Runtime type checking for API boundaries |
 | AI SDK | Vercel AI SDK + OpenRouter | 6.x + 2.x | Multi-provider streaming via `@openrouter/ai-sdk-provider` |
-| Virtual scroll | TanStack Virtual | 3.x | *Installed, not yet wired* |
+| Virtual scroll | TanStack Virtual | 3.x | Wired in `MessageList` with `useAutoScroll` |
 
 ---
 
@@ -283,7 +283,7 @@ Priority is end-to-end functionality first, polish second.
 - [x] `computeBranchSwitch` wired into client mutations (O(depth-to-divergence))
 - [x] `getSiblingInfo` pre-computed in `MessageList`, passed as prop (not full `nodeMap`)
 - [x] `Composer` and `ChatHeader` isolated from active path changes via ref
-- [ ] Virtualized message list — *`@tanstack/react-virtual` installed, not wired*
+- [x] Virtualized message list — *`@tanstack/react-virtual` wired with intent-aware auto-scroll*
 - [ ] Message grouping (collapse consecutive same-speaker)
 - [x] Basic message display (no markdown yet)
 
@@ -295,7 +295,7 @@ Priority is end-to-end functionality first, polish second.
 - [x] Server-side stream manager (`StreamManager` — owns lifecycle, persists to SQLite on finalize)
 - [x] WebSocket infrastructure (Bun pub/sub, per-chat topics, reconnect with full content replay)
 - [x] Streaming session machine (start, chunk, content, end, error, cancel)
-- [x] Ref-based streaming with frame coalescing (`streaming-buffer.ts` + `EtherealMessage`)
+- [x] Ref-based streaming with frame coalescing (`streaming-buffer.ts` + `MessageContent` streaming mode)
 - [x] Composer: send triggers user message; AI generation via debug panel
 - [ ] Stop + keep partial output behavior
 

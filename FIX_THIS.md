@@ -24,7 +24,7 @@ SillyTavern's `index.html` is 7,879 lines. Every dialog, popup, settings panel, 
 
 573 jQuery selector calls in `script.js` alone. Each `$('.selector')` is a full DOM tree traversal, uncached, running in hot paths. Loading 500 characters means 500 `.append()` calls, each triggering a browser reflow. The avatar click handler is 150 lines that registers 6 global event listeners, performs 5+ DOM queries, and mutates the DOM 7+ times in sequence.
 
-**Proseus rule:** Zero direct DOM manipulation outside of refs. React owns the DOM. Updates are batched through the virtual DOM reconciler. Components subscribe to exactly the state they need and re-render surgically. If a component re-renders and nothing it displays has changed, that's a bug.
+owns the DOM. Updates are batched through the virtual DOM reconciler. Components subscribe to exactly the state they need and re-render surgically. If a component re-renders and nothing it displays has changed, that's a bug.
 
 ### 4. The Flat File "Database"
 
@@ -52,9 +52,8 @@ SillyTavern has a file called `RossAscends-mods.js`. Files are organized by who 
 
 ### 8. The Swipe/Branch Confusion
 
-SillyTavern has two completely different concepts -- "swipes" (alternate responses stored as an array on a message) and "branches" (alternate conversation paths stored as separate files linked by filename strings). They're both "what if the conversation went differently" but handled with entirely different data models, UIs, and code paths. Users conflate them constantly because the UX doesn't clarify the distinction.
-
-**Proseus rule:** Swipes are branches. A "swipe" is a sibling node with the same parent. One data model, one UI, one set of operations. The message tree is the single source of truth. Branching from any message at any depth is a first-class operation, not a bolted-on feature.
+SillyTavern has two completely different concepts -- "swipes" (alternate responses stored as an array on a message) and "branches" (alternate conversation paths stored as separate files linked by filename strings). They're both "what if the conversation went differently" but handled with entirely different data models, UIs, and code paths. Users conflate them constantly because the
+s. A "swipe" is a sibling node with the same parent. One data model, one UI, one set of operations. The message tree is the single source of truth. Branching from any message at any depth is a first-class operation, not a bolted-on feature.
 
 ### 9. The Settings Labyrinth
 
@@ -183,6 +182,41 @@ Beyond fixing SillyTavern's problems and finishing TavernStudio's work, Proseus 
 
 5. **Responsive by design, not by accident.** The UI adapts to screen size. Sidebar collapses on narrow screens. Touch targets are appropriately sized. This isn't a mobile app, but it should work on a tablet.
 
+### Design Language: Forge Lineage
+
+Proseus shares design DNA with its sister project `proseus-ai`. Same forge metaphor, same typographic choices, same color philosophy — but adapted to Bun's HTML import pipeline (no Vite, no shadcn/ui).
+
+**Fonts:** Instrument Serif (display/headings), Outfit weight 300 (body/UI). Loaded via Google Fonts in `globals.css`. No generic fonts (Inter, Roboto, system-ui are banned for primary use).
+
+**Color system:** OKLCH throughout. Near-black base with blue-tinted neutrals at hue 250. Not pure gray — the slight chromatic tint gives warmth without being noticeable.
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--color-background` | `oklch(0.08 0.01 250)` | Page background (~`#060b12`) |
+| `--color-surface` | `oklch(0.13 0.01 250)` | Cards, panels |
+| `--color-surface-raised` | `oklch(0.16 0.01 250)` | Elevated elements |
+| `--color-primary` | `oklch(0.70 0.15 280)` | Violet accent |
+| `--color-destructive` | `oklch(0.55 0.20 25)` | Red/stop/error |
+| `--color-foreground` | `oklch(0.95 0 0)` | Bright text |
+| `--color-text-muted` | `oklch(0.50 0 0)` | Secondary text |
+| `--color-text-dim` | `oklch(0.38 0 0)` | Hint/disabled text |
+| `--color-border` | `oklch(0.25 0.005 250)` | Borders |
+
+**Radius:** Sharp — `0.25rem` base, matching the forge aesthetic. Not rounded pill shapes.
+
+**The Pilot Light:** The composer's signature element. A 1px line at the bottom of the input that communicates state through color:
+- *Idle:* dim violet pulse (`rgba(124, 58, 237, 0.25)`) — the forge is waiting
+- *Focused:* brighter violet with glow — attention acknowledged
+- *Has text:* gradient transitions to `orange → rose → violet` — the forge is lit
+- *Has text + focused:* full intensity gradient with dual box-shadow
+
+**Send button morph:** Three icon states animated via Motion's `AnimatePresence`:
+- *No text:* dim arrow (→) — cold pilot light
+- *Has text:* flame icon with SVG `linearGradient` stroke (orange → rose → violet), `drop-shadow` glow on hover
+- *Streaming:* red stop square
+
+**Tailwind v4 setup:** CSS-first configuration via `@theme` in `globals.css`. No `tailwind.config.js`. Bundled via `bun-plugin-tailwind` in `bunfig.toml`. Single CSS entry point — `globals.css` imports Tailwind and defines all tokens.
+
 ### DX Principles
 
 1. **Clear separation of concerns.** Server routes don't import React. React doesn't import SQLite. The API layer is the boundary. Either side could be swapped without touching the other.
@@ -210,17 +244,20 @@ Beyond fixing SillyTavern's problems and finishing TavernStudio's work, Proseus 
 
 ### Technology Choices (Non-Negotiable)
 
-| Layer | Choice | Rationale |
-|-------|--------|-----------|
-| Runtime | Bun | Native TS, native SQLite, native fetch, fast startup |
-| Server | Hono | Lightweight, typed, tree-shakeable, middleware-friendly |
-| Database | bun:sqlite | WAL mode, prepared statements, zero dependency |
-| Frontend | React 19 | Batched updates, component model, ecosystem |
-| Server state | TanStack Query | Dedup, caching, background refresh, optimistic updates |
-| Local state | Zustand | Minimal, surgical subscriptions, no boilerplate |
-| Styling | Tailwind v4 | Utility-first, no runtime, JIT compiled |
-| Validation | Zod | Runtime type checking for API boundaries |
-| AI SDK | Vercel AI SDK | Multi-provider streaming with unified interface |
+| Layer | Choice | Version | Rationale |
+|-------|--------|---------|-----------|
+| Runtime | Bun | 1.3.6 | Native TS, native SQLite, native fetch, <100ms startup |
+| Server | Hono | 4.x | Lightweight, typed, tree-shakeable, middleware-friendly |
+| Database | bun:sqlite | built-in | WAL mode, prepared statements, zero dependency |
+| Frontend | React | 19.x | Batched updates, component model, ecosystem |
+| Server state | TanStack Query | 5.x | Dedup, caching, background refresh, optimistic updates |
+| Local state | Zustand | 5.x | Minimal, surgical subscriptions, no boilerplate |
+| Styling | Tailwind CSS | 4.x | Utility-first, no runtime, CSS-first config via `@theme` |
+| CSS bundling | bun-plugin-tailwind | 0.1.x | Bun.serve HTML import integration for Tailwind |
+| Animation | Motion | 12.x | AnimatePresence icon morphs, drop-shadow transitions |
+| Validation | Zod | 4.x | Runtime type checking for API boundaries |
+| AI SDK | Vercel AI SDK + OpenRouter | 6.x + 2.x | Multi-provider streaming via `@openrouter/ai-sdk-provider` |
+| Virtual scroll | TanStack Virtual | 3.x | *Installed, not yet wired* |
 
 ---
 
@@ -228,30 +265,38 @@ Beyond fixing SillyTavern's problems and finishing TavernStudio's work, Proseus 
 
 Priority is end-to-end functionality first, polish second.
 
-### Phase 0: Foundation (Current)
+**Current status:** Phases 0–2 mostly complete. 110 tests across 7 files (tree, db-chats, db-speakers, db-messages, api-chats, api-messages, streaming-buffer), all passing. App boots in ~100ms, serves HTML + bundled React + Tailwind CSS. Server-side streaming pipeline wired end-to-end: Composer → WebSocket → StreamManager → OpenRouter AI SDK → SQLite persistence. Forge-lineage design system established with pilot light composer.
+
+### Phase 0: Foundation ✓
 - [x] Bun + Hono + React + SQLite skeleton
-- [ ] Project structure: `src/client/`, `src/server/`, `src/shared/`
-- [ ] Shared type definitions (ChatNode, Character, Persona, etc.)
-- [ ] Database schema with proper migrations (not column-existence checks)
-- [ ] API client with typed endpoints
+- [x] Project structure: `src/client/`, `src/server/`, `src/shared/`
+- [x] Shared type definitions (`ChatNode`, `Speaker`, `Chat`, `ActivePath`, WS types)
+- [ ] Database schema with proper migrations (not column-existence checks) — *currently uses column-existence checks*
+- [x] API client with typed endpoints (`src/client/api/client.ts`, `src/shared/api-types.ts`)
 
-### Phase 1: Chat Core
-- [ ] Message tree data model (Map-based, index-based branching)
-- [ ] CRUD for chats, messages, speakers
-- [ ] Active path computation and rendering
-- [ ] Branch creation, switching, deletion
-- [ ] Virtualized message list
+### Phase 1: Chat Core (Mostly Complete)
+- [x] Message tree data model (Map-based, index-based branching)
+- [x] CRUD for chats, messages, speakers (DB layer + Hono routes + tests)
+- [x] Active path computation and rendering
+- [x] Branch creation, switching, deletion
+- [x] Optimistic cache updates for swipe/branch (TanStack Query `setQueryData`, no full invalidation)
+- [x] `computeBranchSwitch` wired into client mutations (O(depth-to-divergence))
+- [x] `getSiblingInfo` pre-computed in `MessageList`, passed as prop (not full `nodeMap`)
+- [x] `Composer` and `ChatHeader` isolated from active path changes via ref
+- [ ] Virtualized message list — *`@tanstack/react-virtual` installed, not wired*
 - [ ] Message grouping (collapse consecutive same-speaker)
-- [ ] Basic message display (no markdown yet)
+- [x] Basic message display (no markdown yet)
 
-### Phase 2: Streaming End-to-End
-- [ ] AI provider registry (OpenRouter first)
-- [ ] Connection management UI
+### Phase 2: Streaming End-to-End (Mostly Complete)
+- [x] AI provider: OpenRouter via `@openrouter/ai-sdk-provider` + Vercel AI SDK v6
+- [ ] Connection management UI — *debug panel only (`StreamDebug`)*
 - [ ] Model picker with live fetching
-- [ ] Prompt factory v1 (assemble context from chat history + character + persona)
-- [ ] Streaming session machine (start, append, finalize, cancel)
-- [ ] Ref-based streaming with frame coalescing
-- [ ] Composer: send triggers generation, cancel stops it
+- [ ] Prompt factory v1 — *currently loads active path from DB, builds basic message array*
+- [x] Server-side stream manager (`StreamManager` — owns lifecycle, persists to SQLite on finalize)
+- [x] WebSocket infrastructure (Bun pub/sub, per-chat topics, reconnect with full content replay)
+- [x] Streaming session machine (start, chunk, content, end, error, cancel)
+- [x] Ref-based streaming with frame coalescing (`streaming-buffer.ts` + `EtherealMessage`)
+- [x] Composer: send triggers user message; AI generation via debug panel
 - [ ] Stop + keep partial output behavior
 
 ### Phase 3: Character System

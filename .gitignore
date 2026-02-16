@@ -23,6 +23,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # opencode session files
 _tmp_*
 
+# devlogs (personal engineering journal)
+devlogs/
+
 # dotenv environment variable files
 .env
 .env.development.local
@@ -40,3 +43,5 @@ _tmp_*
 
 # Finder (MacOS) folder config
 .DS_Store
+CLAUDE.md
+AGENTS.md

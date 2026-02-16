@@ -209,7 +209,12 @@ export function useStreamSocket(
           break;
         }
 
-        case "stream:end": {
+        case "stream:end":
+        case "stream:cancelled": {
+          // Both end and cancelled mean "content is persisted, finalize
+          // the client-side session." Cancelled just means the user
+          // stopped generation early — the partial content is saved.
+
           // Capture the final content BEFORE clearing the buffer.
           const finalContent = finalizeSession();
 

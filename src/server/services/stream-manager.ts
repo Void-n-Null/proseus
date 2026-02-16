@@ -271,7 +271,12 @@ export class StreamManager {
 
   // ── Cancel ─────────────────────────────────────────────────
 
-  /** Cancel an active stream. Aborts AI requests and discards content. */
+  /**
+   * Cancel an active stream. Aborts the AI request (stops billing)
+   * and persists whatever content has accumulated so far. If no
+   * content was generated before cancellation, rolls back with an
+   * error event instead.
+   */
   cancelStream(chatId: string): boolean {
     const streamId = this.chatStreams.get(chatId);
     if (!streamId) return false;
@@ -279,7 +284,7 @@ export class StreamManager {
     const stream = this.activeStreams.get(streamId);
     if (!stream) return false;
 
-    // Abort AI request if running
+    // Abort AI request if running — stops billing immediately
     stream.abortController?.abort();
 
     // Stop test stream timer if running
@@ -289,12 +294,32 @@ export class StreamManager {
       this.streamTimers.delete(streamId);
     }
 
-    this.publish(chatId, {
-      type: "stream:error",
-      chatId,
-      streamId,
-      error: "Stream cancelled",
-    });
+    if (stream.content.length > 0) {
+      // Persist partial content — don't throw away what we have
+      const result = addMessage(this.db, {
+        chat_id: stream.chatId,
+        parent_id: stream.parentId,
+        message: stream.content,
+        speaker_id: stream.speakerId,
+        is_bot: true,
+        id: stream.nodeId,
+      });
+
+      this.publish(chatId, {
+        type: "stream:cancelled",
+        chatId,
+        streamId,
+        nodeId: result.node.id,
+      });
+    } else {
+      // Nothing generated — roll back the optimistic placeholder
+      this.publish(chatId, {
+        type: "stream:error",
+        chatId,
+        streamId,
+        error: "Stream cancelled before any content was generated",
+      });
+    }
 
     this.activeStreams.delete(streamId);
     this.chatStreams.delete(chatId);

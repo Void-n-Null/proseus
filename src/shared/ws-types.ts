@@ -46,6 +46,12 @@ export type ServerWsMessage =
       nodeId: string;
     }
   | {
+      type: "stream:cancelled";
+      chatId: string;
+      streamId: string;
+      nodeId: string;
+    }
+  | {
       type: "stream:error";
       chatId: string;
       streamId: string;

@@ -212,4 +212,70 @@ describe('streaming-buffer', () => {
     expect(snapshots).toEqual(['ab']);
     unsub();
   });
+
+  // ── Smooth reveal behavior ──────────────────────────────────
+
+  // 17
+  test('finalizeSession reveals all remaining content to listeners', () => {
+    startSession();
+    appendChunk('partial');
+    appendChunk('-content');
+
+    const snapshots: string[] = [];
+    const unsub = subscribeToContent((c) => snapshots.push(c));
+
+    // Finalize should instantly reveal everything to listeners
+    const result = finalizeSession();
+
+    expect(result).toBe('partial-content');
+    // Listener should have been notified with the full content
+    expect(snapshots.length).toBeGreaterThanOrEqual(1);
+    expect(snapshots[snapshots.length - 1]).toBe('partial-content');
+    unsub();
+  });
+
+  // 18
+  test('cancelSession reveals all remaining content to listeners', () => {
+    startSession();
+    appendChunk('saved');
+    appendChunk('-text');
+
+    const snapshots: string[] = [];
+    const unsub = subscribeToContent((c) => snapshots.push(c));
+
+    const result = cancelSession();
+
+    expect(result).toBe('saved-text');
+    expect(snapshots.length).toBeGreaterThanOrEqual(1);
+    expect(snapshots[snapshots.length - 1]).toBe('saved-text');
+    unsub();
+  });
+
+  // 19
+  test('setContent reveals replacement instantly to listeners', () => {
+    startSession();
+    appendChunk('original');
+    getContent(); // flush
+
+    const snapshots: string[] = [];
+    const unsub = subscribeToContent((c) => snapshots.push(c));
+
+    setContent('reconnect-full-content');
+
+    // setContent should notify immediately with the full replacement
+    expect(snapshots).toEqual(['reconnect-full-content']);
+    expect(getContent()).toBe('reconnect-full-content');
+    unsub();
+  });
+
+  // 20
+  test('getContent returns full truth buffer regardless of reveal state', () => {
+    startSession();
+    appendChunk('all');
+    appendChunk('-of');
+    appendChunk('-this');
+
+    // getContent always returns the full accumulated content
+    expect(getContent()).toBe('all-of-this');
+  });
 });

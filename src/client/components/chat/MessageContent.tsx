@@ -1,20 +1,35 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
+import { subscribeToContent } from "../../lib/streaming-buffer.ts";
 
 interface MessageContentProps {
   message: string;
   isEditing: boolean;
+  isStreaming: boolean;
+  speakerColor?: string | null;
   onEditSubmit: (msg: string) => void;
   onEditCancel: () => void;
 }
 
+/** Stable style for the content display container. */
+const contentStyle: React.CSSProperties = {
+  fontSize: "0.9rem",
+  lineHeight: 1.55,
+  color: "#ddd",
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+};
+
 const MessageContent = React.memo(function MessageContent({
   message,
   isEditing,
+  isStreaming,
+  speakerColor,
   onEditSubmit,
   onEditCancel,
 }: MessageContentProps) {
   const [draft, setDraft] = useState(message);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const streamContentRef = useRef<HTMLSpanElement>(null);
 
   // Reset draft when entering edit mode
   useEffect(() => {
@@ -26,6 +41,18 @@ const MessageContent = React.memo(function MessageContent({
       });
     }
   }, [isEditing, message]);
+
+  // ── Streaming mode: subscribe to buffer, write directly to DOM ──
+  useEffect(() => {
+    if (!isStreaming) return;
+
+    const unsub = subscribeToContent((content) => {
+      if (streamContentRef.current) {
+        streamContentRef.current.textContent = content;
+      }
+    });
+    return unsub;
+  }, [isStreaming]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -107,16 +134,35 @@ const MessageContent = React.memo(function MessageContent({
     );
   }
 
+  // ── Streaming mode: ref-based content with blinking cursor ──
+  if (isStreaming) {
+    return (
+      <div style={contentStyle}>
+        <span ref={streamContentRef} />
+        <span
+          style={{
+            display: "inline-block",
+            width: "2px",
+            height: "1em",
+            background: speakerColor ?? "#888",
+            marginLeft: "1px",
+            verticalAlign: "text-bottom",
+            animation: "etherealCursor 1s step-end infinite",
+          }}
+        />
+        <style>{`
+          @keyframes etherealCursor {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // ── Normal mode: render persisted message ──
   return (
-    <div
-      style={{
-        fontSize: "0.9rem",
-        lineHeight: 1.55,
-        color: "#ddd",
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-word",
-      }}
-    >
+    <div style={contentStyle}>
       {message}
     </div>
   );

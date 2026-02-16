@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
 import type { ChatNode, Speaker } from "../../../shared/types.ts";
+import { useIsStreamingNode } from "../../stores/streaming.ts";
 import { useChatMutations } from "../../hooks/useMutations.ts";
 import MessageMeta from "./MessageMeta.tsx";
 import MessageContent from "./MessageContent.tsx";
@@ -26,6 +27,7 @@ const MessageItem = React.memo(
   }: MessageItemProps) {
     const [isHovered, setIsHovered] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const isStreaming = useIsStreamingNode(node.id);
     const { editMessage } = useChatMutations(chatId);
 
     const handleEditSubmit = useCallback(
@@ -104,24 +106,31 @@ const MessageItem = React.memo(
           <MessageContent
             message={node.message}
             isEditing={isEditing}
+            isStreaming={isStreaming}
+            speakerColor={speaker?.color}
             onEditSubmit={handleEditSubmit}
             onEditCancel={handleEditCancel}
           />
 
-          <MessageBranch
-            nodeId={node.id}
-            siblingInfo={siblingInfo}
-            chatId={chatId}
-          />
+          {/* Hide branch navigation during streaming */}
+          {!isStreaming && (
+            <MessageBranch
+              nodeId={node.id}
+              siblingInfo={siblingInfo}
+              chatId={chatId}
+            />
+          )}
         </div>
 
-        {/* Hover actions */}
-        <MessageActions
-          node={node}
-          chatId={chatId}
-          onStartEdit={handleStartEdit}
-          isVisible={isHovered && !isEditing}
-        />
+        {/* Hover actions — disabled during streaming */}
+        {!isStreaming && (
+          <MessageActions
+            node={node}
+            chatId={chatId}
+            onStartEdit={handleStartEdit}
+            isVisible={isHovered && !isEditing}
+          />
+        )}
       </div>
     );
   },

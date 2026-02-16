@@ -1,5 +1,9 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { subscribeToContent } from "../../lib/streaming-buffer.ts";
+import {
+  renderMarkdown,
+  renderStreamingMarkdown,
+} from "../../lib/markdown.ts";
 
 interface MessageContentProps {
   message: string;
@@ -15,7 +19,6 @@ const contentStyle: React.CSSProperties = {
   fontSize: "0.9rem",
   lineHeight: 1.55,
   color: "#ddd",
-  whiteSpace: "pre-wrap",
   wordBreak: "break-word",
 };
 
@@ -29,7 +32,7 @@ const MessageContent = React.memo(function MessageContent({
 }: MessageContentProps) {
   const [draft, setDraft] = useState(message);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const streamContentRef = useRef<HTMLSpanElement>(null);
+  const streamContentRef = useRef<HTMLDivElement>(null);
 
   // Reset draft when entering edit mode
   useEffect(() => {
@@ -48,11 +51,14 @@ const MessageContent = React.memo(function MessageContent({
 
     const unsub = subscribeToContent((content) => {
       if (streamContentRef.current) {
-        streamContentRef.current.textContent = content;
+        streamContentRef.current.innerHTML = renderStreamingMarkdown(content);
       }
     });
     return unsub;
   }, [isStreaming]);
+
+  // ── Memoize rendered markdown for normal mode ──
+  const renderedHtml = useMemo(() => renderMarkdown(message), [message]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -137,9 +143,10 @@ const MessageContent = React.memo(function MessageContent({
   // ── Streaming mode: ref-based content with blinking cursor ──
   if (isStreaming) {
     return (
-      <div style={contentStyle}>
-        <span ref={streamContentRef} />
+      <div className="message-content" style={contentStyle}>
+        <div ref={streamContentRef} />
         <span
+          className="streaming-cursor"
           style={{
             display: "inline-block",
             width: "2px",
@@ -160,11 +167,13 @@ const MessageContent = React.memo(function MessageContent({
     );
   }
 
-  // ── Normal mode: render persisted message ──
+  // ── Normal mode: render persisted message as markdown ──
   return (
-    <div style={contentStyle}>
-      {message}
-    </div>
+    <div
+      className="message-content"
+      style={contentStyle}
+      dangerouslySetInnerHTML={{ __html: renderedHtml }}
+    />
   );
 });
 

@@ -123,7 +123,7 @@ const Composer = React.memo(function Composer({
         </defs>
       </svg>
 
-      <div className="px-4 max-w-5xl mx-auto">
+      <div className="px-4 max-w-6xl mx-auto">
         {/* Pilot Light container */}
         <div
           className="relative pb-3"

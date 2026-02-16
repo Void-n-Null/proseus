@@ -40,7 +40,7 @@ export function createWebSocketHandler(streamManager: StreamManager) {
                 streamId: active.id,
                 parentId: active.parentId,
                 speakerId: active.speakerId,
-                nodeClientId: active.nodeClientId,
+                nodeId: active.nodeId,
               }),
             );
             // Send full accumulated content
@@ -75,6 +75,7 @@ export function createWebSocketHandler(streamManager: StreamManager) {
             msg.chatId,
             msg.parentId,
             msg.speakerId,
+            msg.nodeId,
           );
           break;
         }
@@ -85,6 +86,7 @@ export function createWebSocketHandler(streamManager: StreamManager) {
             msg.parentId,
             msg.speakerId,
             msg.model,
+            msg.nodeId,
           );
           break;
         }

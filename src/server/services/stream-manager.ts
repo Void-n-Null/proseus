@@ -8,6 +8,11 @@
  * The client never owns stream state — it subscribes and displays.
  * If the client refreshes mid-stream, it reconnects, re-subscribes,
  * and receives the full accumulated content immediately.
+ *
+ * Node IDs are provided by the client and validated by the server
+ * at persistence time (format + uniqueness check). This allows the
+ * client to use the same ID as a React key from stream start through
+ * finalization — no component swap, no visual flash.
  */
 
 import type { Server } from "bun";
@@ -16,7 +21,7 @@ import { streamText } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import type { ServerWsMessage, WsContext } from "../../shared/ws-types.ts";
 import type { ChatNode } from "../../shared/types.ts";
-import { generateId, generateClientId } from "../../shared/ids.ts";
+import { generateId } from "../../shared/ids.ts";
 import { getActivePath } from "../../shared/tree.ts";
 import { addMessage, getChatTree } from "../db/messages.ts";
 import { getChat } from "../db/chats.ts";
@@ -28,7 +33,7 @@ interface ActiveStream {
   chatId: string;
   parentId: string;
   speakerId: string;
-  nodeClientId: string;
+  nodeId: string;
   content: string;
   startedAt: number;
   abortController?: AbortController;
@@ -88,23 +93,25 @@ export class StreamManager {
   /**
    * Start a test stream that simulates AI token generation.
    * Streams the test content word-by-word at ~80ms intervals.
+   *
+   * @param nodeId - Client-provided ID for the node to be created.
    */
   startTestStream(
     chatId: string,
     parentId: string,
     speakerId: string,
+    nodeId: string,
   ): string | null {
     if (this.chatStreams.has(chatId)) return null;
 
     const streamId = generateId();
-    const nodeClientId = generateClientId();
 
     const stream: ActiveStream = {
       id: streamId,
       chatId,
       parentId,
       speakerId,
-      nodeClientId,
+      nodeId,
       content: "",
       startedAt: Date.now(),
     };
@@ -118,7 +125,7 @@ export class StreamManager {
       streamId,
       parentId,
       speakerId,
-      nodeClientId,
+      nodeId,
     });
 
     const words = TEST_RESPONSE.split(" ");
@@ -155,19 +162,22 @@ export class StreamManager {
    *
    * Loads the active path from the DB to build the message history,
    * then streams the model's response token-by-token over WebSocket.
-   * On completion, persists the full response as a ChatNode.
+   * On completion, persists the full response as a ChatNode using
+   * the client-provided nodeId.
+   *
+   * @param nodeId - Client-provided ID for the node to be created.
    */
   startAIStream(
     chatId: string,
     parentId: string,
     speakerId: string,
     model: string,
+    nodeId: string,
   ): string | null {
     if (!this.apiKey) return null;
     if (this.chatStreams.has(chatId)) return null;
 
     const streamId = generateId();
-    const nodeClientId = generateClientId();
     const abortController = new AbortController();
 
     const stream: ActiveStream = {
@@ -175,7 +185,7 @@ export class StreamManager {
       chatId,
       parentId,
       speakerId,
-      nodeClientId,
+      nodeId,
       content: "",
       startedAt: Date.now(),
       abortController,
@@ -190,7 +200,7 @@ export class StreamManager {
       streamId,
       parentId,
       speakerId,
-      nodeClientId,
+      nodeId,
     });
 
     // Run the AI stream asynchronously
@@ -295,7 +305,8 @@ export class StreamManager {
 
   /**
    * Finalize a stream: persist the accumulated content to SQLite
-   * as a real ChatNode and broadcast the completion event.
+   * as a real ChatNode using the client-provided nodeId, then
+   * broadcast the completion event.
    */
   private finalizeStream(streamId: string): void {
     const stream = this.activeStreams.get(streamId);
@@ -307,7 +318,7 @@ export class StreamManager {
       message: stream.content,
       speaker_id: stream.speakerId,
       is_bot: true,
-      client_id: stream.nodeClientId,
+      id: stream.nodeId,
     });
 
     this.publish(stream.chatId, {

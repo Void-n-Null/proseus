@@ -117,11 +117,9 @@ const MessageList = React.memo(function MessageList({
       onScroll={onScroll}
       style={scrollContainerStyle}
     >
-      <div
+      <div className="mx-auto w-[80%] relative"
         style={{
           height: virtualizer.getTotalSize(),
-          width: "100%",
-          position: "relative",
         }}
       >
         {virtualItems.map((virtualItem) => {

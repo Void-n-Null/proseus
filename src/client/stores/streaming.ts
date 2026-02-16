@@ -19,13 +19,14 @@ import { startSession } from '../lib/streaming-buffer.ts';
 export interface StreamingMeta {
   parentId: string;
   speakerId: string;
-  nodeClientId: string;
+  /** The node ID shared between client and server — used as the React key. */
+  nodeId: string;
   startedAt: number;
 }
 
 interface StreamingStore {
   meta: StreamingMeta | null;
-  start: (parentId: string, speakerId: string, nodeClientId: string) => void;
+  start: (parentId: string, speakerId: string, nodeId: string) => void;
   stop: () => void;
 }
 
@@ -36,7 +37,7 @@ interface StreamingStore {
 export const useStreamingStore = create<StreamingStore>((set) => ({
   meta: null,
 
-  start: (parentId, speakerId, nodeClientId) => {
+  start: (parentId, speakerId, nodeId) => {
     // Reset the content buffer for the new session.
     startSession();
 
@@ -44,7 +45,7 @@ export const useStreamingStore = create<StreamingStore>((set) => ({
       meta: {
         parentId,
         speakerId,
-        nodeClientId,
+        nodeId,
         startedAt: Date.now(),
       },
     });
@@ -79,8 +80,8 @@ export function useStreamingMeta(): StreamingMeta | null {
  * streaming state changes (Zustand skips re-renders when the selector
  * return value is referentially equal).
  */
-export function useIsStreamingNode(nodeClientId: string | null | undefined): boolean {
+export function useIsStreamingNode(nodeId: string | null | undefined): boolean {
   return useStreamingStore(
-    (s) => s.meta !== null && s.meta.nodeClientId === (nodeClientId ?? ''),
+    (s) => s.meta !== null && s.meta.nodeId === (nodeId ?? ''),
   );
 }

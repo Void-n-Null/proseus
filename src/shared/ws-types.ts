@@ -4,13 +4,20 @@ export type ClientWsMessage =
   | { type: "subscribe"; chatId: string }
   | { type: "unsubscribe"; chatId: string }
   | { type: "set-api-key"; provider: "openrouter"; key: string }
-  | { type: "test-stream"; chatId: string; parentId: string; speakerId: string }
+  | {
+      type: "test-stream";
+      chatId: string;
+      parentId: string;
+      speakerId: string;
+      nodeId: string;
+    }
   | {
       type: "ai-stream";
       chatId: string;
       parentId: string;
       speakerId: string;
       model: string;
+      nodeId: string;
     }
   | { type: "cancel-stream"; chatId: string };
 
@@ -23,7 +30,7 @@ export type ServerWsMessage =
       streamId: string;
       parentId: string;
       speakerId: string;
-      nodeClientId: string;
+      nodeId: string;
     }
   | { type: "stream:chunk"; chatId: string; streamId: string; delta: string }
   | {

@@ -1,4 +1,8 @@
-/** Generate a 12-character nanoid for server-side IDs. */
+/**
+ * Generate a 12-character nanoid.
+ * Used by both client (for optimistic node IDs) and server (for all entities).
+ * The shared format means IDs are stable from creation through persistence.
+ */
 export function generateId(): string {
   const alphabet =
     "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -8,9 +12,4 @@ export function generateId(): string {
     id += alphabet[bytes[i]! % alphabet.length];
   }
   return id;
-}
-
-/** Client-side stable ID for optimistic updates. */
-export function generateClientId(): string {
-  return crypto.randomUUID();
 }

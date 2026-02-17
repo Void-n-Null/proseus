@@ -91,6 +91,26 @@ export function createWebSocketHandler(streamManager: StreamManager) {
           break;
         }
 
+        case "generate": {
+          const result = streamManager.startGeneration(
+            msg.chatId,
+            msg.model,
+            msg.nodeId,
+          );
+          if ("error" in result) {
+            console.warn("[generate]", msg.chatId, result.error);
+            ws.send(
+              JSON.stringify({
+                type: "stream:error",
+                chatId: msg.chatId,
+                streamId: "",
+                error: result.error,
+              }),
+            );
+          }
+          break;
+        }
+
         case "cancel-stream": {
           streamManager.cancelStream(msg.chatId);
           break;

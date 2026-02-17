@@ -20,11 +20,12 @@ import type { Database } from "bun:sqlite";
 import { streamText } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import type { ServerWsMessage, WsContext } from "../../shared/ws-types.ts";
-import type { ChatNode } from "../../shared/types.ts";
 import { generateId } from "../../shared/ids.ts";
-import { getActivePath } from "../../shared/tree.ts";
 import { addMessage, getChatTree } from "../db/messages.ts";
 import { getChat } from "../db/chats.ts";
+import { getActivePath } from "../../shared/tree.ts";
+import type { ChatNode } from "../../shared/types.ts";
+import { assemblePrompt } from "./chat-pipeline.ts";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -86,6 +87,58 @@ export class StreamManager {
     const streamId = this.chatStreams.get(chatId);
     if (!streamId) return null;
     return this.activeStreams.get(streamId) ?? null;
+  }
+
+  // ── Generate (decoupled) ──────────────────────────────────
+
+  /**
+   * Start AI generation for a chat. The server resolves parentId
+   * (leaf of the active path) and speakerId (first bot speaker in
+   * the chat) from the DB — the client only needs to provide the
+   * chatId, model, and a pre-generated nodeId.
+   *
+   * This decouples generation from message creation: the client can
+   * trigger generation after sending a message, or independently
+   * (regenerate, continue, etc.).
+   *
+   * Returns the streamId, or null with an error string.
+   */
+  startGeneration(
+    chatId: string,
+    model: string,
+    nodeId: string,
+  ): { streamId: string } | { error: string } {
+    if (!this.apiKey) return { error: "No API key configured" };
+    if (this.chatStreams.has(chatId)) return { error: "Chat already streaming" };
+
+    // Resolve parentId: leaf of the active path
+    const chat = getChat(this.db, chatId);
+    if (!chat?.root_node_id) return { error: "Chat has no messages" };
+
+    const treeRecord = getChatTree(this.db, chatId);
+    const nodesMap = new Map<string, ChatNode>(Object.entries(treeRecord));
+    const pathIds = getActivePath(chat.root_node_id, nodesMap);
+
+    if (pathIds.length === 0) return { error: "Chat has no active path" };
+    const parentId = pathIds[pathIds.length - 1]!;
+
+    // Resolve speakerId: first non-user speaker in the chat
+    const speakerRows = this.db
+      .query(
+        `SELECT s.id FROM chat_speakers cs
+         JOIN speakers s ON s.id = cs.speaker_id
+         WHERE cs.chat_id = $chatId AND s.is_user = 0
+         LIMIT 1`,
+      )
+      .get({ $chatId: chatId }) as { id: string } | null;
+
+    if (!speakerRows) return { error: "Chat has no bot speaker" };
+    const speakerId = speakerRows.id;
+
+    // Delegate to the existing startAIStream with resolved values
+    const streamId = this.startAIStream(chatId, parentId, speakerId, model, nodeId);
+    if (!streamId) return { error: "Failed to start stream" };
+    return { streamId };
   }
 
   // ── Test stream ────────────────────────────────────────────
@@ -227,25 +280,15 @@ export class StreamManager {
   ): Promise<void> {
     const openrouter = createOpenRouter({ apiKey: this.apiKey! });
 
-    // Build message history from the active path
-    const chat = getChat(this.db, stream.chatId);
-    if (!chat?.root_node_id) throw new Error("Chat has no messages");
-
-    const treeRecord = getChatTree(this.db, stream.chatId);
-    const nodesMap = new Map<string, ChatNode>(Object.entries(treeRecord));
-    const pathIds = getActivePath(chat.root_node_id, nodesMap);
-
-    const messages = pathIds.map((id) => {
-      const node = nodesMap.get(id)!;
-      return {
-        role: node.is_bot ? ("assistant" as const) : ("user" as const),
-        content: node.message,
-      };
-    });
+    // Assemble the full prompt from character + chat history
+    const prompt = assemblePrompt(this.db, stream.chatId);
+    if (!prompt || prompt.messages.length === 0) {
+      throw new Error("Chat has no messages or could not assemble prompt");
+    }
 
     const result = streamText({
       model: openrouter.chat(model),
-      messages,
+      messages: prompt.messages,
       abortSignal: stream.abortController?.signal,
     });
 

@@ -41,6 +41,28 @@ export function createSpeakersRouter(db: Database): Hono {
     return c.json({ speaker });
   });
 
+  // GET /:id/avatar — serve speaker avatar image
+  app.get("/:id/avatar", (c) => {
+    const id = c.req.param("id");
+    const row = db
+      .query("SELECT avatar_blob, avatar_mime FROM speakers WHERE id = $id")
+      .get({ $id: id }) as {
+      avatar_blob: Uint8Array | null;
+      avatar_mime: string | null;
+    } | null;
+
+    if (!row?.avatar_blob) {
+      return c.json({ error: "Avatar not found" }, 404);
+    }
+
+    return new Response(row.avatar_blob as unknown as BodyInit, {
+      headers: {
+        "Content-Type": row.avatar_mime ?? "image/png",
+        "Cache-Control": "public, max-age=86400",
+      },
+    });
+  });
+
   // GET /:id — get single speaker
   app.get("/:id", (c) => {
     const id = c.req.param("id");

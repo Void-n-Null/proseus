@@ -50,3 +50,74 @@ export interface ChatListItem {
   created_at: number;
   updated_at: number;
 }
+
+// ── Character Card Types ──
+
+/** Normalized character data — the internal representation used by Proseus. */
+export interface Character {
+  id: string;
+  name: string;
+  description: string;
+  personality: string;
+  scenario: string;
+  first_mes: string;
+  mes_example: string;
+
+  // V2 fields
+  creator_notes: string;
+  system_prompt: string;
+  post_history_instructions: string;
+  alternate_greetings: string[];
+  tags: string[];
+  creator: string;
+  character_version: string;
+
+  // Metadata
+  avatar_url: string | null;
+  avatar_hash: string | null;
+  source_spec: "v1" | "v2" | "v3";
+  extensions: Record<string, unknown>;
+  character_book: CharacterBook | null;
+  content_hash: string;
+
+  created_at: number;
+  updated_at: number;
+}
+
+/** Lightweight row for character list display. */
+export interface CharacterListItem {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+  tags: string[];
+  creator: string;
+  created_at: number;
+}
+
+/** Embedded lorebook. Stored as JSON, not activated at runtime (yet). */
+export interface CharacterBook {
+  name?: string;
+  description?: string;
+  scan_depth?: number;
+  token_budget?: number;
+  recursive_scanning?: boolean;
+  extensions: Record<string, unknown>;
+  entries: CharacterBookEntry[];
+}
+
+export interface CharacterBookEntry {
+  keys: string[];
+  content: string;
+  extensions: Record<string, unknown>;
+  enabled: boolean;
+  insertion_order: number;
+  case_sensitive?: boolean;
+  name?: string;
+  priority?: number;
+  id?: number;
+  comment?: string;
+  selective?: boolean;
+  secondary_keys?: string[];
+  constant?: boolean;
+  position?: "before_char" | "after_char";
+}

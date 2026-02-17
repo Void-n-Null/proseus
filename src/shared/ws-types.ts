@@ -19,6 +19,12 @@ export type ClientWsMessage =
       model: string;
       nodeId: string;
     }
+  | {
+      type: "generate";
+      chatId: string;
+      model: string;
+      nodeId: string;
+    }
   | { type: "cancel-stream"; chatId: string };
 
 // ── Server -> Client ───────────────────────────────────────────

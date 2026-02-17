@@ -1,4 +1,4 @@
-import type { Chat, ChatNode, Speaker, ChatListItem, ActivePath } from "./types";
+import type { Chat, ChatNode, Speaker, ChatListItem, ActivePath, Character, CharacterListItem } from "./types";
 
 // ── Chat endpoints ──
 
@@ -76,6 +76,29 @@ export interface SwipeSiblingRequest {
 export interface SwipeSiblingResponse {
   updated_parent: ChatNode;
   active_sibling: ChatNode;
+}
+
+// ── Character endpoints ──
+
+export interface ImportCharacterResponse {
+  character: Character;
+  duplicate: boolean;
+}
+
+export interface ListCharactersResponse {
+  characters: CharacterListItem[];
+}
+
+export interface GetCharacterResponse {
+  character: Character;
+}
+
+export interface ImportUrlRequest {
+  url: string;
+}
+
+export interface CreateChatFromCharacterRequest {
+  character_id: string;
 }
 
 // ── Speaker endpoints ──

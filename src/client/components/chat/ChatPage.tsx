@@ -22,7 +22,7 @@ export default function ChatPage({ chatId }: ChatPageProps) {
   const activePath = useActivePath(treeData?.nodes, treeData?.rootNodeId);
 
   // WebSocket connection for server-side streaming
-  const { status: wsStatus, sendTestStream, sendAIStream, setApiKey, cancelStream } =
+  const { status: wsStatus, sendGenerate, setApiKey, cancelStream } =
     useStreamSocket(chatId);
 
   const speakerMap = useMemo(() => {
@@ -56,28 +56,16 @@ export default function ChatPage({ chatId }: ChatPageProps) {
     return null;
   }, [speakerMap]);
 
-  // Find the bot speaker for test streams
-  const botSpeakerId = useMemo(() => {
-    for (const speaker of speakerMap.values()) {
-      if (!speaker.is_user) return speaker.id;
-    }
-    return null;
-  }, [speakerMap]);
+  // Auto-generate: when user sends a message, trigger AI generation.
+  // The server resolves parentId (leaf of active path) and speakerId
+  // (bot speaker) from DB — the client just provides the model.
+  const MODEL_STORAGE_KEY = "proseus:model";
+  const DEFAULT_MODEL = "openai/gpt-4o-mini";
 
-  const handleTestStream = useCallback(() => {
-    const parentId = lastNodeIdRef.current;
-    if (!parentId || !botSpeakerId) return;
-    sendTestStream(parentId, botSpeakerId);
-  }, [sendTestStream, botSpeakerId]);
-
-  const handleAIStream = useCallback(
-    (model: string) => {
-      const parentId = lastNodeIdRef.current;
-      if (!parentId || !botSpeakerId) return;
-      sendAIStream(parentId, botSpeakerId, model);
-    },
-    [sendAIStream, botSpeakerId],
-  );
+  const handleMessageSent = useCallback(() => {
+    const model = localStorage.getItem(MODEL_STORAGE_KEY) ?? DEFAULT_MODEL;
+    sendGenerate(model);
+  }, [sendGenerate]);
 
   if (!chatData || !treeData) {
     return (
@@ -122,12 +110,12 @@ export default function ChatPage({ chatId }: ChatPageProps) {
         chatId={chatId}
         lastNodeIdRef={lastNodeIdRef}
         userSpeakerId={userSpeakerId}
+        onMessageSent={handleMessageSent}
+        onCancel={cancelStream}
       />
 
       <StreamDebug
         wsStatus={wsStatus}
-        onTestStream={handleTestStream}
-        onAIStream={handleAIStream}
         onCancel={cancelStream}
         onApiKeyChange={setApiKey}
       />

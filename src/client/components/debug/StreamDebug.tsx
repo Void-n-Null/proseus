@@ -1,8 +1,11 @@
 /**
- * Debug overlay for testing server-side streaming.
+ * Settings panel for AI generation configuration.
  *
  * Toggled via Ctrl+Shift+S. Shows WebSocket connection status,
- * OpenRouter API key input, model selector, and stream controls.
+ * OpenRouter API key input, and model selector.
+ *
+ * Generation is now triggered automatically when the user sends
+ * a message — no manual buttons needed.
  */
 
 import React, { useEffect, useState, useCallback } from "react";
@@ -15,16 +18,12 @@ const DEFAULT_MODEL = "openai/gpt-4o-mini";
 
 interface StreamDebugProps {
   wsStatus: WsStatus;
-  onTestStream: () => void;
-  onAIStream: (model: string) => void;
   onCancel: () => void;
   onApiKeyChange: (key: string) => void;
 }
 
 export default function StreamDebug({
   wsStatus,
-  onTestStream,
-  onAIStream,
   onCancel,
   onApiKeyChange,
 }: StreamDebugProps) {
@@ -76,10 +75,6 @@ export default function StreamDebug({
     [],
   );
 
-  const handleGenerate = useCallback(() => {
-    onAIStream(model);
-  }, [onAIStream, model]);
-
   if (!visible) return null;
 
   const statusColor =
@@ -90,7 +85,6 @@ export default function StreamDebug({
         : "#ef4444";
 
   const hasKey = apiKey.length > 0;
-  const canGenerate = wsStatus === "connected" && hasKey && !isStreaming;
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
@@ -104,23 +98,6 @@ export default function StreamDebug({
     outline: "none",
     boxSizing: "border-box",
   };
-
-  const btnStyle = (
-    enabled: boolean,
-    color: string,
-    bg: string,
-  ): React.CSSProperties => ({
-    flex: 1,
-    padding: "0.4rem",
-    background: enabled ? bg : "#1a1a1a",
-    color: enabled ? color : "#555",
-    border: "none",
-    borderRadius: "4px",
-    cursor: enabled ? "pointer" : "default",
-    fontSize: "0.7rem",
-    fontFamily: "monospace",
-    fontWeight: 500,
-  });
 
   return (
     <div
@@ -154,7 +131,7 @@ export default function StreamDebug({
         <span
           style={{ fontWeight: 700, color: "#999", letterSpacing: "0.1em" }}
         >
-          STREAM DEBUG
+          SETTINGS
         </span>
         <button
           onClick={() => setVisible(false)}
@@ -230,6 +207,17 @@ export default function StreamDebug({
             Save
           </button>
         </div>
+        {hasKey && (
+          <div
+            style={{
+              fontSize: "0.6rem",
+              color: "#4a5",
+              marginTop: "0.2rem",
+            }}
+          >
+            Key set
+          </div>
+        )}
       </div>
 
       {/* Model */}
@@ -253,51 +241,39 @@ export default function StreamDebug({
         />
       </div>
 
-      {/* Stream status */}
+      {/* Stream status + cancel */}
       <div style={{ marginBottom: "0.5rem" }}>
         {isStreaming ? (
-          <div style={{ color: "#7dd3fc" }}>Streaming... {elapsed}s</div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <span style={{ color: "#7dd3fc" }}>Streaming... {elapsed}s</span>
+            <button
+              onClick={onCancel}
+              style={{
+                padding: "0.25rem 0.5rem",
+                background: "#7f1d1d",
+                color: "#fca5a5",
+                border: "none",
+                borderRadius: "3px",
+                cursor: "pointer",
+                fontSize: "0.65rem",
+                fontFamily: "monospace",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
         ) : (
-          <div style={{ color: "#666" }}>Idle</div>
+          <div style={{ color: "#666" }}>
+            Idle — send a message to generate
+          </div>
         )}
       </div>
-
-      {/* Actions */}
-      {isStreaming ? (
-        <button
-          onClick={onCancel}
-          style={{
-            width: "100%",
-            padding: "0.4rem",
-            background: "#7f1d1d",
-            color: "#fca5a5",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontSize: "0.7rem",
-            fontFamily: "monospace",
-          }}
-        >
-          Cancel Stream
-        </button>
-      ) : (
-        <div style={{ display: "flex", gap: "0.3rem" }}>
-          <button
-            onClick={onTestStream}
-            disabled={wsStatus !== "connected"}
-            style={btnStyle(wsStatus === "connected", "#7dd3fc", "#1e3a5f")}
-          >
-            Test Stream
-          </button>
-          <button
-            onClick={handleGenerate}
-            disabled={!canGenerate}
-            style={btnStyle(canGenerate, "#a5f3a5", "#14532d")}
-          >
-            Generate
-          </button>
-        </div>
-      )}
 
       <div
         style={{

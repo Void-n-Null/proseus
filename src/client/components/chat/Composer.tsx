@@ -7,6 +7,10 @@ interface ComposerProps {
   chatId: string;
   lastNodeIdRef: React.RefObject<string | null>;
   userSpeakerId: string | null;
+  /** Called after a user message is successfully persisted. */
+  onMessageSent?: () => void;
+  /** Cancel the active stream. */
+  onCancel?: () => void;
 }
 
 /**
@@ -24,6 +28,8 @@ const Composer = React.memo(function Composer({
   chatId,
   lastNodeIdRef,
   userSpeakerId,
+  onMessageSent,
+  onCancel,
 }: ComposerProps) {
   const [draft, setDraft] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -38,19 +44,28 @@ const Composer = React.memo(function Composer({
     const lastNodeId = lastNodeIdRef.current;
     if (!canSend || !lastNodeId || !userSpeakerId) return;
 
-    addMessage.mutate({
-      parent_id: lastNodeId,
-      speaker_id: userSpeakerId,
-      is_bot: false,
-      message: draft.trim(),
-    });
+    const msg = draft.trim();
+    addMessage
+      .mutateAsync({
+        parent_id: lastNodeId,
+        speaker_id: userSpeakerId,
+        is_bot: false,
+        message: msg,
+      })
+      .then(() => {
+        // Message persisted — trigger generation as a separate action.
+        onMessageSent?.();
+      })
+      .catch(() => {
+        // Mutation's own onError handles cache rollback.
+      });
 
     setDraft("");
 
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [canSend, lastNodeIdRef, userSpeakerId, draft, addMessage]);
+  }, [canSend, lastNodeIdRef, userSpeakerId, draft, addMessage, onMessageSent]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -77,11 +92,11 @@ const Composer = React.memo(function Composer({
 
   const handleButtonClick = useCallback(() => {
     if (isStreaming) {
-      // Stop is handled via StreamDebug for now
+      onCancel?.();
       return;
     }
     handleSend();
-  }, [isStreaming, handleSend]);
+  }, [isStreaming, handleSend, onCancel]);
 
   // Pilot light state classes
   const pilotClasses = [

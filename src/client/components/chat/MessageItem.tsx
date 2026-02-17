@@ -73,23 +73,37 @@ const MessageItem = React.memo(
           }}
         >
           {isFirstInGroup && speaker && (
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                background: speaker.color ?? "#555",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.8rem",
-                fontWeight: 600,
-                color: "#fff",
-                flexShrink: 0,
-              }}
-            >
-              {speaker.name.charAt(0).toUpperCase()}
-            </div>
+            speaker.avatar_url ? (
+              <img
+                src={speaker.avatar_url}
+                alt={speaker.name}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  flexShrink: 0,
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: speaker.color ?? "#555",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: "#fff",
+                  flexShrink: 0,
+                }}
+              >
+                {speaker.name.charAt(0).toUpperCase()}
+              </div>
+            )
           )}
         </div>
 

@@ -63,4 +63,60 @@ export function runMigrations(db: Database): void {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_chat_nodes_parent ON chat_nodes(parent_id);
   `);
+
+  // ── Characters table (Phase 3) ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS characters (
+      id                       TEXT PRIMARY KEY,
+      name                     TEXT NOT NULL,
+      description              TEXT NOT NULL DEFAULT '',
+      personality              TEXT NOT NULL DEFAULT '',
+      scenario                 TEXT NOT NULL DEFAULT '',
+      first_mes                TEXT NOT NULL DEFAULT '',
+      mes_example              TEXT NOT NULL DEFAULT '',
+
+      creator_notes            TEXT NOT NULL DEFAULT '',
+      system_prompt            TEXT NOT NULL DEFAULT '',
+      post_history_instructions TEXT NOT NULL DEFAULT '',
+      alternate_greetings      TEXT NOT NULL DEFAULT '[]',
+      tags                     TEXT NOT NULL DEFAULT '[]',
+      creator                  TEXT NOT NULL DEFAULT '',
+      character_version        TEXT NOT NULL DEFAULT '',
+
+      avatar                   BLOB,
+      avatar_hash              TEXT,
+      source_spec              TEXT NOT NULL DEFAULT 'v2',
+      extensions               TEXT NOT NULL DEFAULT '{}',
+      character_book           TEXT,
+      content_hash             TEXT NOT NULL,
+
+      created_at               INTEGER NOT NULL,
+      updated_at               INTEGER NOT NULL
+    );
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_characters_name ON characters(name);
+  `);
+
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_characters_content_hash ON characters(content_hash);
+  `);
+
+  // ── Migrations for existing tables ──
+  // These ALTER TABLEs add columns introduced in Phase 3.
+  // Each is wrapped in try/catch because ALTER TABLE ADD COLUMN
+  // throws if the column already exists. This is a stopgap until
+  // a proper numbered migration system is built (tracked tech debt).
+  const alterColumns = [
+    `ALTER TABLE chats ADD COLUMN character_id TEXT REFERENCES characters(id) ON DELETE SET NULL`,
+    `ALTER TABLE speakers ADD COLUMN character_id TEXT REFERENCES characters(id) ON DELETE SET NULL`,
+  ];
+  for (const sql of alterColumns) {
+    try {
+      db.exec(sql);
+    } catch {
+      // Column already exists — expected on subsequent runs
+    }
+  }
 }

@@ -17,6 +17,9 @@ import type {
   CreateSpeakerRequest,
   CreateSpeakerResponse,
   ListSpeakersResponse,
+  ImportCharacterResponse,
+  ListCharactersResponse,
+  GetCharacterResponse,
 } from "../../shared/api-types.ts";
 import type { Chat, Speaker } from "../../shared/types.ts";
 
@@ -99,6 +102,38 @@ export const api = {
       }),
     delete: (id: string) =>
       fetchJson<{ ok: true }>(`/speakers/${id}`, { method: "DELETE" }),
+  },
+  characters: {
+    list: () => fetchJson<ListCharactersResponse>("/characters"),
+    get: (id: string) =>
+      fetchJson<GetCharacterResponse>(`/characters/${id}`),
+    import: async (file: File, options?: { force?: boolean }) => {
+      const form = new FormData();
+      form.append("file", file);
+      if (options?.force) form.append("force", "true");
+      const res = await fetch(`${BASE}/characters/import`, {
+        method: "POST",
+        body: form,
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(
+          (error as { error?: string }).error || res.statusText,
+        );
+      }
+      return res.json() as Promise<ImportCharacterResponse>;
+    },
+    importUrl: (url: string) =>
+      fetchJson<ImportCharacterResponse>("/characters/import-url", {
+        method: "POST",
+        body: JSON.stringify({ url }),
+      }),
+    delete: (id: string) =>
+      fetchJson<{ ok: true }>(`/characters/${id}`, { method: "DELETE" }),
+    createChat: (characterId: string) =>
+      fetchJson<CreateChatResponse>(`/characters/${characterId}/chat`, {
+        method: "POST",
+      }),
   },
   dev: {
     seed: () => fetchJson<{ ok: true }>("/dev/seed", { method: "POST" }),

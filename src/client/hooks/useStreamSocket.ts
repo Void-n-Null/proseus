@@ -1,16 +1,19 @@
 /**
  * WebSocket hook for server-side streaming.
  *
- * Connects to /ws, subscribes to a chat's stream topic, and drives
- * the existing streaming buffer + Zustand store from server events.
- * The client never owns stream state — it displays what the server sends.
+ * Architecture: ONE WebSocket connection per app lifetime. Chat switching
+ * sends subscribe/unsubscribe messages — it does NOT tear down the socket.
+ *
+ * - Connection effect (empty deps): creates WS, restores API key, handles
+ *   reconnect. Runs once on mount, cleans up on unmount.
+ * - Subscription effect (chatId dep): sends subscribe/unsubscribe when the
+ *   active chat changes. Lightweight, no WS teardown.
  *
  * On reconnect (or late join), the server sends the full accumulated
  * content so the client can pick up mid-stream seamlessly.
  *
- * When streaming starts (either initiated locally or received from the
- * server), a placeholder node is optimistically inserted into the
- * TanStack Query tree cache so MessageItem can render immediately
+ * When streaming starts, a placeholder node is optimistically inserted
+ * into the TanStack Query tree cache so MessageItem can render immediately
  * with the same React key that will persist after finalization.
  */
 
@@ -51,6 +54,8 @@ interface UseStreamSocketReturn {
     speakerId: string,
     model: string,
   ) => void;
+  /** Trigger generation — server resolves parentId and speakerId from DB. */
+  sendGenerate: (model: string) => void;
   setApiKey: (key: string) => void;
   cancelStream: () => void;
 }
@@ -135,6 +140,13 @@ function removePlaceholderNode(
   qc.setQueryData<TreeData>(treeKey, { ...current, nodes: newNodes });
 }
 
+/** Send a message on a WebSocket if it's open. */
+function wsSend(ws: WebSocket | null, msg: ClientWsMessage): void {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg));
+  }
+}
+
 export function useStreamSocket(
   chatId: string | null,
 ): UseStreamSocketReturn {
@@ -142,12 +154,19 @@ export function useStreamSocket(
   const [status, setStatus] = useState<WsStatus>("disconnected");
   const qc = useQueryClient();
 
-  const storeStart = useStreamingStore((s) => s.start);
-  const storeStop = useStreamingStore((s) => s.stop);
+  // Use refs for streaming store functions so they don't cause
+  // the connection effect to re-run when streaming state changes.
+  const storeStartRef = useRef(useStreamingStore.getState().start);
+  const storeStopRef = useRef(useStreamingStore.getState().stop);
 
+  // Keep a ref to the current chatId so the message handler
+  // (which lives in the connection effect) can read it without
+  // the connection effect depending on chatId.
+  const chatIdRef = useRef(chatId);
+  chatIdRef.current = chatId;
+
+  // ── Connection effect: ONE WebSocket for the app lifetime ──
   useEffect(() => {
-    if (!chatId) return;
-
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
     wsRef.current = ws;
@@ -156,19 +175,20 @@ export function useStreamSocket(
     ws.addEventListener("open", () => {
       setStatus("connected");
 
-      // Subscribe to this chat's stream events
-      const sub: ClientWsMessage = { type: "subscribe", chatId };
-      ws.send(JSON.stringify(sub));
-
       // Restore API key from localStorage if available
       const savedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
       if (savedKey) {
-        const keyMsg: ClientWsMessage = {
+        wsSend(ws, {
           type: "set-api-key",
           provider: "openrouter",
           key: savedKey,
-        };
-        ws.send(JSON.stringify(keyMsg));
+        });
+      }
+
+      // If we already have a chatId, subscribe now
+      const currentChatId = chatIdRef.current;
+      if (currentChatId) {
+        wsSend(ws, { type: "subscribe", chatId: currentChatId });
       }
     });
 
@@ -180,21 +200,20 @@ export function useStreamSocket(
         return;
       }
 
-      // Only process messages for our chat
-      if (msg.chatId !== chatId) return;
+      // Only process messages for the currently active chat
+      const currentChatId = chatIdRef.current;
+      if (msg.chatId !== currentChatId) return;
 
       switch (msg.type) {
         case "stream:start": {
-          // Optimistically insert placeholder node into the tree cache.
-          // This gives MessageItem a real node to render with the final key.
           insertPlaceholderNode(
             qc,
-            chatId,
+            msg.chatId,
             msg.nodeId,
             msg.parentId,
             msg.speakerId,
           );
-          storeStart(msg.parentId, msg.speakerId, msg.nodeId);
+          storeStartRef.current(msg.parentId, msg.speakerId, msg.nodeId);
           break;
         }
 
@@ -204,57 +223,47 @@ export function useStreamSocket(
         }
 
         case "stream:content": {
-          // Full content on reconnect — replace buffer entirely
           setContent(msg.content);
           break;
         }
 
         case "stream:end":
         case "stream:cancelled": {
-          // Both end and cancelled mean "content is persisted, finalize
-          // the client-side session." Cancelled just means the user
-          // stopped generation early — the partial content is saved.
-
-          // Capture the final content BEFORE clearing the buffer.
           const finalContent = finalizeSession();
 
-          // Patch the placeholder node's message in the cache BEFORE
-          // stopping streaming. This ensures that when MessageContent
-          // switches from buffer mode (isStreaming=true) to normal mode
-          // (isStreaming=false), node.message already has the real text.
-          // Without this: buffer clears → message="" → flash of empty → refetch fills it.
           const meta = useStreamingStore.getState().meta;
-          if (meta) {
-            const treeKey = ["chat-tree", chatId];
+          if (meta && currentChatId) {
+            const treeKey = ["chat-tree", currentChatId];
             const current = qc.getQueryData<TreeData>(treeKey);
             if (current) {
               const node = current.nodes.get(meta.nodeId);
               if (node) {
                 const newNodes = new Map(current.nodes);
                 newNodes.set(meta.nodeId, { ...node, message: finalContent });
-                qc.setQueryData<TreeData>(treeKey, { ...current, nodes: newNodes });
+                qc.setQueryData<TreeData>(treeKey, {
+                  ...current,
+                  nodes: newNodes,
+                });
               }
             }
           }
 
-          storeStop();
+          storeStopRef.current();
 
-          // Reconcile with server in the background. The message content
-          // is already correct, so React.memo prevents a re-render.
-          // This just picks up server-side timestamps and any other metadata.
-          qc.invalidateQueries({ queryKey: ["chat-tree", chatId] });
-          qc.invalidateQueries({ queryKey: ["chats"] });
+          if (currentChatId) {
+            qc.invalidateQueries({ queryKey: ["chat-tree", currentChatId] });
+            qc.invalidateQueries({ queryKey: ["chats"] });
+          }
           break;
         }
 
         case "stream:error": {
-          // Roll back the optimistic placeholder
           const meta = useStreamingStore.getState().meta;
-          if (meta) {
-            removePlaceholderNode(qc, chatId, meta.nodeId, meta.parentId);
+          if (meta && currentChatId) {
+            removePlaceholderNode(qc, currentChatId, meta.nodeId, meta.parentId);
           }
           cancelSession();
-          storeStop();
+          storeStopRef.current();
           break;
         }
       }
@@ -266,75 +275,98 @@ export function useStreamSocket(
     });
 
     return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        const unsub: ClientWsMessage = { type: "unsubscribe", chatId };
-        ws.send(JSON.stringify(unsub));
-      }
       ws.close();
       wsRef.current = null;
       setStatus("disconnected");
     };
-  }, [chatId, storeStart, storeStop, qc]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally empty: one connection per mount
+  }, [qc]);
+
+  // ── Subscription effect: lightweight chat topic switching ──
+  useEffect(() => {
+    const ws = wsRef.current;
+    if (!chatId) return;
+
+    // Subscribe when entering a chat
+    wsSend(ws, { type: "subscribe", chatId });
+
+    // Also handle late-open: if WS wasn't connected when this effect
+    // ran, the connection effect's open handler will subscribe using
+    // chatIdRef.current.
+
+    return () => {
+      // Unsubscribe when leaving this chat (but keep the WS alive)
+      wsSend(wsRef.current, { type: "unsubscribe", chatId });
+    };
+  }, [chatId]);
+
+  // ── Actions ───────────────────────────────────────────────
 
   const setApiKey = useCallback((key: string) => {
-    // Persist locally so it survives page refreshes
     localStorage.setItem(API_KEY_STORAGE_KEY, key);
-
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-    const msg: ClientWsMessage = {
+    wsSend(wsRef.current, {
       type: "set-api-key",
       provider: "openrouter",
       key,
-    };
-    ws.send(JSON.stringify(msg));
+    });
   }, []);
 
   const sendTestStream = useCallback(
     (parentId: string, speakerId: string) => {
-      const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN || !chatId) return;
-
+      if (!chatId) return;
       const nodeId = generateId();
-      const msg: ClientWsMessage = {
+      wsSend(wsRef.current, {
         type: "test-stream",
         chatId,
         parentId,
         speakerId,
         nodeId,
-      };
-      ws.send(JSON.stringify(msg));
+      });
     },
     [chatId],
   );
 
   const sendAIStream = useCallback(
     (parentId: string, speakerId: string, model: string) => {
-      const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN || !chatId) return;
-
+      if (!chatId) return;
       const nodeId = generateId();
-      const msg: ClientWsMessage = {
+      wsSend(wsRef.current, {
         type: "ai-stream",
         chatId,
         parentId,
         speakerId,
         model,
         nodeId,
-      };
-      ws.send(JSON.stringify(msg));
+      });
+    },
+    [chatId],
+  );
+
+  const sendGenerate = useCallback(
+    (model: string) => {
+      if (!chatId) return;
+      const nodeId = generateId();
+      wsSend(wsRef.current, {
+        type: "generate",
+        chatId,
+        model,
+        nodeId,
+      });
     },
     [chatId],
   );
 
   const cancelStream = useCallback(() => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN || !chatId) return;
-
-    const msg: ClientWsMessage = { type: "cancel-stream", chatId };
-    ws.send(JSON.stringify(msg));
+    if (!chatId) return;
+    wsSend(wsRef.current, { type: "cancel-stream", chatId });
   }, [chatId]);
 
-  return { status, sendTestStream, sendAIStream, setApiKey, cancelStream };
+  return {
+    status,
+    sendTestStream,
+    sendAIStream,
+    sendGenerate,
+    setApiKey,
+    cancelStream,
+  };
 }

@@ -29,6 +29,8 @@
     "marked": "^17.0.2",
     "marked-highlight": "^2.2.3",
     "motion": "^12.34.0",
+    "png-chunk-text": "^1.0.0",
+    "png-chunks-extract": "^1.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "remend": "^1.2.0",

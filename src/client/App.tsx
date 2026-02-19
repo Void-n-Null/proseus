@@ -3,14 +3,19 @@ import { useChatList } from "./hooks/useChat.ts";
 import { api } from "./api/client.ts";
 import ChatPage from "./components/chat/ChatPage.tsx";
 import CharacterSidebar from "./components/characters/CharacterSidebar.tsx";
+import PersonaSidebar from "./components/personas/PersonaSidebar.tsx";
+import ModelSelector from "./components/model/ModelSelector.tsx";
+import { useOAuthCallback } from "./hooks/useOAuthCallback.ts";
 
 export default function App() {
   const { data: chatData, isLoading, refetch } = useChatList();
   const [seeding, setSeeding] = useState(false);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
-  const [sidebarView, setSidebarView] = useState<"characters" | "chats">(
+  const [sidebarView, setSidebarView] = useState<"characters" | "chats" | "personas">(
     "characters",
   );
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { oauthState, dismissOAuth } = useOAuthCallback();
 
   const handleSeed = async () => {
     setSeeding(true);
@@ -75,26 +80,68 @@ export default function App() {
         </span>
 
         {/* Sidebar view toggle */}
-        <div
-          style={{
-            display: "flex",
-            gap: "2px",
-            background: "var(--color-surface)",
-            borderRadius: "var(--radius-md)",
-            padding: "2px",
-          }}
-        >
-          <ToggleButton
-            active={sidebarView === "characters"}
-            onClick={() => setSidebarView("characters")}
-            label="Characters"
-          />
-          <ToggleButton
-            active={sidebarView === "chats"}
-            onClick={() => setSidebarView("chats")}
-            label={`Chats${chats.length > 0 ? ` (${chats.length})` : ""}`}
-          />
+        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+          <button
+            onClick={() => setSidebarCollapsed((c) => !c)}
+            title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+            style={{
+              padding: "0.3rem 0.45rem",
+              background: "var(--color-surface)",
+              color: "var(--color-text-dim)",
+              border: "none",
+              borderRadius: "var(--radius-md)",
+              cursor: "pointer",
+              fontSize: "0.78rem",
+              lineHeight: 1,
+              transition: "color 0.15s",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.color = "var(--color-text-body)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.color = "var(--color-text-dim)")
+            }
+          >
+            {sidebarCollapsed ? "\u25B6" : "\u25C0"}
+          </button>
+          <div
+            style={{
+              display: "flex",
+              gap: "2px",
+              background: "var(--color-surface)",
+              borderRadius: "var(--radius-md)",
+              padding: "2px",
+            }}
+          >
+            <ToggleButton
+              active={sidebarView === "characters"}
+              onClick={() => {
+                setSidebarView("characters");
+                setSidebarCollapsed(false);
+              }}
+              label="Characters"
+            />
+            <ToggleButton
+              active={sidebarView === "personas"}
+              onClick={() => {
+                setSidebarView("personas");
+                setSidebarCollapsed(false);
+              }}
+              label="Personas"
+            />
+            <ToggleButton
+              active={sidebarView === "chats"}
+              onClick={() => {
+                setSidebarView("chats");
+                setSidebarCollapsed(false);
+              }}
+              label={`Chats${chats.length > 0 ? ` (${chats.length})` : ""}`}
+            />
+          </div>
         </div>
+
+        {/* Model selector */}
+        <ModelSelector />
 
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           {resolvedChatId && (
@@ -133,18 +180,56 @@ export default function App() {
         </div>
       </div>
 
+      {/* OAuth callback feedback */}
+      {oauthState.status === "exchanging" && (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-surface border-b border-border text-sm text-text-body shrink-0">
+          <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin shrink-0" />
+          Connecting to OpenRouter...
+        </div>
+      )}
+      {oauthState.status === "success" && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b shrink-0" style={{ background: "oklch(0.70 0.15 155 / 0.06)", borderColor: "oklch(0.70 0.15 155 / 0.15)" }}>
+          <div className="flex items-center gap-2 text-sm" style={{ color: "oklch(0.72 0.15 155)" }}>
+            <svg viewBox="0 0 12 12" fill="none" className="w-4 h-4">
+              <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            OpenRouter connected successfully
+          </div>
+          <button type="button" onClick={dismissOAuth} className="text-text-dim hover:text-text-muted transition-colors text-xs">
+            Dismiss
+          </button>
+        </div>
+      )}
+      {oauthState.status === "error" && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b shrink-0" style={{ background: "oklch(0.55 0.15 40 / 0.06)", borderColor: "oklch(0.55 0.15 40 / 0.15)" }}>
+          <div className="flex items-center gap-2 text-sm" style={{ color: "oklch(0.70 0.15 40)" }}>
+            <svg viewBox="0 0 12 12" fill="none" className="w-4 h-4">
+              <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            OAuth failed: {oauthState.message}
+          </div>
+          <button type="button" onClick={dismissOAuth} className="text-text-dim hover:text-text-muted transition-colors text-xs">
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Main content */}
       <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
         {/* Sidebar */}
-        {sidebarView === "characters" ? (
-          <CharacterSidebar onChatCreated={handleChatCreated} />
-        ) : (
-          <ChatListSidebar
-            chats={chats}
-            activeChatId={resolvedChatId}
-            onSelectChat={setActiveChatId}
-            isLoading={isLoading}
-          />
+        {!sidebarCollapsed && (
+          sidebarView === "characters" ? (
+            <CharacterSidebar onChatCreated={handleChatCreated} />
+          ) : sidebarView === "personas" ? (
+            <PersonaSidebar />
+          ) : (
+            <ChatListSidebar
+              chats={chats}
+              activeChatId={resolvedChatId}
+              onSelectChat={setActiveChatId}
+              isLoading={isLoading}
+            />
+          )
         )}
 
         {/* Chat area */}

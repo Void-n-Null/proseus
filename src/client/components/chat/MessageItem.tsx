@@ -2,6 +2,7 @@ import React, { useState, useCallback } from "react";
 import type { ChatNode, Speaker } from "../../../shared/types.ts";
 import { useIsStreamingNode } from "../../stores/streaming.ts";
 import { useChatMutations } from "../../hooks/useMutations.ts";
+import { Avatar } from "../ui/avatar.tsx";
 import MessageMeta from "./MessageMeta.tsx";
 import MessageContent from "./MessageContent.tsx";
 import MessageBranch from "./MessageBranch.tsx";
@@ -14,6 +15,7 @@ interface MessageItemProps {
   chatId: string;
   isFirstInGroup: boolean;
   isLast: boolean;
+  userName: string;
 }
 
 const MessageItem = React.memo(
@@ -24,6 +26,7 @@ const MessageItem = React.memo(
     chatId,
     isFirstInGroup,
     isLast,
+    userName,
   }: MessageItemProps) {
     const [isHovered, setIsHovered] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -65,8 +68,8 @@ const MessageItem = React.memo(
         {/* Avatar column — always present for alignment */}
         <div
           style={{
-            width: 36,
-            minWidth: 36,
+            width: 50,
+            minWidth: 60,
             display: "flex",
             justifyContent: "center",
             paddingTop: isFirstInGroup ? 2 : 0,
@@ -74,16 +77,12 @@ const MessageItem = React.memo(
         >
           {isFirstInGroup && speaker && (
             speaker.avatar_url ? (
-              <img
+              <Avatar
                 src={speaker.avatar_url}
                 alt={speaker.name}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                  flexShrink: 0,
-                }}
+                width={50}
+                height={64}
+                borderRadius="20%"
               />
             ) : (
               <div
@@ -91,7 +90,7 @@ const MessageItem = React.memo(
                   width: 32,
                   height: 32,
                   borderRadius: "50%",
-                  background: speaker.color ?? "#555",
+                  background: speaker.color ?? "#333",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -117,14 +116,17 @@ const MessageItem = React.memo(
             />
           )}
 
-          <MessageContent
-            message={node.message}
-            isEditing={isEditing}
-            isStreaming={isStreaming}
-            speakerColor={speaker?.color}
-            onEditSubmit={handleEditSubmit}
-            onEditCancel={handleEditCancel}
-          />
+          <div style={{ paddingTop: "0.5rem" }}>
+            <MessageContent
+              message={node.message}
+              isEditing={isEditing}
+              isStreaming={isStreaming}
+              speakerColor={speaker?.color}
+              userName={userName}
+              onEditSubmit={handleEditSubmit}
+              onEditCancel={handleEditCancel}
+            />
+          </div>
 
           {/* Hide branch navigation during streaming */}
           {!isStreaming && (
@@ -154,7 +156,11 @@ const MessageItem = React.memo(
     prev.node.updated_at === next.node.updated_at &&
     prev.isFirstInGroup === next.isFirstInGroup &&
     prev.siblingInfo?.index === next.siblingInfo?.index &&
-    prev.siblingInfo?.total === next.siblingInfo?.total,
+    prev.siblingInfo?.total === next.siblingInfo?.total &&
+    prev.speaker?.id === next.speaker?.id &&
+    prev.speaker?.avatar_url === next.speaker?.avatar_url &&
+    prev.speaker?.name === next.speaker?.name &&
+    prev.userName === next.userName,
 );
 
 export default MessageItem;

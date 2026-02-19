@@ -10,14 +10,21 @@ interface MessageContentProps {
   isEditing: boolean;
   isStreaming: boolean;
   speakerColor?: string | null;
+  userName: string;
   onEditSubmit: (msg: string) => void;
   onEditCancel: () => void;
 }
 
+/** Replace {{user}} placeholders (case-insensitive) with the active persona name. */
+function applyUserPlaceholder(content: string, userName: string): string {
+  return content.replace(/\{\{user\}\}/gi, userName);
+}
+
 /** Stable style for the content display container. */
 const contentStyle: React.CSSProperties = {
-  fontSize: "0.9rem",
-  lineHeight: 1.55,
+  fontSize: "1rem",
+  fontFamily: "sans-serif",
+  lineHeight: 1.5,
   color: "#ddd",
   wordBreak: "break-word",
 };
@@ -27,6 +34,7 @@ const MessageContent = React.memo(function MessageContent({
   isEditing,
   isStreaming,
   speakerColor,
+  userName,
   onEditSubmit,
   onEditCancel,
 }: MessageContentProps) {
@@ -51,14 +59,19 @@ const MessageContent = React.memo(function MessageContent({
 
     const unsub = subscribeToContent((content) => {
       if (streamContentRef.current) {
-        streamContentRef.current.innerHTML = renderStreamingMarkdown(content);
+        streamContentRef.current.innerHTML = renderStreamingMarkdown(
+          applyUserPlaceholder(content, userName),
+        );
       }
     });
     return unsub;
-  }, [isStreaming]);
+  }, [isStreaming, userName]);
 
   // ── Memoize rendered markdown for normal mode ──
-  const renderedHtml = useMemo(() => renderMarkdown(message), [message]);
+  const renderedHtml = useMemo(
+    () => renderMarkdown(applyUserPlaceholder(message, userName)),
+    [message, userName],
+  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

@@ -14,18 +14,15 @@ import type { WsStatus } from "../../hooks/useStreamSocket.ts";
 
 const API_KEY_STORAGE_KEY = "proseus:openrouter-key";
 const MODEL_STORAGE_KEY = "proseus:model";
-const DEFAULT_MODEL = "openai/gpt-4o-mini";
 
 interface StreamDebugProps {
   wsStatus: WsStatus;
   onCancel: () => void;
-  onApiKeyChange: (key: string) => void;
 }
 
 export default function StreamDebug({
   wsStatus,
   onCancel,
-  onApiKeyChange,
 }: StreamDebugProps) {
   const [visible, setVisible] = useState(false);
   const isStreaming = useIsStreaming();
@@ -35,7 +32,7 @@ export default function StreamDebug({
     () => localStorage.getItem(API_KEY_STORAGE_KEY) ?? "",
   );
   const [model, setModel] = useState(
-    () => localStorage.getItem(MODEL_STORAGE_KEY) ?? DEFAULT_MODEL,
+    () => localStorage.getItem(MODEL_STORAGE_KEY) ?? "",
   );
 
   // Ctrl+Shift+S toggles panel
@@ -63,8 +60,8 @@ export default function StreamDebug({
   }, [isStreaming]);
 
   const handleSaveKey = useCallback(() => {
-    onApiKeyChange(apiKey);
-  }, [apiKey, onApiKeyChange]);
+    localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
+  }, [apiKey]);
 
   const handleModelChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -236,7 +233,7 @@ export default function StreamDebug({
           type="text"
           value={model}
           onChange={handleModelChange}
-          placeholder="openai/gpt-4o-mini"
+          placeholder="provider/model-name"
           style={inputStyle}
         />
       </div>

@@ -12,6 +12,7 @@ interface MessageListProps {
   speakerMap: Map<string, Speaker>;
   nodeMap: Map<string, ChatNode>;
   chatId: string;
+  userName: string;
 }
 
 /**
@@ -43,6 +44,7 @@ const MessageList = React.memo(function MessageList({
   speakerMap,
   nodeMap,
   chatId,
+  userName,
 }: MessageListProps) {
   const isStreaming = useIsStreaming();
   const nodes = activePath?.nodes ?? [];
@@ -117,7 +119,7 @@ const MessageList = React.memo(function MessageList({
       onScroll={onScroll}
       style={scrollContainerStyle}
     >
-      <div className="mx-auto w-[80%] relative"
+      <div className="mx-auto w-[60vw] relative"
         style={{
           height: virtualizer.getTotalSize(),
         }}
@@ -149,6 +151,7 @@ const MessageList = React.memo(function MessageList({
                 chatId={chatId}
                 isFirstInGroup={isFirstInGroup}
                 isLast={isLast}
+                userName={userName}
               />
             </div>
           );

@@ -43,7 +43,7 @@ const MessageMeta = React.memo(function MessageMeta({
       <span
         style={{
           fontWeight: 600,
-          fontSize: "0.85rem",
+          fontSize: "1.1rem",
           color: speaker.color ?? "#e0e0e0",
         }}
       >

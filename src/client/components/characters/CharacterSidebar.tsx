@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef } from "react";
 import type { CharacterListItem } from "../../../shared/types.ts";
+import { Avatar } from "../ui/avatar.tsx";
 import {
   useCharacters,
   useImportCharacter,
@@ -477,16 +478,10 @@ function CharacterCard({
     >
       {/* Avatar */}
       {character.avatar_url ? (
-        <img
+        <Avatar
           src={character.avatar_url}
           alt={character.name}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: "var(--radius-md)",
-            objectFit: "cover",
-            flexShrink: 0,
-          }}
+          size={36}
         />
       ) : (
         <div

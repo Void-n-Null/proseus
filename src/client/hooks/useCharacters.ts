@@ -57,6 +57,7 @@ export function useCreateChatFromCharacter() {
     mutationFn: (characterId: string) => api.characters.createChat(characterId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chats"] });
+      queryClient.invalidateQueries({ queryKey: ["speakers"] });
     },
   });
 }

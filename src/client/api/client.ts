@@ -20,8 +20,21 @@ import type {
   ImportCharacterResponse,
   ListCharactersResponse,
   GetCharacterResponse,
+  ListConnectionsResponse,
+  SaveConnectionResponse,
+  DeleteConnectionResponse,
+  GetSettingsResponse,
+  UpdateSettingsResponse,
+  ListPersonasResponse,
+  GetPersonaResponse,
+  CreatePersonaRequest,
+  CreatePersonaResponse,
+  UpdatePersonaRequest,
+  UpdatePersonaResponse,
+  SetChatPersonaResponse,
 } from "../../shared/api-types.ts";
 import type { Chat, Speaker } from "../../shared/types.ts";
+import type { ProviderName } from "../../shared/providers.ts";
 
 const BASE = "/api";
 
@@ -133,6 +146,60 @@ export const api = {
     createChat: (characterId: string) =>
       fetchJson<CreateChatResponse>(`/characters/${characterId}/chat`, {
         method: "POST",
+      }),
+  },
+  connections: {
+    list: () => fetchJson<ListConnectionsResponse>("/connections"),
+    save: (provider: ProviderName, apiKey: string) =>
+      fetchJson<SaveConnectionResponse>(`/connections/${provider}`, {
+        method: "PUT",
+        body: JSON.stringify({ api_key: apiKey }),
+      }),
+    delete: (provider: ProviderName) =>
+      fetchJson<DeleteConnectionResponse>(`/connections/${provider}`, {
+        method: "DELETE",
+      }),
+  },
+  settings: {
+    get: () => fetchJson<GetSettingsResponse>("/settings"),
+    update: (settings: Record<string, string>) =>
+      fetchJson<UpdateSettingsResponse>("/settings", {
+        method: "PUT",
+        body: JSON.stringify({ settings }),
+      }),
+  },
+  personas: {
+    list: () => fetchJson<ListPersonasResponse>("/personas"),
+    get: (id: string) => fetchJson<GetPersonaResponse>(`/personas/${id}`),
+    create: (body: CreatePersonaRequest) =>
+      fetchJson<CreatePersonaResponse>("/personas", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    update: (id: string, body: UpdatePersonaRequest) =>
+      fetchJson<UpdatePersonaResponse>(`/personas/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    uploadAvatar: async (id: string, file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`${BASE}/personas/${id}/avatar`, {
+        method: "POST",
+        body: form,
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error((error as { error?: string }).error || res.statusText);
+      }
+      return res.json() as Promise<GetPersonaResponse>;
+    },
+    delete: (id: string) =>
+      fetchJson<{ ok: true }>(`/personas/${id}`, { method: "DELETE" }),
+    setChatPersona: (chatId: string, personaId: string | null) =>
+      fetchJson<SetChatPersonaResponse>(`/personas/chats/${chatId}/persona`, {
+        method: "PUT",
+        body: JSON.stringify({ persona_id: personaId }),
       }),
   },
   dev: {

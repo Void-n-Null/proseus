@@ -24,6 +24,7 @@ import type {
   ServerWsMessage,
 } from "../../shared/ws-types.ts";
 import type { ChatNode } from "../../shared/types.ts";
+import type { ProviderName } from "../../shared/providers.ts";
 import { generateId } from "../../shared/ids.ts";
 import { useStreamingStore } from "../stores/streaming.ts";
 import {
@@ -34,8 +35,6 @@ import {
 } from "../lib/streaming-buffer.ts";
 
 export type WsStatus = "connecting" | "connected" | "disconnected";
-
-const API_KEY_STORAGE_KEY = "proseus:openrouter-key";
 
 /**
  * Shape of the cached tree data in TanStack Query.
@@ -55,8 +54,7 @@ interface UseStreamSocketReturn {
     model: string,
   ) => void;
   /** Trigger generation — server resolves parentId and speakerId from DB. */
-  sendGenerate: (model: string) => void;
-  setApiKey: (key: string) => void;
+  sendGenerate: (model: string, provider?: ProviderName) => void;
   cancelStream: () => void;
 }
 
@@ -175,16 +173,6 @@ export function useStreamSocket(
     ws.addEventListener("open", () => {
       setStatus("connected");
 
-      // Restore API key from localStorage if available
-      const savedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
-      if (savedKey) {
-        wsSend(ws, {
-          type: "set-api-key",
-          provider: "openrouter",
-          key: savedKey,
-        });
-      }
-
       // If we already have a chatId, subscribe now
       const currentChatId = chatIdRef.current;
       if (currentChatId) {
@@ -302,15 +290,6 @@ export function useStreamSocket(
 
   // ── Actions ───────────────────────────────────────────────
 
-  const setApiKey = useCallback((key: string) => {
-    localStorage.setItem(API_KEY_STORAGE_KEY, key);
-    wsSend(wsRef.current, {
-      type: "set-api-key",
-      provider: "openrouter",
-      key,
-    });
-  }, []);
-
   const sendTestStream = useCallback(
     (parentId: string, speakerId: string) => {
       if (!chatId) return;
@@ -343,7 +322,7 @@ export function useStreamSocket(
   );
 
   const sendGenerate = useCallback(
-    (model: string) => {
+    (model: string, provider?: ProviderName) => {
       if (!chatId) return;
       const nodeId = generateId();
       wsSend(wsRef.current, {
@@ -351,6 +330,7 @@ export function useStreamSocket(
         chatId,
         model,
         nodeId,
+        ...(provider ? { provider } : {}),
       });
     },
     [chatId],
@@ -366,7 +346,6 @@ export function useStreamSocket(
     sendTestStream,
     sendAIStream,
     sendGenerate,
-    setApiKey,
     cancelStream,
   };
 }

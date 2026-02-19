@@ -30,10 +30,26 @@ export function useChatMutations(chatId: string | null) {
   };
 
   // ── Add message ──────────────────────────────────────────────
-  // Server generates the ID and timestamp, so we invalidate.
+  // Server returns the new node + updated parent. We patch the cache
+  // directly instead of invalidating, because invalidation triggers a
+  // background refetch that races with streaming: the refetch can
+  // overwrite the placeholder node inserted by stream:start, causing
+  // the stream to be invisible until stream:end re-fetches.
   const addMessage = useMutation({
     mutationFn: (body: AddMessageRequest) => api.messages.add(chatId!, body),
-    onSuccess: invalidateTree,
+    onSuccess: (data) => {
+      // Patch the tree cache with the server-confirmed node and parent.
+      const current = qc.getQueryData<TreeData>(treeKey);
+      if (current) {
+        const newNodes = new Map(current.nodes);
+        newNodes.set(data.node.id, data.node);
+        newNodes.set(data.updated_parent.id, data.updated_parent);
+        qc.setQueryData<TreeData>(treeKey, { ...current, nodes: newNodes });
+      }
+      // Refresh the chat list (last-message preview, etc.) — this is
+      // safe because the chats list doesn't affect the tree cache.
+      qc.invalidateQueries({ queryKey: listKey });
+    },
   });
 
   // ── Edit message ─────────────────────────────────────────────

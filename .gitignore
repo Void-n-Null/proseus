@@ -20,6 +20,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 *.db-wal
 *.db-shm
 
+# encryption key (API keys at rest)
+.proseus-key
+
 # opencode session files
 _tmp_*
 

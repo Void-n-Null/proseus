@@ -9,6 +9,7 @@ import {
 } from "../db/chats.ts";
 import { addMessage, getChatTree } from "../db/messages.ts";
 import { getSpeaker } from "../db/speakers.ts";
+import { getGlobalPersona } from "../db/personas.ts";
 import { createMessagesRouter } from "./messages.ts";
 
 export function createChatsRouter(db: Database): Hono {
@@ -45,6 +46,12 @@ export function createChatsRouter(db: Database): Hono {
       tags: body.tags,
     });
 
+    // Apply the global persona to new chats automatically
+    const globalPersona = getGlobalPersona(db);
+    if (globalPersona) {
+      updateChat(db, chat.id, { persona_id: globalPersona.id });
+    }
+
     let rootNode = null;
 
     if (body.greeting) {
@@ -63,16 +70,12 @@ export function createChatsRouter(db: Database): Hono {
           is_bot: true,
         });
         rootNode = result.node;
-
-        // Refresh chat to get updated root_node_id
-        const updatedChat = getChat(db, chat.id);
-        if (updatedChat) {
-          return c.json({ chat: updatedChat, root_node: rootNode });
-        }
       }
     }
 
-    return c.json({ chat, root_node: rootNode });
+    // Always re-fetch so persona_id (and root_node_id if greeting was added) are current
+    const finalChat = getChat(db, chat.id) ?? chat;
+    return c.json({ chat: finalChat, root_node: rootNode });
   });
 
   // GET /:chatId — get a single chat + its speakers
@@ -90,10 +93,14 @@ export function createChatsRouter(db: Database): Hono {
     return c.json({ chat, speakers });
   });
 
-  // PATCH /:chatId — update chat name/tags
+  // PATCH /:chatId — update chat name/tags/persona_id
   app.patch("/:chatId", async (c) => {
     const chatId = c.req.param("chatId");
-    const body = await c.req.json<{ name?: string; tags?: string[] }>();
+    const body = await c.req.json<{
+      name?: string;
+      tags?: string[];
+      persona_id?: string | null;
+    }>();
 
     const chat = updateChat(db, chatId, body);
     if (!chat) {

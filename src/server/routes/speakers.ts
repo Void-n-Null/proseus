@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Database } from "bun:sqlite";
+import { parseSizeParam, resizeAvatar } from "../lib/thumbnail.ts";
 import {
   createSpeaker,
   getSpeaker,
@@ -41,8 +42,8 @@ export function createSpeakersRouter(db: Database): Hono {
     return c.json({ speaker });
   });
 
-  // GET /:id/avatar — serve speaker avatar image
-  app.get("/:id/avatar", (c) => {
+  // GET /:id/avatar — serve speaker avatar image (optional ?size= thumbnail)
+  app.get("/:id/avatar", async (c) => {
     const id = c.req.param("id");
     const row = db
       .query("SELECT avatar_blob, avatar_mime FROM speakers WHERE id = $id")
@@ -55,9 +56,17 @@ export function createSpeakersRouter(db: Database): Hono {
       return c.json({ error: "Avatar not found" }, 404);
     }
 
-    return new Response(row.avatar_blob as unknown as BodyInit, {
+    const size = parseSizeParam(c.req.query("size"));
+    const { buffer, mime } = await resizeAvatar(
+      row.avatar_blob,
+      row.avatar_mime ?? "image/png",
+      size,
+      `speaker-${id}`,
+    );
+
+    return new Response(buffer as unknown as BodyInit, {
       headers: {
-        "Content-Type": row.avatar_mime ?? "image/png",
+        "Content-Type": mime,
         "Cache-Control": "public, max-age=86400",
       },
     });

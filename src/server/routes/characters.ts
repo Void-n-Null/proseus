@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Database } from "bun:sqlite";
+import { parseSizeParam, resizeAvatar } from "../lib/thumbnail.ts";
 import {
   createCharacter,
   getCharacter,
@@ -13,9 +14,10 @@ import {
   CardParseError,
 } from "../lib/character-card-parser.ts";
 import { createSpeaker } from "../db/speakers.ts";
-import { createChat } from "../db/chats.ts";
+import { createChat, updateChat } from "../db/chats.ts";
 import { addMessage, getChatTree } from "../db/messages.ts";
 import { getChat } from "../db/chats.ts";
+import { getGlobalPersona } from "../db/personas.ts";
 
 /** PNG magic bytes: \x89PNG\r\n\x1a\n */
 function isPNG(data: Uint8Array): boolean {
@@ -86,8 +88,8 @@ export function createCharactersRouter(db: Database): Hono {
     return c.json({ character });
   });
 
-  // GET /:id/avatar — serve avatar image with ETag caching
-  app.get("/:id/avatar", (c) => {
+  // GET /:id/avatar — serve avatar image with ETag caching (optional ?size= thumbnail)
+  app.get("/:id/avatar", async (c) => {
     const id = c.req.param("id");
     const result = getCharacterAvatar(db, id);
 
@@ -95,16 +97,25 @@ export function createCharactersRouter(db: Database): Hono {
       return c.json({ error: "Avatar not found" }, 404);
     }
 
+    const size = parseSizeParam(c.req.query("size"));
+    const { buffer, mime } = await resizeAvatar(
+      result.avatar,
+      "image/png",
+      size,
+      `character-${id}`,
+    );
+
     // ETag / If-None-Match caching
+    const etag = `"${result.avatar_hash}-${size ?? "full"}"`;
     const ifNoneMatch = c.req.header("If-None-Match");
-    if (ifNoneMatch && ifNoneMatch === `"${result.avatar_hash}"`) {
+    if (ifNoneMatch && ifNoneMatch === etag) {
       return new Response(null, { status: 304 });
     }
 
-    return new Response(result.avatar as unknown as BodyInit, {
+    return new Response(buffer as unknown as BodyInit, {
       headers: {
-        "Content-Type": "image/png",
-        ETag: `"${result.avatar_hash}"`,
+        "Content-Type": mime,
+        ETag: etag,
         "Cache-Control": "public, max-age=86400, must-revalidate",
       },
     });
@@ -284,11 +295,15 @@ export function createCharactersRouter(db: Database): Hono {
       speaker_ids: [userSpeakerId, botSpeakerId],
     });
 
-    // Tag the chat with the character_id
+    // Tag the chat with the character_id and apply the global persona if one is set
+    const globalPersona = getGlobalPersona(db);
     db.query("UPDATE chats SET character_id = $cid WHERE id = $id").run({
       $cid: characterId,
       $id: chat.id,
     });
+    if (globalPersona) {
+      updateChat(db, chat.id, { persona_id: globalPersona.id });
+    }
 
     // Insert the character's first message
     let rootNode = null;

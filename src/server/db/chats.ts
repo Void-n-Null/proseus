@@ -7,6 +7,7 @@ interface ChatRow {
   name: string;
   root_node_id: string | null;
   tags: string;
+  persona_id: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -25,6 +26,7 @@ function rowToChat(db: Database, row: ChatRow): Chat {
     root_node_id: row.root_node_id,
     speaker_ids: getSpeakerIds(db, row.id),
     tags: JSON.parse(row.tags) as string[],
+    persona_id: row.persona_id ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -70,6 +72,7 @@ export function createChat(
     root_node_id: input.root_node_id ?? null,
     speaker_ids: input.speaker_ids,
     tags,
+    persona_id: null,
     created_at: now,
     updated_at: now,
   };
@@ -116,7 +119,7 @@ export function listChats(db: Database): ChatListItem[] {
 export function updateChat(
   db: Database,
   id: string,
-  input: { name?: string; tags?: string[] },
+  input: { name?: string; tags?: string[]; persona_id?: string | null },
 ): Chat | null {
   const existing = db
     .query("SELECT * FROM chats WHERE id = $id")
@@ -127,14 +130,18 @@ export function updateChat(
   const name = input.name ?? existing.name;
   const tags =
     input.tags !== undefined ? input.tags : (JSON.parse(existing.tags) as string[]);
+  // persona_id: explicit null clears it, undefined keeps existing
+  const persona_id =
+    "persona_id" in input ? (input.persona_id ?? null) : (existing.persona_id ?? null);
   const now = Date.now();
 
   db.query(
-    `UPDATE chats SET name = $name, tags = $tags, updated_at = $updated_at WHERE id = $id`,
+    `UPDATE chats SET name = $name, tags = $tags, persona_id = $persona_id, updated_at = $updated_at WHERE id = $id`,
   ).run({
     $id: id,
     $name: name,
     $tags: JSON.stringify(tags),
+    $persona_id: persona_id,
     $updated_at: now,
   });
 
@@ -144,6 +151,7 @@ export function updateChat(
     root_node_id: existing.root_node_id,
     speaker_ids: getSpeakerIds(db, id),
     tags,
+    persona_id,
     created_at: existing.created_at,
     updated_at: now,
   };

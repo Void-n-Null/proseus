@@ -1,9 +1,10 @@
 // ── Client -> Server ───────────────────────────────────────────
 
+import type { ProviderName } from "./providers.ts";
+
 export type ClientWsMessage =
   | { type: "subscribe"; chatId: string }
   | { type: "unsubscribe"; chatId: string }
-  | { type: "set-api-key"; provider: "openrouter"; key: string }
   | {
       type: "test-stream";
       chatId: string;
@@ -18,12 +19,14 @@ export type ClientWsMessage =
       speakerId: string;
       model: string;
       nodeId: string;
+      provider?: ProviderName;
     }
   | {
       type: "generate";
       chatId: string;
       model: string;
       nodeId: string;
+      provider?: ProviderName;
     }
   | { type: "cancel-stream"; chatId: string };
 

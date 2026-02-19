@@ -29,6 +29,18 @@ export interface Chat {
   root_node_id: string | null;
   speaker_ids: string[];
   tags: string[];
+  persona_id: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+/** A user persona: name, avatar, and a prompt injected into the system context. */
+export interface Persona {
+  id: string;
+  name: string;
+  prompt: string;
+  avatar_url: string | null;
+  is_global: boolean;
   created_at: number;
   updated_at: number;
 }

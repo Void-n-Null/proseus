@@ -1,4 +1,5 @@
-import type { Chat, ChatNode, Speaker, ChatListItem, ActivePath, Character, CharacterListItem } from "./types";
+import type { Chat, ChatNode, Speaker, ChatListItem, ActivePath, Character, CharacterListItem, Persona } from "./types";
+import type { ProviderName } from "./providers.ts";
 
 // ── Chat endpoints ──
 
@@ -26,6 +27,45 @@ export interface ListChatsResponse {
 export interface UpdateChatRequest {
   name?: string;
   tags?: string[];
+  persona_id?: string | null;
+}
+
+// ── Persona endpoints ──
+
+export interface ListPersonasResponse {
+  personas: Persona[];
+}
+
+export interface GetPersonaResponse {
+  persona: Persona;
+}
+
+export interface CreatePersonaRequest {
+  name: string;
+  prompt?: string;
+  is_global?: boolean;
+}
+
+export interface CreatePersonaResponse {
+  persona: Persona;
+}
+
+export interface UpdatePersonaRequest {
+  name?: string;
+  prompt?: string;
+  is_global?: boolean;
+}
+
+export interface UpdatePersonaResponse {
+  persona: Persona;
+}
+
+export interface SetChatPersonaRequest {
+  persona_id: string | null;
+}
+
+export interface SetChatPersonaResponse {
+  chat: Chat;
 }
 
 // ── Message endpoints ──
@@ -115,4 +155,44 @@ export interface CreateSpeakerResponse {
 
 export interface ListSpeakersResponse {
   speakers: Speaker[];
+}
+
+// ── Connection endpoints ──
+
+export interface ConnectionStatusItem {
+  provider: ProviderName;
+  connected: boolean;
+  updated_at: number | null;
+}
+
+export interface ListConnectionsResponse {
+  connections: ConnectionStatusItem[];
+}
+
+export interface SaveConnectionRequest {
+  provider: ProviderName;
+  api_key: string;
+}
+
+export interface SaveConnectionResponse {
+  provider: ProviderName;
+  connected: boolean;
+}
+
+export interface DeleteConnectionResponse {
+  ok: true;
+}
+
+// ── Settings endpoints ──
+
+export interface GetSettingsResponse {
+  settings: Record<string, string>;
+}
+
+export interface UpdateSettingsRequest {
+  settings: Record<string, string>;
+}
+
+export interface UpdateSettingsResponse {
+  settings: Record<string, string>;
 }

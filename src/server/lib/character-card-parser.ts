@@ -166,10 +166,33 @@ export function extractCardFromJSON(json: string): NormalizedCard {
 
 function decodeBase64(text: string): string {
   try {
-    return atob(text);
+    // Must use Buffer for proper UTF-8 handling. atob() returns a Latin-1
+    // binary string which corrupts multi-byte UTF-8 sequences (CJK, emoji, etc.)
+    const decoded = Buffer.from(text, "base64").toString("utf-8");
+
+    // Some tools accidentally double-encode. If the decoded string is
+    // still valid base64 that decodes to valid JSON, unwrap one layer.
+    if (looksLikeBase64(decoded)) {
+      try {
+        const inner = Buffer.from(decoded, "base64").toString("utf-8");
+        JSON.parse(inner); // validates it's real JSON
+        return inner;
+      } catch {
+        // Not double-encoded, use the first decode
+      }
+    }
+
+    return decoded;
   } catch {
     throw new CardParseError("Failed to decode base64 character data from PNG chunk.");
   }
+}
+
+/** Heuristic: does this string look like it's base64-encoded? */
+function looksLikeBase64(s: string): boolean {
+  // Must be at least ~20 chars (a tiny JSON object), only base64 chars, no whitespace
+  if (s.length < 20) return false;
+  return /^[A-Za-z0-9+/=]+$/.test(s.trim());
 }
 
 function parseAndNormalize(json: string, fromCcv3: boolean): NormalizedCard {
@@ -223,11 +246,23 @@ function str(value: unknown): string {
 }
 
 function strArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((v): v is string => typeof v === "string");
+  if (Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === "string");
+  }
+  // Some old exporters write tags/alternate_greetings as a single string.
+  // Split comma-separated strings into arrays (like SillyTavern does).
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
 }
 
 function normalizeV1(card: TavernCardV1): NormalizedCard {
+  // Some old tools use 'creatorcomment' instead of 'creator_notes' (SillyTavern maps this).
+  // V1 cards from certain tools also have V2 fields at root level (system_prompt, tags, etc.)
+  const extra = card as unknown as Record<string, unknown>;
+  const creatorNotes = str(extra.creatorcomment ?? extra.creator_notes);
+
   return {
     name: str(card.name) || "Unnamed",
     description: str(card.description),
@@ -236,22 +271,30 @@ function normalizeV1(card: TavernCardV1): NormalizedCard {
     first_mes: str(card.first_mes),
     mes_example: str(card.mes_example),
 
-    creator_notes: "",
-    system_prompt: "",
-    post_history_instructions: "",
-    alternate_greetings: [],
-    tags: [],
-    creator: "",
-    character_version: "",
+    creator_notes: creatorNotes,
+    system_prompt: str(extra.system_prompt),
+    post_history_instructions: str(extra.post_history_instructions),
+    alternate_greetings: strArray(extra.alternate_greetings),
+    tags: strArray(extra.tags),
+    creator: str(extra.creator),
+    character_version: str(extra.character_version),
 
-    extensions: {},
-    character_book: null,
+    extensions:
+      extra.extensions && typeof extra.extensions === "object"
+        ? (extra.extensions as Record<string, unknown>)
+        : {},
+    character_book: normalizeCharacterBook(extra.character_book),
     source_spec: "v1",
   };
 }
 
 function normalizeV2(card: TavernCardV2): NormalizedCard {
-  const d = card.data ?? ({} as TavernCardV2["data"]);
+  if (!card.data || typeof card.data !== "object") {
+    throw new CardParseError(
+      "V2 character card has spec field but no valid 'data' object.",
+    );
+  }
+  const d = card.data;
 
   return {
     name: str(d.name) || "Unnamed",
@@ -279,11 +322,17 @@ function normalizeV2(card: TavernCardV2): NormalizedCard {
 }
 
 function normalizeV3(card: TavernCardV3): NormalizedCard {
+  if (!card.data || typeof card.data !== "object") {
+    throw new CardParseError(
+      "V3 character card has spec field but no valid 'data' object.",
+    );
+  }
+
   // Extract V2-compatible fields, store full V3 data in extensions
   const normalized = normalizeV2({
     spec: "chara_card_v2",
     spec_version: "2.0",
-    data: card.data ?? ({} as TavernCardV3["data"]),
+    data: card.data,
   });
 
   // Preserve the full original V3 card for lossless round-trip

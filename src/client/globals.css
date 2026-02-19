@@ -11,10 +11,10 @@
 
 @theme {
   /* Surface layers — blue-tinted near-blacks, hue 250 */
-  --color-background: oklch(0.08 0.01 250);
-  --color-surface: oklch(0.13 0.01 250);
-  --color-surface-raised: oklch(0.16 0.01 250);
-  --color-surface-hover: oklch(0.20 0.01 250);
+  --color-background: oklch(0.2 0.007 300);
+  --color-surface: oklch(0.18 0.007 300);
+  --color-surface-raised: oklch(0.25 0.007 300);
+  --color-surface-hover: oklch(0.23 0.007 300);
 
   /* Borders — ultra-subtle */
   --color-border: oklch(0.25 0.005 250);
@@ -41,6 +41,45 @@
   --radius-sm: 0.125rem;
   --radius-md: 0.25rem;
   --radius-lg: 0.375rem;
+
+  /* shadcn animation keyframes */
+  --animate-in: enter 0.2s ease-out;
+  --animate-out: exit 0.2s ease-in;
+}
+
+/* shadcn animation keyframes for Radix state transitions */
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(
+        var(--tw-enter-translate-x, 0),
+        var(--tw-enter-translate-y, 0),
+        0
+      )
+      scale3d(
+        var(--tw-enter-scale, 1),
+        var(--tw-enter-scale, 1),
+        var(--tw-enter-scale, 1)
+      )
+      rotate(var(--tw-enter-rotate, 0));
+  }
+}
+
+@keyframes exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(
+        var(--tw-exit-translate-x, 0),
+        var(--tw-exit-translate-y, 0),
+        0
+      )
+      scale3d(
+        var(--tw-exit-scale, 1),
+        var(--tw-exit-scale, 1),
+        var(--tw-exit-scale, 1)
+      )
+      rotate(var(--tw-exit-rotate, 0));
+  }
 }
 
 body {
@@ -178,7 +217,7 @@ body {
 /* Roleplay action italics — the *action* convention.
    marked renders *text* as <em> per CommonMark. */
 .message-content em {
-  color: oklch(0.75 0.06 250);
+  color: oklch(0.6 0.03 250);
   font-style: italic;
 }
 
@@ -419,6 +458,50 @@ body {
 }
 .message-content .hljs-strong {
   font-weight: 500;
+}
+
+/* ============================================
+   CONNECTION VALIDATION — shimmer + pulse
+   Used in the Model Browser connection flow.
+   ============================================ */
+
+@keyframes connection-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes connection-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes connection-dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+.connection-shimmer-bar {
+  position: relative;
+  overflow: hidden;
+  border-radius: 9999px;
+}
+
+.connection-shimmer-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(0.70 0.15 280 / 0.3) 50%,
+    transparent 100%
+  );
+  animation: connection-shimmer 1.4s ease-in-out infinite;
+}
+
+.connection-icon-pulse {
+  animation: connection-pulse 1.6s ease-in-out infinite;
 }
 
 /* Reduced motion */

@@ -18,7 +18,6 @@
 import type { Server } from "bun";
 import type { Database } from "bun:sqlite";
 import { streamText } from "ai";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import type { ServerWsMessage, WsContext } from "../../shared/ws-types.ts";
 import { generateId } from "../../shared/ids.ts";
 import { addMessage, getChatTree } from "../db/messages.ts";
@@ -26,6 +25,9 @@ import { getChat } from "../db/chats.ts";
 import { getActivePath } from "../../shared/tree.ts";
 import type { ChatNode } from "../../shared/types.ts";
 import { assemblePrompt } from "./chat-pipeline.ts";
+import type { ProviderName } from "../../shared/providers.ts";
+import { createModel } from "../lib/llm.ts";
+import { getApiKey } from "../db/connections.ts";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -61,7 +63,6 @@ export class StreamManager {
   private streamTimers = new Map<string, Timer>();
   private server: Server<WsContext> | null = null;
   private db: Database;
-  private apiKey: string | null = null;
 
   constructor(db: Database) {
     this.db = db;
@@ -72,14 +73,9 @@ export class StreamManager {
     this.server = server;
   }
 
-  /** Store an OpenRouter API key for use in AI streams. */
-  setApiKey(key: string): void {
-    this.apiKey = key;
-  }
-
-  /** Check if an API key has been configured. */
-  hasApiKey(): boolean {
-    return this.apiKey !== null && this.apiKey.length > 0;
+  /** Check if a provider has a configured API key. */
+  async hasApiKey(provider: ProviderName = "openrouter"): Promise<boolean> {
+    return (await getApiKey(this.db, provider)) !== null;
   }
 
   /** Get the active stream for a chat, if any. */
@@ -103,12 +99,13 @@ export class StreamManager {
    *
    * Returns the streamId, or null with an error string.
    */
-  startGeneration(
+  async startGeneration(
     chatId: string,
     model: string,
     nodeId: string,
-  ): { streamId: string } | { error: string } {
-    if (!this.apiKey) return { error: "No API key configured" };
+    provider: ProviderName = "openrouter",
+  ): Promise<{ streamId: string } | { error: string }> {
+    if (!(await this.hasApiKey(provider))) return { error: `No API key configured for ${provider}` };
     if (this.chatStreams.has(chatId)) return { error: "Chat already streaming" };
 
     // Resolve parentId: leaf of the active path
@@ -136,7 +133,7 @@ export class StreamManager {
     const speakerId = speakerRows.id;
 
     // Delegate to the existing startAIStream with resolved values
-    const streamId = this.startAIStream(chatId, parentId, speakerId, model, nodeId);
+    const streamId = await this.startAIStream(chatId, parentId, speakerId, model, nodeId, provider);
     if (!streamId) return { error: "Failed to start stream" };
     return { streamId };
   }
@@ -220,14 +217,15 @@ export class StreamManager {
    *
    * @param nodeId - Client-provided ID for the node to be created.
    */
-  startAIStream(
+  async startAIStream(
     chatId: string,
     parentId: string,
     speakerId: string,
     model: string,
     nodeId: string,
-  ): string | null {
-    if (!this.apiKey) return null;
+    provider: ProviderName = "openrouter",
+  ): Promise<string | null> {
+    if (!(await this.hasApiKey(provider))) return null;
     if (this.chatStreams.has(chatId)) return null;
 
     const streamId = generateId();
@@ -257,7 +255,7 @@ export class StreamManager {
     });
 
     // Run the AI stream asynchronously
-    this.runAIStream(stream, model).catch((err) => {
+    this.runAIStream(stream, model, provider).catch((err) => {
       // Only broadcast error if the stream is still active (not cancelled)
       if (this.activeStreams.has(streamId)) {
         this.publish(chatId, {
@@ -277,8 +275,9 @@ export class StreamManager {
   private async runAIStream(
     stream: ActiveStream,
     model: string,
+    provider: ProviderName = "openrouter",
   ): Promise<void> {
-    const openrouter = createOpenRouter({ apiKey: this.apiKey! });
+    const aiModel = await createModel(this.db, provider, model);
 
     // Assemble the full prompt from character + chat history
     const prompt = assemblePrompt(this.db, stream.chatId);
@@ -287,7 +286,7 @@ export class StreamManager {
     }
 
     const result = streamText({
-      model: openrouter.chat(model),
+      model: aiModel,
       messages: prompt.messages,
       abortSignal: stream.abortController?.signal,
     });

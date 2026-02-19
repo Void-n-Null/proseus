@@ -29,6 +29,7 @@ import { getActivePath } from "../../shared/tree.ts";
 import { getChatTree } from "../db/messages.ts";
 import { getChat } from "../db/chats.ts";
 import { getCharacter } from "../db/characters.ts";
+import { getPersonaForChat } from "../db/personas.ts";
 
 /** A single message in the prompt, ready for the AI SDK. */
 export interface PromptMessage {
@@ -64,9 +65,10 @@ export function assemblePrompt(
   const nodesMap = new Map<string, ChatNode>(Object.entries(treeRecord));
   const pathIds = getActivePath(chat.root_node_id, nodesMap);
 
-  // Try to load the character associated with this chat
+  // Try to load the character and persona associated with this chat
   const characterId = getCharacterIdForChat(db, chatId);
   const character = characterId ? getCharacter(db, characterId) : null;
+  const persona = getPersonaForChat(db, chatId);
 
   const messages: PromptMessage[] = [];
 
@@ -103,6 +105,15 @@ export function assemblePrompt(
     // TODO: Lorebook entries would be injected here based on keyword
     // scanning of the chat history. character.character_book contains
     // the entries but activation logic is not implemented yet.
+  }
+
+  // ── Persona context (injected into the system prompt) ──
+  if (persona) {
+    const personaParts: string[] = [`[User: ${persona.name}]`];
+    if (persona.prompt) {
+      personaParts.push(persona.prompt);
+    }
+    systemParts.push(personaParts.join("\n"));
   }
 
   if (systemParts.length > 0) {

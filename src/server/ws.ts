@@ -16,7 +16,7 @@ export function createWebSocketHandler(streamManager: StreamManager) {
       // Connection established, no subscriptions yet
     },
 
-    message(ws: ServerWebSocket<WsContext>, raw: string | Buffer) {
+    async message(ws: ServerWebSocket<WsContext>, raw: string | Buffer) {
       let msg: ClientWsMessage;
       try {
         msg = JSON.parse(typeof raw === "string" ? raw : raw.toString());
@@ -65,11 +65,6 @@ export function createWebSocketHandler(streamManager: StreamManager) {
           break;
         }
 
-        case "set-api-key": {
-          streamManager.setApiKey(msg.key);
-          break;
-        }
-
         case "test-stream": {
           streamManager.startTestStream(
             msg.chatId,
@@ -81,21 +76,23 @@ export function createWebSocketHandler(streamManager: StreamManager) {
         }
 
         case "ai-stream": {
-          streamManager.startAIStream(
+          await streamManager.startAIStream(
             msg.chatId,
             msg.parentId,
             msg.speakerId,
             msg.model,
             msg.nodeId,
+            msg.provider,
           );
           break;
         }
 
         case "generate": {
-          const result = streamManager.startGeneration(
+          const result = await streamManager.startGeneration(
             msg.chatId,
             msg.model,
             msg.nodeId,
+            msg.provider,
           );
           if ("error" in result) {
             console.warn("[generate]", msg.chatId, result.error);

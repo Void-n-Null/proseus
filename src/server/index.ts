@@ -1,9 +1,12 @@
 import index from "../client/index.html";
 import api from "./api.ts";
-import db from "./db/index.ts";
+import db, { initDatabase } from "./db/index.ts";
 import type { WsContext } from "../shared/ws-types.ts";
 import { StreamManager } from "./services/stream-manager.ts";
 import { createWebSocketHandler } from "./ws.ts";
+
+// Initialize encryption key and migrate any plaintext API keys
+await initDatabase(db);
 
 const streamManager = new StreamManager(db);
 

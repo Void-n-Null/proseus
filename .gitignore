@@ -31,6 +31,7 @@ devlogs/
 
 # opencode AI tooling config (personal, not project)
 .opencode/
+.opencode.json
 
 # dotenv environment variable files
 .env

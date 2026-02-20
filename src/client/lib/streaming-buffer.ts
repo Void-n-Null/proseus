@@ -232,9 +232,22 @@ function resetState(): void {
 // Public API
 // ---------------------------------------------------------------------------
 
-/** Subscribe to content updates. Returns an unsubscribe function. */
+/**
+ * Subscribe to content updates. Returns an unsubscribe function.
+ *
+ * The listener is called immediately with the current revealed content
+ * so that late subscribers (e.g., components mounting after a reconnect
+ * `setContent()` call) don't miss already-delivered content.
+ */
 export function subscribeToContent(listener: ContentListener): () => void {
   listeners.add(listener);
+
+  // Deliver current state immediately so late subscribers see existing content.
+  // This handles the race where setContent() fired before the component mounted.
+  if (sessionActive && revealedLength > 0) {
+    listener(contentBuffer.substring(0, revealedLength));
+  }
+
   return () => {
     listeners.delete(listener);
   };

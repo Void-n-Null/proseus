@@ -29,6 +29,9 @@ _tmp_*
 # devlogs (personal engineering journal)
 devlogs/
 
+# opencode AI tooling config (personal, not project)
+.opencode/
+
 # dotenv environment variable files
 .env
 .env.development.local

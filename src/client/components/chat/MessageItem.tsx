@@ -62,16 +62,17 @@ const MessageItem = React.memo(
             : "0.15rem 1rem 0.15rem 1rem",
           gap: "0.6rem",
           transition: "background-color 0.15s",
-          backgroundColor: isHovered ? "#111" : "transparent",
+          backgroundColor: isHovered ? "var(--color-surface-raised)" : "transparent",
         }}
       >
         {/* Avatar column — always present for alignment */}
         <div
           style={{
             width: 50,
-            minWidth: 60,
+            minWidth: 50,
             display: "flex",
             justifyContent: "center",
+            alignSelf: "flex-start",
             paddingTop: isFirstInGroup ? 2 : 0,
           }}
         >
@@ -81,8 +82,7 @@ const MessageItem = React.memo(
                 src={speaker.avatar_url}
                 alt={speaker.name}
                 width={50}
-                height={64}
-                borderRadius="20%"
+                fit="natural"
               />
             ) : (
               <div

@@ -81,14 +81,45 @@ const MessageList = React.memo(function MessageList({
     [virtualizer],
   );
 
-  // ── Scroll to bottom when item count changes (new message added) ────
-  const prevCountRef = useRef(nodes.length);
+  // ── Scroll to bottom on initial load and when new messages arrive ────
+  const prevCountRef = useRef(0);
+  const initialScrollDoneRef = useRef(false);
+
+  // Scroll to the last item using the virtualizer (reliable with estimated sizes).
+  const scrollToLastItem = useCallback(() => {
+    if (nodes.length === 0) return;
+    virtualizer.scrollToIndex(nodes.length - 1, { align: "end" });
+    // After the virtualizer scrolls and measures, do a second pass to ensure
+    // we're truly at the bottom (first scroll uses estimated size, second uses measured).
+    requestAnimationFrame(() => {
+      virtualizer.scrollToIndex(nodes.length - 1, { align: "end" });
+      // Re-engage sticky after programmatic scroll
+      forceScrollToBottom();
+    });
+  }, [nodes.length, virtualizer, forceScrollToBottom]);
+
   useEffect(() => {
-    if (nodes.length > prevCountRef.current) {
+    if (nodes.length > 0 && !initialScrollDoneRef.current) {
+      // First time we have content — scroll to the last message.
+      initialScrollDoneRef.current = true;
+      // Defer so the virtualizer has laid out at least the estimated items.
+      requestAnimationFrame(() => scrollToLastItem());
+    } else if (nodes.length > prevCountRef.current && prevCountRef.current > 0) {
+      // Subsequent new message — scroll if sticky
       requestAnimationFrame(() => scrollToBottom());
     }
     prevCountRef.current = nodes.length;
-  }, [nodes.length, scrollToBottom]);
+  }, [nodes.length, scrollToBottom, scrollToLastItem]);
+
+  // Reset initial scroll flag when chat changes
+  const prevChatIdRef = useRef(chatId);
+  useEffect(() => {
+    if (chatId !== prevChatIdRef.current) {
+      initialScrollDoneRef.current = false;
+      prevCountRef.current = 0;
+      prevChatIdRef.current = chatId;
+    }
+  }, [chatId]);
 
   // ── During streaming: keep scroll pinned as content grows ───────────
   useEffect(() => {

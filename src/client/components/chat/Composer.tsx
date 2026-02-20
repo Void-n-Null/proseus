@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useIsStreaming } from "../../stores/streaming.ts";
+import { useConnectionStatus, type ConnectionStatus } from "../../stores/connection.ts";
 import { useChatMutations } from "../../hooks/useMutations.ts";
 import { usePersonas, useSetChatPersona } from "../../hooks/usePersonas.ts";
 import { PersonaAvatar } from "../personas/PersonaSidebar.tsx";
@@ -54,6 +55,10 @@ const Composer = React.memo(function Composer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const isStreaming = useIsStreaming();
+  const connectionStatus = useConnectionStatus();
+  const isConnected = connectionStatus === "connected";
+  const isReconnecting = connectionStatus === "reconnecting";
+  const isDisconnected = connectionStatus === "disconnected" || isReconnecting;
   const { addMessage } = useChatMutations(chatId);
 
   // Persona data
@@ -63,7 +68,7 @@ const Composer = React.memo(function Composer({
   const activePersona = personas.find((p) => p.id === personaId) ?? null;
 
   const hasText = draft.trim().length > 0;
-  const canSend = hasText && userSpeakerId !== null;
+  const canSend = hasText && userSpeakerId !== null && isConnected;
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -328,7 +333,7 @@ const Composer = React.memo(function Composer({
     <div
       className="shrink-0 pt-0 pb-4 md:px-6"
       style={{
-        background: "linear-gradient(to top, #060b12 60%, transparent 100%)",
+        background: "linear-gradient(to top, var(--color-background) 60%, transparent 100%)",
         paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
       }}
     >
@@ -508,9 +513,13 @@ const Composer = React.memo(function Composer({
               value={draft}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
-              disabled={isStreaming}
+              disabled={isStreaming || isDisconnected}
               placeholder={
-                isStreaming ? "Generating..." : "Send a message..."
+                isDisconnected
+                  ? "Reconnecting to server..."
+                  : isStreaming
+                    ? "Generating..."
+                    : "Send a message..."
               }
               rows={3}
               className={[
@@ -692,6 +701,48 @@ const Composer = React.memo(function Composer({
                     display: "block",
                   }}
                 />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Connection status banner — shown when WS is disconnected */}
+          <AnimatePresence>
+            {isDisconnected && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <div
+                  className="flex items-center justify-center gap-2 py-1.5 text-xs"
+                  style={{
+                    color: isReconnecting ? "#eab308" : "#ef4444",
+                  }}
+                >
+                  {/* Pulsing dot */}
+                  <motion.div
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: isReconnecting ? "#eab308" : "#ef4444",
+                      flexShrink: 0,
+                    }}
+                    animate={{ opacity: [1, 0.3, 1] }}
+                    transition={{
+                      duration: isReconnecting ? 1.2 : 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  />
+                  <span style={{ fontFamily: "'Outfit', system-ui, sans-serif" }}>
+                    {isReconnecting
+                      ? "Connection lost — reconnecting..."
+                      : "Disconnected from server"}
+                  </span>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

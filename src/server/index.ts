@@ -13,11 +13,15 @@ const streamManager = new StreamManager(db);
 const server = Bun.serve<WsContext>({
   port: 3000,
   routes: {
+    // SPA routes — all serve the same HTML shell, client-side routing
+    // picks the view based on the URL path.
     "/": index,
+    "/chat/:id": index,
   },
   fetch(req, server) {
-    // WebSocket upgrade for /ws
     const url = new URL(req.url);
+
+    // WebSocket upgrade for /ws
     if (url.pathname === "/ws") {
       const upgraded = server.upgrade(req, {
         data: { subscribedChats: new Set<string>() },
@@ -26,7 +30,7 @@ const server = Bun.serve<WsContext>({
       return new Response("WebSocket upgrade failed", { status: 400 });
     }
 
-    // Everything else goes to Hono
+    // Everything else goes to Hono (API routes)
     return api.fetch(req);
   },
   websocket: createWebSocketHandler(streamManager),

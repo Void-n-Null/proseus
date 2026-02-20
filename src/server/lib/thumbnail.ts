@@ -29,11 +29,13 @@ export function parseSizeParam(raw: string | undefined): number | null {
 }
 
 /**
- * Resize an avatar to fit within `size x size` using cover + Mitchell.
+ * Resize an image so its **shorter** side equals `size`, preserving aspect
+ * ratio. Landscape images treat `size` as the height; portrait (or square)
+ * images treat it as the width. Nothing is cropped — the full image is kept.
  *
  * Mitchell-Netravali produces smoother results than Lanczos3 for photographic
  * content — no ringing artifacts (halos around edges). Combined with high
- * webp quality this gives the best visual result for avatar thumbnails.
+ * webp quality this gives the best visual result for thumbnails.
  *
  * Returns the original blob untouched when no size is requested.
  * Results are cached in-memory keyed by `cacheKey-size`.
@@ -50,11 +52,19 @@ export async function resizeAvatar(
   const cached = cache.get(key);
   if (cached) return cached;
 
+  const meta = await sharp(blob).metadata();
+  const w = meta.width ?? 1;
+  const h = meta.height ?? 1;
+
+  // Constrain the shorter side to `size`; the longer side scales freely.
+  const landscape = w >= h;
+  const resizeOpts: sharp.ResizeOptions = {
+    ...(landscape ? { height: size } : { width: size }),
+    kernel: sharp.kernel.mitchell,
+  };
+
   const resized = await sharp(blob)
-    .resize(size, size, {
-      fit: "cover",
-      kernel: sharp.kernel.mitchell,
-    })
+    .resize(resizeOpts)
     .webp({ quality: 95, smartSubsample: true })
     .toBuffer();
 

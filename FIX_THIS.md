@@ -44,9 +44,9 @@ SillyTavern has 90+ npm dependencies, including `body-parser` (built into Expres
 
 **Proseus rule:** Minimize dependencies ruthlessly. Use the platform. Bun has native SQLite, native fetch, native WebSocket, native TypeScript execution. Hono is the only server framework. React + ReactDOM are the only UI framework. Every dependency must justify its existence. If Bun or the browser provides it natively, use the native version.
 
-### 7. The RossAscends Problem
+### 7. The Organization Problem
 
-SillyTavern has a file called `RossAscends-mods.js`. Files are organized by who wrote them, not what they do. The `power-user.js` file at 4,550 lines is a junk drawer. `openai.js` at 6,739 lines handles one provider in a file longer than some entire applications.
+SillyTavern organizes some files by contributor rather than by function. The `power-user.js` file at 4,550 lines is a junk drawer. `openai.js` at 6,739 lines handles one provider in a file longer than some entire applications.
 
 **Proseus rule:** Files are organized by domain, not author. Every file has a single, obvious reason to exist. No file exceeds 500 lines without a very good reason (pure data schemas are the exception). The directory structure communicates architecture at a glance.
 
@@ -223,7 +223,7 @@ Proseus shares design DNA with its sister project `proseus-ai`. Same forge metap
 
 2. **Schema-driven everything.** Design config, prompt slots, provider definitions, settings -- all driven by typed schemas. Adding a new setting means adding to a schema, not writing UI code.
 
-3. **Small files, clear names.** No 12,000-line scripts. No `power-user.ts`. No `RossAscends-mods.ts`. Files named by what they do, organized by domain.
+3. **Small files, clear names.** No 12,000-line scripts. No `power-user.ts`. No contributor-named files. Files named by what they do, organized by domain.
 
 4. **Tests that matter.** Database operations, prompt assembly, tree traversal, API contracts. Don't test that React renders a div. Test that branching from message 500 in a 1000-message tree produces the correct active path.
 
@@ -370,7 +370,7 @@ These are patterns from SillyTavern that must never appear in Proseus.
 |---|---|---|
 | Mutable exported state | `export let chat = []` | All state in stores, never exported mutably |
 | God files | `script.js` at 11,767 lines | No file over 500 lines without justification |
-| Files named after authors | `RossAscends-mods.js` | Files named by domain and responsibility |
+| Files named after authors | contributor-named `.js` files | Files named by domain and responsibility |
 | Flat file storage | JSON/JSONL on disk | SQLite for everything |
 | jQuery DOM manipulation | `$('.selector').append()` | React owns the DOM |
 | Global event listeners | 6 listeners on one click handler | Scoped component handlers |
@@ -390,6 +390,6 @@ These are patterns from SillyTavern that must never appear in Proseus.
 
 SillyTavern proved the demand. TavernStudio proved the architecture. Proseus ships the product.
 
-The competition isn't SillyTavern's feature count. It's the experience of using those features. A fast, beautiful, deeply customizable AI roleplay interface that respects your machine, your data, and your time.
+The goal isn't to match SillyTavern's feature count. It's to deliver a better experience of those features. A fast, beautiful, deeply customizable AI roleplay interface that respects your machine, your data, and your time.
 
-Build it right. Build it once. Make them switch.
+Build it right. Build it once.

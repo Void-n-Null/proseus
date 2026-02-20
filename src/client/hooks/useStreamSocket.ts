@@ -9,15 +9,17 @@
  * - Subscription effect (chatId dep): sends subscribe/unsubscribe when the
  *   active chat changes. Lightweight, no WS teardown.
  *
- * On reconnect (or late join), the server sends the full accumulated
- * content so the client can pick up mid-stream seamlessly.
+ * Reconnection: On unexpected close, the hook automatically reconnects
+ * with exponential backoff (1s → 2s → 4s → ... → 30s cap) plus jitter.
+ * On successful reconnect, re-subscribes to the active chat so the server
+ * can send full accumulated content for any in-progress stream.
  *
  * When streaming starts, a placeholder node is optimistically inserted
  * into the TanStack Query tree cache so MessageItem can render immediately
  * with the same React key that will persist after finalization.
  */
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type {
   ClientWsMessage,
@@ -28,13 +30,42 @@ import type { ProviderName } from "../../shared/providers.ts";
 import { generateId } from "../../shared/ids.ts";
 import { useStreamingStore } from "../stores/streaming.ts";
 import {
+  useConnectionStore,
+  useConnectionStatus,
+  type ConnectionStatus,
+} from "../stores/connection.ts";
+import {
   appendChunk,
   setContent,
   finalizeSession,
   cancelSession,
 } from "../lib/streaming-buffer.ts";
 
-export type WsStatus = "connecting" | "connected" | "disconnected";
+// ---------------------------------------------------------------------------
+// Reconnection constants
+// ---------------------------------------------------------------------------
+
+/** Initial delay before first reconnect attempt (ms). */
+const RECONNECT_BASE_MS = 1_000;
+/** Maximum delay between reconnect attempts (ms). */
+const RECONNECT_MAX_MS = 30_000;
+/** Multiplier for exponential backoff. */
+const RECONNECT_MULTIPLIER = 2;
+/** Random jitter range as a fraction of the computed delay (0–1). */
+const RECONNECT_JITTER = 0.3;
+
+/** Compute the delay for a given attempt number, with jitter. */
+function reconnectDelay(attempt: number): number {
+  const base = Math.min(
+    RECONNECT_BASE_MS * Math.pow(RECONNECT_MULTIPLIER, attempt),
+    RECONNECT_MAX_MS,
+  );
+  const jitter = base * RECONNECT_JITTER * Math.random();
+  return base + jitter;
+}
+
+// Re-export for backward compatibility (ChatPage, StreamDebug still use WsStatus)
+export type WsStatus = ConnectionStatus;
 
 /**
  * Shape of the cached tree data in TanStack Query.
@@ -46,7 +77,7 @@ interface TreeData {
 }
 
 interface UseStreamSocketReturn {
-  status: WsStatus;
+  status: ConnectionStatus;
   sendTestStream: (parentId: string, speakerId: string) => void;
   sendAIStream: (
     parentId: string,
@@ -61,6 +92,14 @@ interface UseStreamSocketReturn {
 /**
  * Insert a placeholder node into the TanStack Query tree cache.
  * This lets MessageItem render immediately with the final React key.
+ *
+ * Returns `true` if insertion succeeded (tree data was available),
+ * `false` if the tree isn't loaded yet and insertion should be retried.
+ *
+ * On reconnect/refresh, the tree may already contain the node (fetched
+ * from the DB before the WS `stream:start` arrived). In that case we
+ * skip insertion but still ensure the parent's active_child_index
+ * points to the streaming node.
  */
 function insertPlaceholderNode(
   qc: ReturnType<typeof useQueryClient>,
@@ -68,40 +107,55 @@ function insertPlaceholderNode(
   nodeId: string,
   parentId: string,
   speakerId: string,
-): void {
+): boolean {
   const treeKey = ["chat-tree", chatId];
   const previous = qc.getQueryData<TreeData>(treeKey);
-  if (!previous) return;
-
-  const placeholder: ChatNode = {
-    id: nodeId,
-    client_id: null,
-    parent_id: parentId,
-    child_ids: [],
-    active_child_index: null,
-    speaker_id: speakerId,
-    message: "",
-    is_bot: true,
-    created_at: Date.now(),
-    updated_at: null,
-  };
+  if (!previous) return false;
 
   const newNodes = new Map(previous.nodes);
-  newNodes.set(nodeId, placeholder);
+
+  // If the node already exists (DB fetch beat the WS message), skip
+  // creating a placeholder but still ensure active_child_index is correct.
+  if (!newNodes.has(nodeId)) {
+    const placeholder: ChatNode = {
+      id: nodeId,
+      client_id: null,
+      parent_id: parentId,
+      child_ids: [],
+      active_child_index: null,
+      speaker_id: speakerId,
+      message: "",
+      is_bot: true,
+      created_at: Date.now(),
+      updated_at: null,
+    };
+    newNodes.set(nodeId, placeholder);
+  }
 
   // Update parent's child_ids and active_child_index
   const parent = newNodes.get(parentId);
   if (parent) {
-    const newChildIds = [...parent.child_ids, nodeId];
+    // Only add to child_ids if not already present (idempotent)
+    const alreadyChild = parent.child_ids.includes(nodeId);
+    const newChildIds = alreadyChild
+      ? parent.child_ids
+      : [...parent.child_ids, nodeId];
+    const newIndex = newChildIds.indexOf(nodeId);
     newNodes.set(parentId, {
       ...parent,
       child_ids: newChildIds,
-      active_child_index: newChildIds.length - 1,
+      active_child_index: newIndex >= 0 ? newIndex : newChildIds.length - 1,
     });
   }
 
   qc.setQueryData<TreeData>(treeKey, { ...previous, nodes: newNodes });
+  return true;
 }
+
+/** Maximum number of placeholder insertion retries. */
+const PLACEHOLDER_MAX_RETRIES = 30;
+/** Interval between retries (ms). Tree queries typically resolve in <200ms. */
+const PLACEHOLDER_RETRY_INTERVAL = 100;
 
 /**
  * Remove a placeholder node from the TanStack Query tree cache.
@@ -149,8 +203,11 @@ export function useStreamSocket(
   chatId: string | null,
 ): UseStreamSocketReturn {
   const wsRef = useRef<WebSocket | null>(null);
-  const [status, setStatus] = useState<WsStatus>("disconnected");
   const qc = useQueryClient();
+
+  // Connection store for global status
+  const connStore = useConnectionStore;
+  const status = useConnectionStatus();
 
   // Use refs for streaming store functions so they don't cause
   // the connection effect to re-run when streaming state changes.
@@ -163,17 +220,36 @@ export function useStreamSocket(
   const chatIdRef = useRef(chatId);
   chatIdRef.current = chatId;
 
-  // ── Connection effect: ONE WebSocket for the app lifetime ──
-  useEffect(() => {
+  // Reconnection state managed via refs (not React state — no re-renders).
+  const reconnectAttemptRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Set to true during intentional cleanup (unmount). Prevents reconnect. */
+  const intentionalCloseRef = useRef(false);
+
+  // ── WebSocket factory ──────────────────────────────────────────
+  const createWebSocket = useCallback(() => {
+    // Clean up any existing connection
+    if (wsRef.current) {
+      // Prevent the close handler from triggering reconnect
+      intentionalCloseRef.current = true;
+      wsRef.current.close();
+      intentionalCloseRef.current = false;
+      wsRef.current = null;
+    }
+
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
     wsRef.current = ws;
-    setStatus("connecting");
+
+    const isReconnect = reconnectAttemptRef.current > 0;
+    connStore.getState().setStatus(isReconnect ? 'reconnecting' : 'connecting');
 
     ws.addEventListener("open", () => {
-      setStatus("connected");
+      // Success — reset reconnect counter, update store
+      reconnectAttemptRef.current = 0;
+      connStore.getState().markConnected();
 
-      // If we already have a chatId, subscribe now
+      // (Re-)subscribe to the active chat
       const currentChatId = chatIdRef.current;
       if (currentChatId) {
         wsSend(ws, { type: "subscribe", chatId: currentChatId });
@@ -194,13 +270,32 @@ export function useStreamSocket(
 
       switch (msg.type) {
         case "stream:start": {
-          insertPlaceholderNode(
+          const inserted = insertPlaceholderNode(
             qc,
             msg.chatId,
             msg.nodeId,
             msg.parentId,
             msg.speakerId,
           );
+
+          if (!inserted) {
+            // Tree data not loaded yet — retry until it is.
+            // This race happens on refresh: the WS reconnects and
+            // receives stream:start before the tree HTTP query resolves.
+            // The node is NOT in the DB yet (only persisted on stream:end),
+            // so the placeholder is the only way it appears in the tree.
+            let retries = 0;
+            const retryInsert = () => {
+              if (insertPlaceholderNode(qc, msg.chatId, msg.nodeId, msg.parentId, msg.speakerId)) {
+                return; // Success
+              }
+              if (++retries < PLACEHOLDER_MAX_RETRIES) {
+                setTimeout(retryInsert, PLACEHOLDER_RETRY_INTERVAL);
+              }
+            };
+            setTimeout(retryInsert, PLACEHOLDER_RETRY_INTERVAL);
+          }
+
           storeStartRef.current(msg.parentId, msg.speakerId, msg.nodeId);
           break;
         }
@@ -258,17 +353,62 @@ export function useStreamSocket(
     });
 
     ws.addEventListener("close", () => {
-      setStatus("disconnected");
       wsRef.current = null;
+
+      // If this was intentional (unmount), don't reconnect
+      if (intentionalCloseRef.current) {
+        connStore.getState().markDisconnected();
+        return;
+      }
+
+      // Unintentional close — schedule reconnect with backoff
+      const attempt = reconnectAttemptRef.current;
+      const delay = reconnectDelay(attempt);
+      reconnectAttemptRef.current = attempt + 1;
+
+      connStore.getState().markReconnecting(attempt + 1);
+
+      console.warn(
+        `[ws] Connection lost. Reconnecting in ${(delay / 1000).toFixed(1)}s (attempt ${attempt + 1})...`,
+      );
+
+      reconnectTimerRef.current = setTimeout(() => {
+        reconnectTimerRef.current = null;
+        createWebSocket();
+      }, delay);
     });
 
+    ws.addEventListener("error", () => {
+      // The error event is always followed by a close event,
+      // so reconnection is handled in the close handler.
+      // We just log here for debugging.
+      console.warn("[ws] WebSocket error occurred.");
+    });
+  }, [qc, connStore]);
+
+  // ── Connection effect: ONE WebSocket for the app lifetime ──
+  useEffect(() => {
+    intentionalCloseRef.current = false;
+    createWebSocket();
+
     return () => {
-      ws.close();
-      wsRef.current = null;
-      setStatus("disconnected");
+      // Intentional unmount — clean up without triggering reconnect
+      intentionalCloseRef.current = true;
+
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+
+      connStore.getState().markDisconnected();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally empty: one connection per mount
-  }, [qc]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally stable: one connection per mount
+  }, [createWebSocket]);
 
   // ── Subscription effect: lightweight chat topic switching ──
   useEffect(() => {

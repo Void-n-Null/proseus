@@ -11,6 +11,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useIsStreaming, useStreamingMeta } from "../../stores/streaming.ts";
 import type { WsStatus } from "../../hooks/useStreamSocket.ts";
+// WsStatus is now ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'reconnecting'
 
 const API_KEY_STORAGE_KEY = "proseus:openrouter-key";
 const MODEL_STORAGE_KEY = "proseus:model";
@@ -77,7 +78,7 @@ export default function StreamDebug({
   const statusColor =
     wsStatus === "connected"
       ? "#22c55e"
-      : wsStatus === "connecting"
+      : wsStatus === "connecting" || wsStatus === "reconnecting"
         ? "#eab308"
         : "#ef4444";
 

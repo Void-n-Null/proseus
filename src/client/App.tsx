@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { useChatList } from "./hooks/useChat.ts";
 import { api } from "./api/client.ts";
+import { useRoute } from "./hooks/useRoute.ts";
 import ChatPage from "./components/chat/ChatPage.tsx";
 import CharacterSidebar from "./components/characters/CharacterSidebar.tsx";
 import PersonaSidebar from "./components/personas/PersonaSidebar.tsx";
@@ -10,9 +11,10 @@ import { useOAuthCallback } from "./hooks/useOAuthCallback.ts";
 export default function App() {
   const { data: chatData, isLoading, refetch } = useChatList();
   const [seeding, setSeeding] = useState(false);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const { route, navigateToChat, navigateHome, replaceRoute } = useRoute();
   const [sidebarView, setSidebarView] = useState<"characters" | "chats" | "personas">(
-    "characters",
+    // Default to "chats" if we loaded with a chat URL, otherwise "characters"
+    route.chatId ? "chats" : "characters",
   );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { oauthState, dismissOAuth } = useOAuthCallback();
@@ -29,19 +31,41 @@ export default function App() {
 
   const handleChatCreated = useCallback(
     (chatId: string) => {
-      setActiveChatId(chatId);
+      navigateToChat(chatId);
+      setSidebarView("chats");
       refetch();
     },
-    [refetch],
+    [navigateToChat, refetch],
   );
+
+  const handleSelectChat = useCallback(
+    (chatId: string) => {
+      navigateToChat(chatId);
+    },
+    [navigateToChat],
+  );
+
+  const handleCloseChat = useCallback(() => {
+    navigateHome();
+  }, [navigateHome]);
 
   const chats = chatData?.chats ?? [];
 
-  // If we have an active chat, verify it still exists
-  const resolvedChatId =
-    activeChatId && chats.some((c) => c.id === activeChatId)
-      ? activeChatId
-      : null;
+  // Validate the chat ID from the URL against the actual chat list.
+  // If the URL points to a chat that doesn't exist, silently redirect home.
+  const activeChatId = route.chatId;
+  const resolvedChatId = useMemo(() => {
+    if (!activeChatId) return null;
+    if (chats.some((c) => c.id === activeChatId)) return activeChatId;
+    return null;
+  }, [activeChatId, chats]);
+
+  // If the URL had an invalid chat ID and data has loaded, fix the URL.
+  useEffect(() => {
+    if (!isLoading && activeChatId && !resolvedChatId) {
+      replaceRoute({ page: "home", chatId: null });
+    }
+  }, [isLoading, activeChatId, resolvedChatId, replaceRoute]);
 
   return (
     <div
@@ -146,7 +170,7 @@ export default function App() {
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           {resolvedChatId && (
             <button
-              onClick={() => setActiveChatId(null)}
+              onClick={handleCloseChat}
               style={{
                 padding: "0.35rem 0.75rem",
                 background: "var(--color-surface-raised)",
@@ -226,7 +250,7 @@ export default function App() {
             <ChatListSidebar
               chats={chats}
               activeChatId={resolvedChatId}
-              onSelectChat={setActiveChatId}
+              onSelectChat={handleSelectChat}
               isLoading={isLoading}
             />
           )

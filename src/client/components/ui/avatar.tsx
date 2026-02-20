@@ -33,6 +33,13 @@ interface AvatarProps {
   width?: number | string;
   /** Height if different from width. Overrides `size` for height. */
   height?: number | string;
+  /**
+   * How the image fills its box.
+   * - `"cover"` (default): fixed dimensions, crops to fill.
+   * - `"natural"`: width is treated as a max-width, height scales to show
+   *   the full image without cropping. Great for portrait avatars.
+   */
+  fit?: "cover" | "natural";
   /** Border radius — defaults to "var(--radius-md)". */
   borderRadius?: string;
   style?: React.CSSProperties;
@@ -55,6 +62,7 @@ export const Avatar = React.memo(function Avatar({
   size = 36,
   width,
   height,
+  fit = "cover",
   borderRadius = "var(--radius-md)",
   style,
   className,
@@ -67,6 +75,21 @@ export const Avatar = React.memo(function Avatar({
     const ph = typeof h === "number" ? h : 256;
     return appendSize(src, pickThumbnailSize(pw, ph));
   }, [src, w, h]);
+
+  if (fit === "natural") {
+    return (
+      <div
+        className={`shrink-0 overflow-hidden rounded-lg ${className ?? ""}`}
+        style={{ maxWidth: w, ...style }}
+      >
+        <img
+          src={thumbSrc}
+          alt={alt}
+          className="block h-auto w-full"
+        />
+      </div>
+    );
+  }
 
   return (
     <div

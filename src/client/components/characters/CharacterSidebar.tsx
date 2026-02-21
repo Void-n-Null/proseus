@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import type { CharacterListItem } from "../../../shared/types.ts";
 import { Avatar } from "../ui/avatar.tsx";
 import {
@@ -8,6 +8,7 @@ import {
   useImportCharacterUrl,
   useCreateChatFromCharacter,
   useDeleteCharacter,
+  useRecentChatForCharacter,
 } from "../../hooks/useCharacters.ts";
 import CharacterEditor from "./CharacterEditor.tsx";
 
@@ -128,6 +129,13 @@ export default function CharacterSidebar({
       }
     },
     [createChatMutation, onChatCreated, showStatus],
+  );
+
+  const handleContinueChat = useCallback(
+    (chatId: string) => {
+      onChatCreated(chatId);
+    },
+    [onChatCreated],
   );
 
   const handleDelete = useCallback(
@@ -471,6 +479,7 @@ export default function CharacterSidebar({
                 key={char.id}
                 character={char}
                 onStartChat={() => handleStartChat(char.id)}
+                onContinueChat={handleContinueChat}
                 onDelete={() => handleDelete(char.id, char.name)}
                 onEdit={() => setEditingCharacterId(char.id)}
                 isCreatingChat={createChatMutation.isPending}
@@ -486,162 +495,249 @@ export default function CharacterSidebar({
 function CharacterCard({
   character,
   onStartChat,
+  onContinueChat,
   onDelete,
   onEdit,
   isCreatingChat,
 }: {
   character: CharacterListItem;
   onStartChat: () => void;
+  onContinueChat: (chatId: string) => void;
   onDelete: () => void;
   onEdit: () => void;
   isCreatingChat: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
+  const [showPopover, setShowPopover] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const { data: recentChatData } = useRecentChatForCharacter(character.id);
+  const recentChat = recentChatData?.chat ?? null;
+
+  useEffect(() => {
+    if (!showPopover) return;
+    const handleMouseDown = (e: MouseEvent) => {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        setShowPopover(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowPopover(false);
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showPopover]);
+
+  const handleClick = () => {
+    if (showPopover) return;
+    if (recentChat) {
+      setShowPopover(true);
+    } else {
+      onStartChat();
+    }
+  };
 
   return (
     <div
+      ref={cardRef}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "0.5rem",
-        padding: "0.5rem",
         borderRadius: "var(--radius-md)",
-        cursor: "pointer",
+        cursor: showPopover ? "default" : "pointer",
         transition: "background 0.15s",
-        background: hovered ? "var(--color-surface-hover)" : "transparent",
-        position: "relative",
+        background: hovered || showPopover ? "var(--color-surface-hover)" : "transparent",
       }}
-      onClick={onStartChat}
+      onClick={handleClick}
     >
-      {/* Avatar */}
-      {character.avatar_url ? (
-        <Avatar
-          src={character.avatar_url}
-          alt={character.name}
-          size={36}
-        />
+      {showPopover && recentChat ? (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            padding: "0.35rem",
+            display: "flex",
+            flexDirection: "row",
+            gap: "0.25rem",
+          }}
+        >
+          <button
+            onClick={() => {
+              setShowPopover(false);
+              onContinueChat(recentChat.id);
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              padding: "0.5rem 0.6rem",
+              background: "var(--color-primary)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "var(--radius-sm)",
+              cursor: "pointer",
+              fontSize: "0.72rem",
+              textAlign: "center",
+              whiteSpace: "nowrap",
+            }}
+            title={`Continue "${recentChat.name}"`}
+          >
+            ↩ Continue
+          </button>
+          <button
+            onClick={() => {
+              setShowPopover(false);
+              onStartChat();
+            }}
+            style={{
+              flex: 1,
+              padding: "0.5rem 0.6rem",
+              background: "transparent",
+              color: "var(--color-text-muted)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-sm)",
+              cursor: "pointer",
+              fontSize: "0.72rem",
+              textAlign: "center",
+              whiteSpace: "nowrap",
+            }}
+          >
+            + New
+          </button>
+        </div>
       ) : (
         <div
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: "var(--radius-md)",
-            background: "var(--color-surface-raised)",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            fontSize: "0.85rem",
-            fontWeight: 500,
-            color: "var(--color-text-muted)",
-            flexShrink: 0,
+            gap: "0.5rem",
+            padding: "0.5rem",
+            position: "relative",
           }}
         >
-          {character.name.charAt(0).toUpperCase()}
-        </div>
-      )}
+          {character.avatar_url ? (
+            <Avatar src={character.avatar_url} alt={character.name} size={36} />
+          ) : (
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: "var(--radius-md)",
+                background: "var(--color-surface-raised)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.85rem",
+                fontWeight: 500,
+                color: "var(--color-text-muted)",
+                flexShrink: 0,
+              }}
+            >
+              {character.name.charAt(0).toUpperCase()}
+            </div>
+          )}
 
-      {/* Info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: "0.8rem",
-            fontWeight: 400,
-            color: "var(--color-text-body)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {character.name}
-        </div>
-        {character.creator && (
-          <div
-            style={{
-              fontSize: "0.68rem",
-              color: "var(--color-text-dim)",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            by {character.creator}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: "0.8rem",
+                fontWeight: 400,
+                color: "var(--color-text-body)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {character.name}
+            </div>
+            {character.creator && (
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--color-text-dim)",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                by {character.creator}
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Actions on hover */}
-      {hovered && (
-        <div
-          style={{
-            position: "absolute",
-            top: "0.35rem",
-            right: "0.35rem",
-            display: "flex",
-            gap: "0.2rem",
-          }}
-        >
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-            style={{
-              width: 20,
-              height: 20,
-              padding: 0,
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--color-text-dim)",
-              fontSize: "0.65rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: "var(--radius-sm)",
-              transition: "color 0.15s",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.color = "var(--color-primary)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.color = "var(--color-text-dim)")
-            }
-            title="Edit character"
-          >
-            ✎
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            style={{
-              width: 20,
-              height: 20,
-              padding: 0,
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--color-text-dim)",
-              fontSize: "0.75rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: "var(--radius-sm)",
-              transition: "color 0.15s",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.color = "var(--color-destructive)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.color = "var(--color-text-dim)")
-            }
-            title="Delete character"
-          >
-            &times;
-          </button>
+          {hovered && (
+            <div
+              style={{
+                position: "absolute",
+                top: "0.35rem",
+                right: "0.35rem",
+                display: "flex",
+                gap: "0.2rem",
+              }}
+            >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                style={{
+                  width: 20,
+                  height: 20,
+                  padding: 0,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--color-text-dim)",
+                  fontSize: "0.65rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "var(--radius-sm)",
+                  transition: "color 0.15s",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.color = "var(--color-primary)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.color = "var(--color-text-dim)")
+                }
+                title="Edit character"
+              >
+                ✎
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                style={{
+                  width: 20,
+                  height: 20,
+                  padding: 0,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--color-text-dim)",
+                  fontSize: "0.75rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "var(--radius-sm)",
+                  transition: "color 0.15s",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.color = "var(--color-destructive)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.color = "var(--color-text-dim)")
+                }
+                title="Delete character"
+              >
+                &times;
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

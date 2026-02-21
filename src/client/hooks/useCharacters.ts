@@ -51,14 +51,23 @@ export function useDeleteCharacter() {
   });
 }
 
+export function useRecentChatForCharacter(characterId: string | null) {
+  return useQuery({
+    queryKey: ["character-recent-chat", characterId],
+    queryFn: () => api.characters.getRecentChat(characterId!),
+    enabled: !!characterId,
+  });
+}
+
 export function useCreateChatFromCharacter() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (characterId: string) => api.characters.createChat(characterId),
-    onSuccess: () => {
+    onSuccess: (_, characterId) => {
       queryClient.invalidateQueries({ queryKey: ["chats"] });
       queryClient.invalidateQueries({ queryKey: ["speakers"] });
+      queryClient.invalidateQueries({ queryKey: ["character-recent-chat", characterId] });
     },
   });
 }

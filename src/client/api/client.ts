@@ -177,6 +177,10 @@ export const api = {
       fetchJson<CreateChatResponse>(`/characters/${characterId}/chat`, {
         method: "POST",
       }),
+    getRecentChat: (characterId: string) =>
+      fetchJson<{ chat: { id: string; name: string; updated_at: number } | null }>(
+        `/characters/${characterId}/recent-chat`,
+      ),
   },
   connections: {
     list: () => fetchJson<ListConnectionsResponse>("/connections"),

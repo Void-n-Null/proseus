@@ -181,53 +181,20 @@ export default function PromptTemplateModal({ onClose }: { onClose: () => void }
   const previewBlocks = buildPreview(slots);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        fontFamily: "var(--font-body)",
-        color: "var(--color-text-body)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0.65rem 1rem",
-          borderBottom: "1px solid var(--color-border)",
-          flexShrink: 0,
-        }}
-      >
-        <span
-          style={{
-            fontSize: "0.72rem",
-            fontWeight: 400,
-            letterSpacing: "0.15em",
-            color: "var(--color-text-muted)",
-            textTransform: "uppercase",
-            fontFamily: "var(--font-display)",
-          }}
-        >
+    <div className="flex flex-col h-full font-body text-text-body">
+      <div className="flex items-center justify-between px-4 py-[0.65rem] border-b border-border shrink-0">
+        <span className="text-[0.72rem] font-normal tracking-[0.15em] text-text-muted uppercase font-display">
           Prompt Template
         </span>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <div className="flex items-center gap-3">
           {isDirty && (
             <button
               onClick={handleSave}
               disabled={isUpdating}
+              className="px-[0.85rem] py-[0.3rem] bg-primary text-background border-none rounded-md text-[0.72rem] font-medium transition-opacity duration-[0.15s]"
               style={{
-                padding: "0.3rem 0.85rem",
-                background: "var(--color-primary)",
-                color: "var(--color-background)",
-                border: "none",
-                borderRadius: "var(--radius-md)",
-                cursor: isUpdating ? "wait" : "pointer",
-                fontSize: "0.72rem",
-                fontWeight: 500,
-                opacity: isUpdating ? 0.6 : 1,
-                transition: "opacity 0.15s",
+                /* intentionally dynamic */ cursor: isUpdating ? "wait" : "pointer",
+                /* intentionally dynamic */ opacity: isUpdating ? 0.6 : 1,
               }}
             >
               {isUpdating ? "Saving\u2026" : "Save"}
@@ -235,16 +202,7 @@ export default function PromptTemplateModal({ onClose }: { onClose: () => void }
           )}
           <button
             onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--color-text-dim)",
-              cursor: "pointer",
-              fontSize: "1rem",
-              lineHeight: 1,
-              padding: "0.2rem 0.3rem",
-              transition: "color 0.15s",
-            }}
+            className="bg-transparent border-none text-text-dim cursor-pointer text-base leading-none px-[0.3rem] py-[0.2rem] transition-colors duration-[0.15s]"
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-text-body)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-dim)")}
           >
@@ -254,30 +212,12 @@ export default function PromptTemplateModal({ onClose }: { onClose: () => void }
       </div>
 
       {isLoading || !template ? (
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--color-text-dim)",
-            fontSize: "0.82rem",
-          }}
-        >
+        <div className="flex-1 flex items-center justify-center text-text-dim text-[0.82rem]">
           Loading…
         </div>
       ) : (
-        <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-          <div
-            style={{
-              width: 320,
-              minWidth: 320,
-              borderRight: "1px solid var(--color-border)",
-              display: "flex",
-              flexDirection: "column",
-              overflowY: "auto",
-            }}
-          >
+        <div className="flex-1 flex min-h-0">
+          <div className="w-80 min-w-80 border-r border-border flex flex-col overflow-y-auto">
             <SlotEditor
               slots={slots}
               expandedSlot={expandedSlot}
@@ -289,95 +229,64 @@ export default function PromptTemplateModal({ onClose }: { onClose: () => void }
             />
           </div>
 
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "0.75rem 1rem",
-              background: "oklch(0.07 0.01 250)",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "0.62rem",
-                letterSpacing: "0.12em",
-                color: "var(--color-text-dim)",
-                textTransform: "uppercase",
-                marginBottom: "0.75rem",
-              }}
-            >
+          <div className="flex-1 overflow-y-auto px-4 py-3 bg-[oklch(0.07_0.01_250)]">
+            <div className="text-[0.62rem] tracking-[0.12em] text-text-dim uppercase mb-3">
               Assembled Prompt Preview
             </div>
 
             {previewBlocks.length === 0 ? (
-              <div style={{ color: "var(--color-text-dim)", fontSize: "0.78rem" }}>
+              <div className="text-text-dim text-[0.78rem]">
                 No slots enabled.
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <div className="flex flex-col gap-3">
                 {previewBlocks.map((block, bi) => {
                   const colors = ROLE_COLORS[block.role];
                   return (
                     <div
                       key={bi}
+                      className="rounded-md overflow-hidden"
                       style={{
-                        borderRadius: "var(--radius-md)",
-                        border: `1px solid ${colors.border}`,
-                        background: colors.bg,
-                        overflow: "hidden",
+                        /* intentionally dynamic */ border: `1px solid ${colors.border}`,
+                        /* intentionally dynamic */ background: colors.bg,
                       }}
                     >
                       <div
+                        className="px-[0.65rem] py-[0.3rem] text-[0.58rem] font-semibold tracking-[0.12em] uppercase font-display"
                         style={{
-                          padding: "0.3rem 0.65rem",
-                          borderBottom: `1px solid ${colors.border}`,
-                          fontSize: "0.58rem",
-                          fontWeight: 600,
-                          letterSpacing: "0.12em",
-                          color: colors.text,
-                          textTransform: "uppercase",
-                          fontFamily: "var(--font-display)",
+                          /* intentionally dynamic */ borderBottom: `1px solid ${colors.border}`,
+                          /* intentionally dynamic */ color: colors.text,
                         }}
                       >
                         {block.label}
                       </div>
-                      <div style={{ padding: "0.5rem 0.65rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      <div className="px-[0.65rem] py-[0.5rem] flex flex-col gap-2">
                         {block.segments.map((seg, si) => (
                           <div key={si}>
                             {block.segments.length > 1 && (
                               <div
+                                className="text-[0.58rem] opacity-70 tracking-[0.08em] mb-[0.2rem] uppercase"
                                 style={{
-                                  fontSize: "0.58rem",
-                                  color: colors.text,
-                                  opacity: 0.7,
-                                  letterSpacing: "0.08em",
-                                  marginBottom: "0.2rem",
-                                  textTransform: "uppercase",
+                                  /* intentionally dynamic */ color: colors.text,
                                 }}
                               >
                                 {seg.slotLabel}
                               </div>
                             )}
                             <pre
+                              className="m-0 font-body text-[0.72rem] text-text-body whitespace-pre-wrap break-words leading-[1.55]"
                               style={{
-                                margin: 0,
-                                fontFamily: "var(--font-body)",
-                                fontSize: "0.72rem",
-                                color: "var(--color-text-body)",
-                                whiteSpace: "pre-wrap",
-                                wordBreak: "break-word",
-                                lineHeight: 1.55,
-                                opacity: seg.text.startsWith("[") ? 0.45 : 1,
-                                fontStyle: seg.text.startsWith("[") ? "italic" : "normal",
+                                /* intentionally dynamic */ opacity: seg.text.startsWith("[") ? 0.45 : 1,
+                                /* intentionally dynamic */ fontStyle: seg.text.startsWith("[") ? "italic" : "normal",
                               }}
                             >
                               {seg.text}
                             </pre>
                             {si < block.segments.length - 1 && (
                               <div
+                                className="mt-2"
                                 style={{
-                                  marginTop: "0.5rem",
-                                  borderTop: `1px solid ${colors.border}`,
+                                  /* intentionally dynamic */ borderTop: `1px solid ${colors.border}`,
                                 }}
                               />
                             )}
@@ -422,22 +331,13 @@ function SlotEditor({
   }));
 
   return (
-    <div style={{ padding: "0.35rem" }}>
+    <div className="p-[0.35rem]">
       {slotsByZone.map(({ zone, label, items }) => (
-        <div key={zone} style={{ marginBottom: "0.5rem" }}>
-          <div
-            style={{
-              fontSize: "0.6rem",
-              fontWeight: 500,
-              letterSpacing: "0.1em",
-              color: "var(--color-text-dim)",
-              textTransform: "uppercase",
-              padding: "0.4rem 0.5rem 0.2rem",
-            }}
-          >
+        <div key={zone} className="mb-2">
+          <div className="text-[0.6rem] font-medium tracking-[0.1em] text-text-dim uppercase px-2 pt-[0.4rem] pb-[0.2rem]">
             {label}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+          <div className="flex flex-col gap-[2px]">
             {items.map(({ slot, index }) => {
               const meta = SLOT_META[slot.id];
               const isExpanded = expandedSlot === slot.id;
@@ -448,15 +348,10 @@ function SlotEditor({
               return (
                 <div key={slot.id}>
                   <div
+                    className="flex items-center gap-[0.4rem] px-[0.45rem] py-[0.4rem] rounded-sm transition-[background] duration-[0.12s]"
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.4rem",
-                      padding: "0.4rem 0.45rem",
-                      borderRadius: "var(--radius-sm)",
-                      cursor: meta.hasContent ? "pointer" : "default",
-                      transition: "background 0.12s",
-                      background: isExpanded ? "var(--color-surface-hover)" : "transparent",
+                      /* intentionally dynamic */ cursor: meta.hasContent ? "pointer" : "default",
+                      /* intentionally dynamic */ background: isExpanded ? "var(--color-surface-hover)" : "transparent",
                     }}
                     onClick={meta.hasContent ? () => onToggleExpand(slot.id) : undefined}
                     onMouseEnter={(e) => {
@@ -467,93 +362,57 @@ function SlotEditor({
                     }}
                   >
                     {canReorder ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "1px", flexShrink: 0 }}>
+                      <div className="flex flex-col gap-px shrink-0">
                         <ArrowButton direction="up" disabled={!!isFirst} onClick={(e) => { e.stopPropagation(); onMoveUp(index); }} />
                         <ArrowButton direction="down" disabled={!!isLast} onClick={(e) => { e.stopPropagation(); onMoveDown(index); }} />
                       </div>
                     ) : (
-                      <div style={{ width: 16, flexShrink: 0 }} />
+                      <div className="w-4 shrink-0" />
                     )}
 
                     <button
                       onClick={(e) => { e.stopPropagation(); if (!meta.required) onToggle(slot.id); }}
                       disabled={meta.required}
+                      className="w-[30px] h-[17px] rounded-[9px] border-none relative shrink-0 transition-[background] duration-[0.15s]"
                       style={{
-                        width: 30,
-                        height: 17,
-                        borderRadius: 9,
-                        border: "none",
-                        cursor: meta.required ? "not-allowed" : "pointer",
-                        background: slot.enabled ? "var(--color-primary)" : "var(--color-surface-raised)",
-                        position: "relative",
-                        flexShrink: 0,
-                        transition: "background 0.15s",
-                        opacity: meta.required ? 0.55 : 1,
+                        /* intentionally dynamic */ cursor: meta.required ? "not-allowed" : "pointer",
+                        /* intentionally dynamic */ background: slot.enabled ? "var(--color-primary)" : "var(--color-surface-raised)",
+                        /* intentionally dynamic */ opacity: meta.required ? 0.55 : 1,
                       }}
                     >
                       <div
+                        className="w-[11px] h-[11px] rounded-full bg-[oklch(0.95_0_0)] absolute top-[3px] transition-[left] duration-[0.15s]"
                         style={{
-                          width: 11,
-                          height: 11,
-                          borderRadius: "50%",
-                          background: "oklch(0.95 0 0)",
-                          position: "absolute",
-                          top: 3,
-                          left: slot.enabled ? 16 : 3,
-                          transition: "left 0.15s",
+                          /* intentionally dynamic */ left: slot.enabled ? 16 : 3,
                         }}
                       />
                     </button>
 
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="flex-1 min-w-0">
                       <div
+                        className="text-[0.76rem] font-normal whitespace-nowrap overflow-hidden text-ellipsis"
                         style={{
-                          fontSize: "0.76rem",
-                          fontWeight: 400,
-                          color: slot.enabled ? "var(--color-text-body)" : "var(--color-text-dim)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
+                          /* intentionally dynamic */ color: slot.enabled ? "var(--color-text-body)" : "var(--color-text-dim)",
                         }}
                       >
                         {meta.label}
                       </div>
-                      <div
-                        style={{
-                          fontSize: "0.62rem",
-                          color: "var(--color-text-dim)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          marginTop: "1px",
-                        }}
-                      >
+                      <div className="text-[0.62rem] text-text-dim whitespace-nowrap overflow-hidden text-ellipsis mt-px">
                         {meta.description}
                       </div>
                     </div>
 
                     {meta.hasContent && slot.content != null && slot.content.length > 0 && (
-                      <span
-                        style={{
-                          fontSize: "0.6rem",
-                          color: "var(--color-text-dim)",
-                          flexShrink: 0,
-                          fontVariantNumeric: "tabular-nums",
-                        }}
-                      >
+                      <span className="text-[0.6rem] text-text-dim shrink-0 tabular-nums">
                         ~{estimateTokens(slot.content)} tk
                       </span>
                     )}
 
                     {meta.hasContent && (
                       <span
+                        className="text-[0.55rem] text-text-dim shrink-0 transition-transform duration-[0.15s] inline-block"
                         style={{
-                          fontSize: "0.55rem",
-                          color: "var(--color-text-dim)",
-                          flexShrink: 0,
-                          transition: "transform 0.15s",
-                          transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                          display: "inline-block",
+                          /* intentionally dynamic */ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
                         }}
                       >
                         ▶
@@ -562,30 +421,17 @@ function SlotEditor({
                   </div>
 
                   {isExpanded && meta.hasContent && (
-                    <div style={{ padding: "0.2rem 0.45rem 0.45rem 2.5rem" }}>
+                    <div className="pt-[0.2rem] pr-[0.45rem] pb-[0.45rem] pl-10">
                       <textarea
                         value={slot.content ?? ""}
                         onChange={(e) => onContentChange(slot.id, e.target.value)}
                         rows={5}
-                        style={{
-                          width: "100%",
-                          resize: "vertical",
-                          background: "var(--color-surface)",
-                          color: "var(--color-text-body)",
-                          border: "1px solid var(--color-border)",
-                          borderRadius: "var(--radius-sm)",
-                          padding: "0.4rem 0.5rem",
-                          fontSize: "0.72rem",
-                          fontFamily: "var(--font-body)",
-                          lineHeight: 1.5,
-                          outline: "none",
-                          boxSizing: "border-box",
-                        }}
+                        className="w-full resize-y bg-surface text-text-body border border-border rounded-sm px-2 py-[0.4rem] text-[0.72rem] font-body leading-normal outline-none box-border"
                         onFocus={(e) => { e.currentTarget.style.borderColor = "var(--color-primary)"; }}
                         onBlur={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; }}
                       />
                       {meta.hasMacros && (
-                        <div style={{ fontSize: "0.58rem", color: "var(--color-text-dim)", marginTop: "0.2rem" }}>
+                        <div className="text-[0.58rem] text-text-dim mt-[0.2rem]">
                           {"Supports {{char}} and {{user}} macros"}
                         </div>
                       )}
@@ -614,19 +460,10 @@ function ArrowButton({
     <button
       onClick={onClick}
       disabled={disabled}
+      className="w-4 h-[10px] p-0 border-none bg-transparent text-[0.48rem] leading-none flex items-center justify-center"
       style={{
-        width: 16,
-        height: 10,
-        padding: 0,
-        border: "none",
-        background: "transparent",
-        color: disabled ? "var(--color-surface-raised)" : "var(--color-text-dim)",
-        cursor: disabled ? "default" : "pointer",
-        fontSize: "0.48rem",
-        lineHeight: 1,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        /* intentionally dynamic */ color: disabled ? "var(--color-surface-raised)" : "var(--color-text-dim)",
+        /* intentionally dynamic */ cursor: disabled ? "default" : "pointer",
       }}
     >
       {direction === "up" ? "▲" : "▼"}

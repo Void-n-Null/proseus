@@ -34,42 +34,20 @@ export default function MessageActions({
 
   if (!isVisible) return null;
 
-  const buttonStyle: React.CSSProperties = {
-    padding: "0.2rem 0.45rem",
-    background: "#1a1a1a",
-    color: "#999",
-    border: "1px solid #2a2a2a",
-    borderRadius: "3px",
-    cursor: "pointer",
-    fontSize: "0.7rem",
-    lineHeight: 1,
-    whiteSpace: "nowrap",
-  };
+  const btnClass =
+    "py-[0.2rem] px-[0.45rem] bg-[#1a1a1a] text-[#999] border border-[#2a2a2a] rounded-[3px] cursor-pointer text-[0.7rem] leading-none whitespace-nowrap";
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: 0,
-        right: "1rem",
-        display: "flex",
-        gap: "0.2rem",
-        padding: "0.2rem",
-        background: "#0e0e0e",
-        border: "1px solid #222",
-        borderRadius: "4px",
-        zIndex: 10,
-      }}
-    >
-      <button onClick={onStartEdit} style={buttonStyle}>
+    <div className="absolute top-0 right-4 flex gap-[0.2rem] p-[0.2rem] bg-[#0e0e0e] border border-[#222] rounded-[4px] z-10">
+      <button onClick={onStartEdit} className={btnClass}>
         Edit
       </button>
-      <button onClick={handleCopy} style={buttonStyle}>
+      <button onClick={handleCopy} className={btnClass}>
         Copy
       </button>
       <button
         onClick={handleDelete}
-        style={{ ...buttonStyle, color: "#c44" }}
+        className={`${btnClass} !text-[#c44]`}
       >
         Delete
       </button>

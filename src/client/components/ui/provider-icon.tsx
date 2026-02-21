@@ -32,13 +32,13 @@ export default function ProviderIcon({
   const brandColor = color ?? getProviderColor(provider);
 
   return (
+    // intentionally dynamic: size, color, and mask from props
     <div
-      className={className}
+      className={`shrink-0 transition-colors duration-150 ${className ?? ""}`}
       aria-hidden="true"
       style={{
         width: size,
         height: size,
-        flexShrink: 0,
         backgroundColor: brandColor,
         WebkitMaskImage: `url(${url})`,
         WebkitMaskSize: "contain",
@@ -48,7 +48,6 @@ export default function ProviderIcon({
         maskSize: "contain",
         maskRepeat: "no-repeat",
         maskPosition: "center",
-        transition: "background-color 0.15s",
         ...style,
       }}
     />

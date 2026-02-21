@@ -40,49 +40,18 @@ export default function PersonaSidebar() {
   }
 
   return (
-    <div
-      style={{
-        width: 280,
-        minWidth: 280,
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--color-surface)",
-        borderRight: "1px solid var(--color-border)",
-      }}
-    >
+    <div className="w-[280px] min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
       {/* Header */}
-      <div
-        style={{
-          padding: "0.75rem",
-          borderBottom: "1px solid var(--color-border)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <span
-          style={{
-            fontSize: "0.75rem",
-            fontWeight: 400,
-            letterSpacing: "0.15em",
-            color: "var(--color-text-muted)",
-            textTransform: "uppercase",
-          }}
-        >
+      <div className="p-3 border-b border-border flex items-center justify-between">
+        <span className="text-xs font-normal tracking-[0.15em] text-text-muted uppercase">
           Personas
         </span>
         <button
           onClick={() => setCreating(true)}
           disabled={createMutation.isPending}
+          className="px-[0.6rem] py-[0.3rem] bg-primary text-white border-none rounded-md cursor-pointer text-[0.72rem]"
           style={{
-            padding: "0.3rem 0.6rem",
-            background: "var(--color-primary)",
-            color: "#fff",
-            border: "none",
-            borderRadius: "var(--radius-md)",
-            cursor: "pointer",
-            fontSize: "0.72rem",
+            /* intentionally dynamic */
             opacity: createMutation.isPending ? 0.5 : 1,
           }}
         >
@@ -91,41 +60,20 @@ export default function PersonaSidebar() {
       </div>
 
       {/* List */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "0.35rem" }}>
+      <div className="flex-1 overflow-y-auto p-[0.35rem]">
         {isLoading ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              color: "var(--color-text-dim)",
-              fontSize: "0.8rem",
-            }}
-          >
+          <div className="flex items-center justify-center h-full text-text-dim text-[0.8rem]">
             Loading...
           </div>
         ) : personas.length === 0 ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              gap: "0.5rem",
-              color: "var(--color-text-dim)",
-              textAlign: "center",
-              padding: "1rem",
-            }}
-          >
-            <p style={{ fontSize: "0.85rem" }}>No personas yet</p>
-            <p style={{ fontSize: "0.72rem", lineHeight: 1.4 }}>
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-text-dim text-center p-4">
+            <p className="text-[0.85rem]">No personas yet</p>
+            <p className="text-[0.72rem] leading-[1.4]">
               Create a persona to represent yourself in chats.
             </p>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+          <div className="flex flex-col gap-[2px]">
             {personas.map((p) => (
               <PersonaRow
                 key={p.id}
@@ -154,16 +102,10 @@ function PersonaRow({
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className="flex items-center gap-2 p-2 rounded-md cursor-pointer transition-[background] duration-150 relative"
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "0.5rem",
-        padding: "0.5rem",
-        borderRadius: "var(--radius-md)",
-        cursor: "pointer",
+        /* intentionally dynamic */
         background: hovered ? "var(--color-surface-hover)" : "transparent",
-        transition: "background 0.15s",
-        position: "relative",
       }}
       onClick={onEdit}
     >
@@ -171,54 +113,23 @@ function PersonaRow({
       <PersonaAvatar persona={persona} size={36} />
 
       {/* Info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: "0.8rem",
-            fontWeight: 400,
-            color: "var(--color-text-body)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
+      <div className="flex-1 min-w-0">
+        <div className="text-[0.8rem] font-normal text-text-body whitespace-nowrap overflow-hidden text-ellipsis">
           {persona.name}
         </div>
-        <div
-          style={{
-            fontSize: "0.68rem",
-            color: "var(--color-text-dim)",
-            display: "flex",
-            gap: "0.35rem",
-            alignItems: "center",
-          }}
-        >
+        <div className="text-[0.68rem] text-text-dim flex gap-[0.35rem] items-center">
           {persona.is_global && (
-            <span
-              style={{
-                padding: "0 0.3rem",
-                background: "oklch(0.20 0.04 280)",
-                color: "oklch(0.65 0.12 280)",
-                borderRadius: "var(--radius-sm)",
-                fontSize: "0.62rem",
-              }}
-            >
+            <span className="px-[0.3rem] py-0 bg-[oklch(0.20_0.04_280)] text-[oklch(0.65_0.12_280)] rounded-sm text-[0.62rem]">
               global
             </span>
           )}
           {persona.prompt ? (
-            <span
-              style={{
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
+            <span className="whitespace-nowrap overflow-hidden text-ellipsis">
               {persona.prompt.slice(0, 32)}
               {persona.prompt.length > 32 ? "…" : ""}
             </span>
           ) : (
-            <span style={{ fontStyle: "italic" }}>no prompt</span>
+            <span className="italic">no prompt</span>
           )}
         </div>
       </div>
@@ -230,24 +141,7 @@ function PersonaRow({
             e.stopPropagation();
             deleteMutation.mutate(persona.id);
           }}
-          style={{
-            position: "absolute",
-            top: "0.35rem",
-            right: "0.35rem",
-            width: 18,
-            height: 18,
-            padding: 0,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--color-text-dim)",
-            fontSize: "0.7rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: "var(--radius-sm)",
-            transition: "color 0.15s",
-          }}
+          className="absolute top-[0.35rem] right-[0.35rem] w-[18px] h-[18px] p-0 bg-none border-none cursor-pointer text-text-dim text-[0.7rem] flex items-center justify-center rounded-sm transition-[color] duration-150"
           onMouseEnter={(e) =>
             (e.currentTarget.style.color = "var(--color-destructive)")
           }
@@ -280,55 +174,22 @@ function PersonaCreator({
   }, [name, createMutation, onCreate]);
 
   return (
-    <div
-      style={{
-        width: 280,
-        minWidth: 280,
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--color-surface)",
-        borderRight: "1px solid var(--color-border)",
-      }}
-    >
-      <div
-        style={{
-          padding: "0.75rem",
-          borderBottom: "1px solid var(--color-border)",
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5rem",
-        }}
-      >
+    <div className="w-[280px] min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
+      <div className="p-3 border-b border-border flex items-center gap-2">
         <button
           onClick={onClose}
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--color-text-dim)",
-            cursor: "pointer",
-            fontSize: "0.8rem",
-            padding: "0.1rem",
-          }}
+          className="bg-none border-none text-text-dim cursor-pointer text-[0.8rem] p-[0.1rem]"
         >
           ←
         </button>
-        <span
-          style={{
-            fontSize: "0.75rem",
-            fontWeight: 400,
-            letterSpacing: "0.15em",
-            color: "var(--color-text-muted)",
-            textTransform: "uppercase",
-          }}
-        >
+        <span className="text-xs font-normal tracking-[0.15em] text-text-muted uppercase">
           New Persona
         </span>
       </div>
 
-      <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-          <span style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}>
+      <div className="p-3 flex flex-col gap-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-[0.72rem] text-text-muted">
             Name
           </span>
           <input
@@ -341,30 +202,19 @@ function PersonaCreator({
             }}
             placeholder="Your name"
             autoFocus
-            style={{
-              padding: "0.4rem 0.5rem",
-              background: "var(--color-background)",
-              color: "var(--color-text-body)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              fontSize: "0.82rem",
-              outline: "none",
-            }}
+            className="px-2 py-[0.4rem] bg-background text-text-body border border-border rounded-md text-[0.82rem] outline-none"
           />
         </label>
 
         <button
           onClick={handleCreate}
           disabled={!name.trim() || createMutation.isPending}
+          className="py-[0.45rem] border-none rounded-md text-[0.78rem] transition-all duration-150"
           style={{
-            padding: "0.45rem",
+            /* intentionally dynamic */
             background: !name.trim() ? "var(--color-surface-raised)" : "var(--color-primary)",
             color: !name.trim() ? "var(--color-text-dim)" : "#fff",
-            border: "none",
-            borderRadius: "var(--radius-md)",
             cursor: !name.trim() ? "not-allowed" : "pointer",
-            fontSize: "0.78rem",
-            transition: "all 0.15s",
           }}
         >
           {createMutation.isPending ? "Creating..." : "Create & Edit"}
@@ -416,82 +266,26 @@ function PersonaEditor({ persona, onClose }: { persona: Persona; onClose: () => 
     : null;
 
   return (
-    <div
-      style={{
-        width: 280,
-        minWidth: 280,
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--color-surface)",
-        borderRight: "1px solid var(--color-border)",
-      }}
-    >
+    <div className="w-[280px] min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
       {/* Header */}
-      <div
-        style={{
-          padding: "0.75rem",
-          borderBottom: "1px solid var(--color-border)",
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5rem",
-        }}
-      >
+      <div className="p-3 border-b border-border flex items-center gap-2">
         <button
           onClick={onClose}
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--color-text-dim)",
-            cursor: "pointer",
-            fontSize: "0.8rem",
-            padding: "0.1rem",
-          }}
+          className="bg-none border-none text-text-dim cursor-pointer text-[0.8rem] p-[0.1rem]"
         >
           ←
         </button>
-        <span
-          style={{
-            fontSize: "0.75rem",
-            fontWeight: 400,
-            letterSpacing: "0.15em",
-            color: "var(--color-text-muted)",
-            textTransform: "uppercase",
-            flex: 1,
-          }}
-        >
+        <span className="text-xs font-normal tracking-[0.15em] text-text-muted uppercase flex-1">
           Edit Persona
         </span>
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "0.75rem",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.85rem",
-        }}
-      >
+      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-[0.85rem]">
         {/* Avatar */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+        <div className="flex flex-col items-center gap-2">
           <div
             onClick={() => fileInputRef.current?.click()}
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: "var(--radius-lg)",
-              cursor: "pointer",
-              overflow: "hidden",
-              background: "var(--color-surface-raised)",
-              border: "2px solid var(--color-border)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              position: "relative",
-              transition: "border-color 0.15s",
-            }}
+            className="w-[72px] h-[72px] rounded-lg cursor-pointer overflow-hidden bg-surface-raised border-2 border-border flex items-center justify-center relative transition-[border-color] duration-150"
             onMouseEnter={(e) =>
               ((e.currentTarget as HTMLDivElement).style.borderColor =
                 "var(--color-primary)")
@@ -509,42 +303,24 @@ function PersonaEditor({ persona, onClose }: { persona: Persona; onClose: () => 
                 size="100%"
               />
             ) : (
-              <span
-                style={{
-                  fontSize: "1.5rem",
-                  fontWeight: 500,
-                  color: "var(--color-text-muted)",
-                  fontFamily: "var(--font-display)",
-                }}
-              >
+              <span className="text-2xl font-medium text-text-muted font-[var(--font-display)]">
                 {name.charAt(0).toUpperCase() || "?"}
               </span>
             )}
             {avatarMutation.isPending && (
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "rgba(0,0,0,0.5)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "0.65rem",
-                  color: "#fff",
-                }}
-              >
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-[0.65rem] text-white">
                 Uploading
               </div>
             )}
           </div>
-          <span style={{ fontSize: "0.65rem", color: "var(--color-text-dim)" }}>
+          <span className="text-[0.65rem] text-text-dim">
             Click to change avatar
           </span>
           <input
             ref={fileInputRef}
             type="file"
             accept="image/png,image/jpeg,image/webp,image/gif"
-            style={{ display: "none" }}
+            className="hidden"
             onChange={(e) => {
               handleAvatarChange(e.target.files);
               e.target.value = "";
@@ -553,8 +329,8 @@ function PersonaEditor({ persona, onClose }: { persona: Persona; onClose: () => 
         </div>
 
         {/* Name */}
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-          <span style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}>
+        <label className="flex flex-col gap-1">
+          <span className="text-[0.72rem] text-text-muted">
             Name
           </span>
           <input
@@ -562,24 +338,16 @@ function PersonaEditor({ persona, onClose }: { persona: Persona; onClose: () => 
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Your name"
-            style={{
-              padding: "0.4rem 0.5rem",
-              background: "var(--color-background)",
-              color: "var(--color-text-body)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              fontSize: "0.82rem",
-              outline: "none",
-            }}
+            className="px-2 py-[0.4rem] bg-background text-text-body border border-border rounded-md text-[0.82rem] outline-none"
           />
         </label>
 
         {/* Prompt */}
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-          <span style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}>
+        <label className="flex flex-col gap-1">
+          <span className="text-[0.72rem] text-text-muted">
             Persona Prompt
           </span>
-          <span style={{ fontSize: "0.67rem", color: "var(--color-text-dim)", lineHeight: 1.4 }}>
+          <span className="text-[0.67rem] text-text-dim leading-[1.4]">
             Injected into the system prompt. Describe yourself, your role, or any context the AI should know.
           </span>
           <textarea
@@ -587,62 +355,33 @@ function PersonaEditor({ persona, onClose }: { persona: Persona; onClose: () => 
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="I am a science fiction writer exploring..."
             rows={5}
-            style={{
-              padding: "0.4rem 0.5rem",
-              background: "var(--color-background)",
-              color: "var(--color-text-body)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              fontSize: "0.78rem",
-              outline: "none",
-              resize: "vertical",
-              fontFamily: "var(--font-body)",
-              lineHeight: 1.5,
-            }}
+            className="px-2 py-[0.4rem] bg-background text-text-body border border-border rounded-md text-[0.78rem] outline-none resize-y font-[var(--font-body)] leading-[1.5]"
           />
         </label>
 
         {/* Global toggle */}
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            cursor: "pointer",
-          }}
-        >
+        <label className="flex items-center gap-2 cursor-pointer">
           <div
             onClick={() => setIsGlobal(!isGlobal)}
+            className="w-8 h-[18px] rounded-full border border-border relative cursor-pointer transition-[background] duration-200 shrink-0"
             style={{
-              width: 32,
-              height: 18,
-              borderRadius: "999px",
+              /* intentionally dynamic */
               background: isGlobal ? "var(--color-primary)" : "var(--color-surface-raised)",
-              border: "1px solid var(--color-border)",
-              position: "relative",
-              cursor: "pointer",
-              transition: "background 0.2s",
-              flexShrink: 0,
             }}
           >
             <div
+              className="absolute top-[2px] w-3 h-3 rounded-full bg-white transition-[left] duration-200"
               style={{
-                position: "absolute",
-                top: 2,
+                /* intentionally dynamic */
                 left: isGlobal ? 14 : 2,
-                width: 12,
-                height: 12,
-                borderRadius: "50%",
-                background: "#fff",
-                transition: "left 0.2s",
               }}
             />
           </div>
           <div>
-            <div style={{ fontSize: "0.78rem", color: "var(--color-text-body)" }}>
+            <div className="text-[0.78rem] text-text-body">
               Global persona
             </div>
-            <div style={{ fontSize: "0.67rem", color: "var(--color-text-dim)" }}>
+            <div className="text-[0.67rem] text-text-dim">
               Use this persona across all chats by default
             </div>
           </div>
@@ -652,19 +391,16 @@ function PersonaEditor({ persona, onClose }: { persona: Persona; onClose: () => 
         <button
           onClick={handleSave}
           disabled={!name.trim() || updateMutation.isPending}
+          className="py-[0.45rem] border-none rounded-md text-[0.78rem] transition-all duration-150"
           style={{
-            padding: "0.45rem",
+            /* intentionally dynamic */
             background: saved
               ? "oklch(0.35 0.10 155)"
               : !name.trim()
                 ? "var(--color-surface-raised)"
                 : "var(--color-primary)",
             color: saved ? "oklch(0.80 0.12 155)" : !name.trim() ? "var(--color-text-dim)" : "#fff",
-            border: "none",
-            borderRadius: "var(--radius-md)",
             cursor: !name.trim() ? "not-allowed" : "pointer",
-            fontSize: "0.78rem",
-            transition: "all 0.15s",
           }}
         >
           {updateMutation.isPending ? "Saving..." : saved ? "Saved" : "Save Changes"}
@@ -698,19 +434,12 @@ export function PersonaAvatar({
 
   return (
     <div
+      className="rounded-md bg-[oklch(0.20_0.04_280)] flex items-center justify-center font-medium text-[oklch(0.65_0.12_280)] shrink-0 font-[var(--font-display)]"
       style={{
+        /* intentionally dynamic — size comes from prop */
         width: size,
         height: size,
-        borderRadius: "var(--radius-md)",
-        background: "oklch(0.20 0.04 280)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
         fontSize: size * 0.38,
-        fontWeight: 500,
-        color: "oklch(0.65 0.12 280)",
-        flexShrink: 0,
-        fontFamily: "var(--font-display)",
       }}
     >
       {persona.name.charAt(0).toUpperCase()}

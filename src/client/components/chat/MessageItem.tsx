@@ -53,28 +53,15 @@ const MessageItem = React.memo(
       <div
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        style={{
-          position: "relative",
-          display: "flex",
-          flexDirection: "row",
-          padding: isFirstInGroup
-            ? "0.5rem 1rem 0.15rem 1rem"
-            : "0.15rem 1rem 0.15rem 1rem",
-          gap: "0.6rem",
-          transition: "background-color 0.15s",
-          backgroundColor: isHovered ? "var(--color-surface-raised)" : "transparent",
-        }}
+        className={`relative flex flex-row gap-[0.6rem] transition-colors duration-150 ${
+          isFirstInGroup ? "pt-2 pb-[0.15rem] px-4" : "py-[0.15rem] px-4"
+        } ${isHovered ? "bg-surface-raised" : "bg-transparent"}`}
       >
-        {/* Avatar column — always present for alignment */}
+        {/* Avatar column */}
         <div
-          style={{
-            width: 50,
-            minWidth: 50,
-            display: "flex",
-            justifyContent: "center",
-            alignSelf: "flex-start",
-            paddingTop: isFirstInGroup ? 2 : 0,
-          }}
+          className={`w-[50px] min-w-[50px] flex justify-center self-start ${
+            isFirstInGroup ? "pt-[2px]" : "pt-0"
+          }`}
         >
           {isFirstInGroup && speaker && (
             speaker.avatar_url ? (
@@ -86,19 +73,8 @@ const MessageItem = React.memo(
               />
             ) : (
               <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  background: speaker.color ?? "#333",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  color: "#fff",
-                  flexShrink: 0,
-                }}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[0.8rem] font-semibold text-white shrink-0"
+                style={{ background: speaker.color ?? "#333" /* intentionally dynamic */ }}
               >
                 {speaker.name.charAt(0).toUpperCase()}
               </div>
@@ -107,7 +83,7 @@ const MessageItem = React.memo(
         </div>
 
         {/* Content column */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="flex-1 min-w-0">
           {isFirstInGroup && speaker && (
             <MessageMeta
               speaker={speaker}
@@ -116,7 +92,7 @@ const MessageItem = React.memo(
             />
           )}
 
-          <div style={{ paddingTop: "0.5rem" }}>
+          <div className="pt-2">
             <MessageContent
               message={node.message}
               isEditing={isEditing}
@@ -128,7 +104,6 @@ const MessageItem = React.memo(
             />
           </div>
 
-          {/* Hide branch navigation during streaming */}
           {!isStreaming && (
             <MessageBranch
               nodeId={node.id}
@@ -138,7 +113,6 @@ const MessageItem = React.memo(
           )}
         </div>
 
-        {/* Hover actions — disabled during streaming */}
         {!isStreaming && (
           <MessageActions
             node={node}

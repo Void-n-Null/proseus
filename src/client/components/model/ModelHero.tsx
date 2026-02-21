@@ -268,20 +268,12 @@ function DisconnectedPane({ provider }: { provider: ProviderName }) {
 
   return (
     <div
-      className="relative rounded-xl px-5 py-4 overflow-hidden"
-      style={{
-        border: "1px dashed var(--color-border)",
-        background: "var(--color-surface)",
-      }}
+      className="relative rounded-xl px-5 py-4 overflow-hidden border border-dashed border-border bg-surface"
     >
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <div
-            className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
-            style={{
-              background: "oklch(0.50 0 0 / 0.06)",
-              border: "1px solid oklch(0.50 0 0 / 0.1)",
-            }}
+            className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-[oklch(0.50_0_0/0.06)] border border-[oklch(0.50_0_0/0.1)]"
           >
             <ProviderIcon provider={provider} size={16} />
           </div>
@@ -316,20 +308,12 @@ function NoModelSelectedPane({
 }) {
   return (
     <div
-      className="relative rounded-xl px-5 py-4 overflow-hidden"
-      style={{
-        border: "1px dashed var(--color-border)",
-        background: "var(--color-surface)",
-      }}
+      className="relative rounded-xl px-5 py-4 overflow-hidden border border-dashed border-border bg-surface"
     >
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <div
-            className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
-            style={{
-              background: "oklch(0.50 0 0 / 0.06)",
-              border: "1px solid oklch(0.50 0 0 / 0.1)",
-            }}
+            className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-[oklch(0.50_0_0/0.06)] border border-[oklch(0.50_0_0/0.1)]"
           >
             <svg
               viewBox="0 0 24 24"
@@ -429,10 +413,9 @@ function SelectedModelPane({ model }: { model: Model }) {
 
   return (
     <div
-      className="relative rounded-xl px-5 py-4 overflow-hidden"
+      className="relative rounded-xl px-5 py-4 overflow-hidden bg-surface border border-[oklch(0.70_0.15_280/0.18)]"
+      // intentionally dynamic: provider brand color in box shadow
       style={{
-        background: "var(--color-surface)",
-        border: "1px solid oklch(0.70 0.15 280 / 0.18)",
         boxShadow: `0 4px 24px -8px ${hexToRgba(color, 0.15)}`,
       }}
     >
@@ -441,6 +424,7 @@ function SelectedModelPane({ model }: { model: Model }) {
         <div className="flex items-center gap-3 min-w-0">
           <div
             className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
+            // intentionally dynamic: provider brand color
             style={{
               backgroundColor: hexToRgba(color, 0.18),
             }}
@@ -533,19 +517,11 @@ function ValidatingPane({ provider }: { provider: ProviderName }) {
 
   return (
     <div
-      className="relative rounded-xl px-5 py-4 overflow-hidden"
-      style={{
-        border: "1px solid oklch(0.70 0.15 280 / 0.15)",
-        background: "var(--color-surface)",
-      }}
+      className="relative rounded-xl px-5 py-4 overflow-hidden border border-[oklch(0.70_0.15_280/0.15)] bg-surface"
     >
       <div className="flex items-center gap-3 min-w-0">
         <div
-          className="connection-icon-pulse shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
-          style={{
-            background: "oklch(0.70 0.15 280 / 0.10)",
-            border: "1px solid oklch(0.70 0.15 280 / 0.15)",
-          }}
+          className="connection-icon-pulse shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-[oklch(0.70_0.15_280/0.10)] border border-[oklch(0.70_0.15_280/0.15)]"
         >
           <ProviderIcon provider={provider} size={16} />
         </div>
@@ -563,8 +539,7 @@ function ValidatingPane({ provider }: { provider: ProviderName }) {
       {/* Shimmer bar */}
       <div className="mt-3 pt-3 border-t border-border">
         <div
-          className="connection-shimmer-bar h-1 rounded-full"
-          style={{ background: "oklch(0.70 0.15 280 / 0.08)" }}
+          className="connection-shimmer-bar h-1 rounded-full bg-[oklch(0.70_0.15_280/0.08)]"
         />
       </div>
     </div>
@@ -588,20 +563,12 @@ function ConnectionErrorBanner({
 
   return (
     <div
-      className="relative rounded-xl px-5 py-4 overflow-hidden"
-      style={{
-        border: "1px solid oklch(0.55 0.15 40 / 0.25)",
-        background: "oklch(0.55 0.15 40 / 0.04)",
-      }}
+      className="relative rounded-xl px-5 py-4 overflow-hidden border border-[oklch(0.55_0.15_40/0.25)] bg-[oklch(0.55_0.15_40/0.04)]"
     >
       <div className="flex items-start gap-3 min-w-0">
         {/* Warning icon */}
         <div
-          className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center mt-0.5"
-          style={{
-            background: "oklch(0.55 0.15 40 / 0.12)",
-            border: "1px solid oklch(0.55 0.15 40 / 0.15)",
-          }}
+          className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center mt-0.5 bg-[oklch(0.55_0.15_40/0.12)] border border-[oklch(0.55_0.15_40/0.15)]"
         >
           <svg
             viewBox="0 0 24 24"
@@ -610,8 +577,7 @@ function ConnectionErrorBanner({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="w-4 h-4"
-            style={{ color: "oklch(0.70 0.15 40)" }}
+            className="w-4 h-4 text-[oklch(0.70_0.15_40)]"
           >
             <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
             <path d="M12 9v4" />
@@ -621,8 +587,7 @@ function ConnectionErrorBanner({
 
         <div className="min-w-0 flex-1">
           <p
-            className="text-[15px] font-semibold leading-snug"
-            style={{ color: "oklch(0.75 0.12 40)" }}
+            className="text-[15px] font-semibold leading-snug text-[oklch(0.75_0.12_40)]"
           >
             Connection to {meta.label} failed
           </p>
@@ -788,8 +753,7 @@ export default function ModelHero({
                 autoComplete="off"
                 spellCheck={false}
                 disabled={isValidating}
-                className="relative w-full h-10 pl-3.5 pr-10 rounded-lg border border-border text-sm text-foreground placeholder-text-dim font-mono focus:outline-none focus:border-primary/25 focus:shadow-[0_0_0_1px_oklch(0.70_0.15_280/0.08)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ background: "var(--color-surface)" }}
+                className="relative w-full h-10 pl-3.5 pr-10 rounded-lg border border-border text-sm text-foreground placeholder-text-dim font-mono focus:outline-none focus:border-primary/25 focus:shadow-[0_0_0_1px_oklch(0.70_0.15_280/0.08)] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed bg-surface"
               />
               <button
                 type="button"
@@ -857,8 +821,7 @@ export default function ModelHero({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search models..."
-            className="w-full h-10 pl-10 pr-9 rounded-lg border border-border text-sm text-foreground placeholder-text-dim focus:outline-none focus:border-primary/25 focus:shadow-[0_0_0_1px_oklch(0.70_0.15_280/0.08)] transition-all duration-150"
-            style={{ background: "var(--color-surface)" }}
+            className="w-full h-10 pl-10 pr-9 rounded-lg border border-border text-sm text-foreground placeholder-text-dim focus:outline-none focus:border-primary/25 focus:shadow-[0_0_0_1px_oklch(0.70_0.15_280/0.08)] transition-all duration-150 bg-surface"
           />
           {search && (
             <button

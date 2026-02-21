@@ -21,23 +21,7 @@ interface MessageListProps {
  */
 const ESTIMATED_ITEM_SIZE = 72;
 
-/** Stable reference — always returns the same constant. */
 const estimateSize = () => ESTIMATED_ITEM_SIZE;
-
-/** Stable style for the scroll container. */
-const scrollContainerStyle: React.CSSProperties = {
-  height: "100%",
-  overflowY: "auto",
-  contain: "strict",
-};
-
-/** Stable base style for absolutely-positioned virtual items. */
-const virtualItemBaseStyle: React.CSSProperties = {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  width: "100%",
-};
 
 const MessageList = React.memo(function MessageList({
   activePath,
@@ -49,21 +33,15 @@ const MessageList = React.memo(function MessageList({
   const isStreaming = useIsStreaming();
   const nodes = activePath?.nodes ?? [];
 
-  // ── Auto-scroll (intent-aware) ──────────────────────────────────────
   const { scrollRef, onScroll, scrollToBottom, forceScrollToBottom, onContentGrow } =
     useAutoScroll();
 
-  // ── Stable getScrollElement for virtualizer ─────────────────────────
   const getScrollElement = useCallback(() => scrollRef.current, [scrollRef]);
 
-  // ── Pre-compute sibling info ────────────────────────────────────────
   const siblingInfos = useMemo(() => {
     return nodes.map((node) => getSiblingInfo(node.id, nodeMap));
   }, [nodes, nodeMap]);
 
-  // ── Virtualizer ─────────────────────────────────────────────────────
-  // No special ethereal slot — the streaming node is a real node in the
-  // active path (optimistically inserted by useStreamSocket).
   const virtualizer = useVirtualizer({
     count: nodes.length,
     getScrollElement,
@@ -71,7 +49,6 @@ const MessageList = React.memo(function MessageList({
     overscan: 5,
   });
 
-  // ── Measure callback for dynamic heights ────────────────────────────
   const measureRef = useCallback(
     (node: HTMLElement | null) => {
       if (node) {
@@ -81,37 +58,28 @@ const MessageList = React.memo(function MessageList({
     [virtualizer],
   );
 
-  // ── Scroll to bottom on initial load and when new messages arrive ────
   const prevCountRef = useRef(0);
   const initialScrollDoneRef = useRef(false);
 
-  // Scroll to the last item using the virtualizer (reliable with estimated sizes).
   const scrollToLastItem = useCallback(() => {
     if (nodes.length === 0) return;
     virtualizer.scrollToIndex(nodes.length - 1, { align: "end" });
-    // After the virtualizer scrolls and measures, do a second pass to ensure
-    // we're truly at the bottom (first scroll uses estimated size, second uses measured).
     requestAnimationFrame(() => {
       virtualizer.scrollToIndex(nodes.length - 1, { align: "end" });
-      // Re-engage sticky after programmatic scroll
       forceScrollToBottom();
     });
   }, [nodes.length, virtualizer, forceScrollToBottom]);
 
   useEffect(() => {
     if (nodes.length > 0 && !initialScrollDoneRef.current) {
-      // First time we have content — scroll to the last message.
       initialScrollDoneRef.current = true;
-      // Defer so the virtualizer has laid out at least the estimated items.
       requestAnimationFrame(() => scrollToLastItem());
     } else if (nodes.length > prevCountRef.current && prevCountRef.current > 0) {
-      // Subsequent new message — scroll if sticky
       requestAnimationFrame(() => scrollToBottom());
     }
     prevCountRef.current = nodes.length;
   }, [nodes.length, scrollToBottom, scrollToLastItem]);
 
-  // Reset initial scroll flag when chat changes
   const prevChatIdRef = useRef(chatId);
   useEffect(() => {
     if (chatId !== prevChatIdRef.current) {
@@ -121,7 +89,6 @@ const MessageList = React.memo(function MessageList({
     }
   }, [chatId]);
 
-  // ── During streaming: keep scroll pinned as content grows ───────────
   useEffect(() => {
     if (!isStreaming) return;
 
@@ -132,7 +99,6 @@ const MessageList = React.memo(function MessageList({
     return unsub;
   }, [isStreaming, onContentGrow]);
 
-  // ── When streaming starts, force scroll to bottom ───────────────────
   const wasStreamingRef = useRef(false);
   useEffect(() => {
     if (isStreaming && !wasStreamingRef.current) {
@@ -141,19 +107,17 @@ const MessageList = React.memo(function MessageList({
     wasStreamingRef.current = isStreaming;
   }, [isStreaming, forceScrollToBottom]);
 
-  // ── Render ──────────────────────────────────────────────────────────
   const virtualItems = virtualizer.getVirtualItems();
 
   return (
     <div
       ref={scrollRef}
       onScroll={onScroll}
-      style={scrollContainerStyle}
+      className="h-full overflow-y-auto [contain:strict]"
     >
-      <div className="mx-auto w-[60vw] relative"
-        style={{
-          height: virtualizer.getTotalSize(),
-        }}
+      <div
+        className="mx-auto w-[60vw] relative"
+        style={{ height: virtualizer.getTotalSize() /* intentionally dynamic */ }}
       >
         {virtualItems.map((virtualItem) => {
           const node = nodes[virtualItem.index]!;
@@ -170,10 +134,8 @@ const MessageList = React.memo(function MessageList({
               key={node.id}
               data-index={virtualItem.index}
               ref={measureRef}
-              style={{
-                ...virtualItemBaseStyle,
-                transform: `translateY(${virtualItem.start}px)`,
-              }}
+              className="absolute top-0 left-0 w-full"
+              style={{ transform: `translateY(${virtualItem.start}px)` /* intentionally dynamic */ }}
             >
               <MessageItem
                 node={node}

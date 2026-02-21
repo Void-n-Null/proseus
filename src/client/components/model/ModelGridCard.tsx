@@ -64,6 +64,7 @@ export default function ModelGridCard({
     <button
       type="button"
       onClick={onSelect}
+      // intentionally dynamic: selected state with provider brand color
       style={
         isSelected
           ? {
@@ -91,6 +92,7 @@ export default function ModelGridCard({
         {showProviderIcon && (
           <div
             className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-[background-color,box-shadow] duration-150"
+            // intentionally dynamic: provider brand color with selection state
             style={{
               backgroundColor: hexToRgba(color, isSelected ? 0.24 : 0.12),
               boxShadow: isSelected

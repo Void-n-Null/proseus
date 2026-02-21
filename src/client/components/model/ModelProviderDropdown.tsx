@@ -145,11 +145,8 @@ export default function ModelProviderDropdown({
           isOpen
             ? "z-[51] rounded-t-lg border border-b-0 border-border"
             : "rounded-lg border border-border hover:border-border-subtle",
+          "bg-surface backdrop-blur-[20px]",
         ].join(" ")}
-        style={{
-          background: "var(--color-surface)",
-          backdropFilter: "blur(20px)",
-        }}
       >
         <span className="text-text-dim whitespace-nowrap text-sm">
           Provider
@@ -183,11 +180,7 @@ export default function ModelProviderDropdown({
       {/* Popover */}
       {isOpen && (
         <div
-          className="absolute z-50 left-0 top-full -mt-px w-full md:w-80 rounded-b-lg overflow-hidden border border-t-0 border-border shadow-[0_20px_40px_-8px_rgba(0,0,0,0.7)]"
-          style={{
-            background: "var(--color-surface)",
-            backdropFilter: "blur(20px)",
-          }}
+          className="absolute z-50 left-0 top-full -mt-px w-full md:w-80 rounded-b-lg overflow-hidden border border-t-0 border-border shadow-[0_20px_40px_-8px_rgba(0,0,0,0.7)] bg-surface backdrop-blur-[20px]"
         >
           {/* List */}
           <div
@@ -216,26 +209,14 @@ export default function ModelProviderDropdown({
                   {/* Active item: warm left edge */}
                   {isActive && (
                     <div
-                      className="absolute inset-0 rounded-md pointer-events-none"
-                      style={{
-                        background:
-                          "linear-gradient(90deg, oklch(0.60 0.15 60 / 0.12) 0%, transparent 60%)",
-                        borderLeft:
-                          "2px solid oklch(0.60 0.15 60 / 0.6)",
-                      }}
+                      className="absolute inset-0 rounded-md pointer-events-none bg-[linear-gradient(90deg,oklch(0.60_0.15_60/0.12)_0%,transparent_60%)] border-l-2 border-l-[oklch(0.60_0.15_60/0.6)]"
                     />
                   )}
 
                   {/* Focus highlight */}
                   {isFocused && !isActive && (
                     <div
-                      className="absolute inset-0 rounded-md pointer-events-none"
-                      style={{
-                        background:
-                          "linear-gradient(90deg, oklch(0.50 0 0 / 0.10) 0%, transparent 60%)",
-                        borderLeft:
-                          "2px solid oklch(0.50 0 0 / 0.35)",
-                      }}
+                      className="absolute inset-0 rounded-md pointer-events-none bg-[linear-gradient(90deg,oklch(0.50_0_0/0.10)_0%,transparent_60%)] border-l-2 border-l-[oklch(0.50_0_0/0.35)]"
                     />
                   )}
 
@@ -243,6 +224,7 @@ export default function ModelProviderDropdown({
                     {/* Provider icon */}
                     <div
                       className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+                      // intentionally dynamic: provider brand color mixed at runtime
                       style={{
                         background: isActive
                           ? `color-mix(in oklch, ${pMeta.color} 12%, transparent)`

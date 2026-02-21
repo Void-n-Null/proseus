@@ -80,7 +80,7 @@ export const Avatar = React.memo(function Avatar({
     return (
       <div
         className={`shrink-0 overflow-hidden rounded-lg ${className ?? ""}`}
-        style={{ maxWidth: w, ...style }}
+        style={{ maxWidth: w, ...style }} /* intentionally dynamic: maxWidth from prop */
       >
         <img
           src={thumbSrc}
@@ -91,19 +91,17 @@ export const Avatar = React.memo(function Avatar({
     );
   }
 
+  // intentionally dynamic: dimensions, radius, and image from props
   return (
     <div
       role="img"
       aria-label={alt}
-      className={className}
+      className={`shrink-0 bg-cover bg-center ${className ?? ""}`}
       style={{
         width: w,
         height: h,
         borderRadius,
         backgroundImage: `url(${thumbSrc})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        flexShrink: 0,
         ...style,
       }}
     />

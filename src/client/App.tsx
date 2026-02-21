@@ -7,6 +7,7 @@ import CharacterSidebar from "./components/characters/CharacterSidebar.tsx";
 import PersonaSidebar from "./components/personas/PersonaSidebar.tsx";
 import ModelSelector from "./components/model/ModelSelector.tsx";
 import { useOAuthCallback } from "./hooks/useOAuthCallback.ts";
+import PromptTemplateModal from "./components/prompt-template/PromptTemplateModal.tsx";
 
 export default function App() {
   const { data: chatData, isLoading, refetch } = useChatList();
@@ -17,6 +18,7 @@ export default function App() {
     route.chatId ? "chats" : "characters",
   );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [promptTemplateOpen, setPromptTemplateOpen] = useState(false);
   const { oauthState, dismissOAuth } = useOAuthCallback();
 
   const handleSeed = async () => {
@@ -168,6 +170,25 @@ export default function App() {
         <ModelSelector />
 
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <button
+            onClick={() => setPromptTemplateOpen(true)}
+            title="Prompt Template"
+            style={{
+              padding: "0.35rem 0.5rem",
+              background: "var(--color-surface-raised)",
+              color: "var(--color-text-muted)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-md)",
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              lineHeight: 1,
+              transition: "color 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-text-body)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}
+          >
+            ⚙
+          </button>
           {resolvedChatId && (
             <button
               onClick={handleCloseChat}
@@ -235,6 +256,38 @@ export default function App() {
           <button type="button" onClick={dismissOAuth} className="text-text-dim hover:text-text-muted transition-colors text-xs">
             Dismiss
           </button>
+        </div>
+      )}
+
+      {/* Prompt Template Modal */}
+      {promptTemplateOpen && (
+        <div
+          onClick={() => setPromptTemplateOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "oklch(0 0 0 / 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius-md)",
+              width: "min(920px, 95vw)",
+              height: "min(700px, 88vh)",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <PromptTemplateModal onClose={() => setPromptTemplateOpen(false)} />
+          </div>
         </div>
       )}
 

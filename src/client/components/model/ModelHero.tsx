@@ -413,10 +413,9 @@ function SelectedModelPane({ model }: { model: Model }) {
 
   return (
     <div
-      className="relative rounded-xl px-5 py-4 overflow-hidden bg-surface border border-[oklch(0.70_0.15_280/0.18)]"
-      // intentionally dynamic: provider brand color in box shadow
+      className="relative rounded-2xl px-5 py-4 overflow-hidden bg-surface border border-border/80"
       style={{
-        boxShadow: `0 4px 24px -8px ${hexToRgba(color, 0.15)}`,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
       }}
     >
       {/* Header row */}
@@ -821,7 +820,7 @@ export default function ModelHero({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search models..."
-            className="w-full h-10 pl-10 pr-9 rounded-lg border border-border text-sm text-foreground placeholder-text-dim focus:outline-none focus:border-primary/25 focus:shadow-[0_0_0_1px_oklch(0.70_0.15_280/0.08)] transition-all duration-150 bg-surface"
+            className="w-full h-10 pl-10 pr-9 rounded-2xl border border-border text-sm text-foreground placeholder-text-dim focus:outline-none focus:border-primary/25 focus:shadow-[0_0_0_1px_oklch(0.70_0.15_280/0.08)] transition-all duration-150 bg-surface"
           />
           {search && (
             <button
@@ -857,7 +856,7 @@ export default function ModelHero({
                 type="button"
                 onClick={() => onToggleFilter(chip.key)}
                 className={[
-                  "h-7 px-2.5 rounded-lg flex items-center gap-1.5",
+                  "h-7 px-2.5 rounded-full flex items-center gap-1.5",
                   "text-xs font-medium transition-all duration-100",
                   active
                     ? "bg-surface-hover text-foreground border border-border"

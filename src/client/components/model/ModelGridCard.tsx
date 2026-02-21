@@ -70,19 +70,19 @@ export default function ModelGridCard({
           ? {
               background: "oklch(0.70 0.15 280 / 0.06)",
               border: "1px solid oklch(0.70 0.15 280 / 0.25)",
-              boxShadow: `0 0 20px -6px ${hexToRgba(color, 0.2)}`,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
             }
           : undefined
       }
       className={[
-        "group relative w-full text-left rounded-lg px-4 py-3",
+        "group relative w-full text-left rounded-2xl px-4 py-3",
         "outline-none focus-visible:ring-1 focus-visible:ring-primary/60",
         "transition-[background-color,border-color,box-shadow,transform] duration-150",
         isSelected
           ? ""
           : [
               "bg-[oklch(1_0_0/0.015)] border border-[oklch(1_0_0/0.04)]",
-              "hover:bg-[oklch(1_0_0/0.05)] hover:border-[oklch(1_0_0/0.14)] hover:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.6)]",
+              "hover:bg-[oklch(1_0_0/0.05)] hover:border-[oklch(1_0_0/0.14)] hover:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.2)]",
               "active:scale-[0.985]",
             ].join(" "),
       ].join(" ")}
@@ -91,13 +91,9 @@ export default function ModelGridCard({
         {/* Provider icon with brand color */}
         {showProviderIcon && (
           <div
-            className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-[background-color,box-shadow] duration-150"
-            // intentionally dynamic: provider brand color with selection state
+            className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-[background-color] duration-150"
             style={{
               backgroundColor: hexToRgba(color, isSelected ? 0.24 : 0.12),
-              boxShadow: isSelected
-                ? `0 0 16px -3px ${hexToRgba(color, 0.35)}`
-                : "none",
             }}
           >
             <ProviderIcon provider={model.provider} size={20} />

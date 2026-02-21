@@ -140,11 +140,11 @@ export default function ModelProviderDropdown({
         aria-activedescendant={isOpen ? focusedId : undefined}
         className={[
           "relative group flex items-center gap-2.5 w-full md:w-80 h-10 px-3.5 text-sm",
-          "transition-all duration-150",
+          "duration-100",
           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50",
           isOpen
-            ? "z-[51] rounded-t-lg border border-b-0 border-border"
-            : "rounded-lg border border-border hover:border-border-subtle",
+            ? "z-[51] rounded-t-2xl border border-b-0 border-border"
+            : "rounded-2xl border border-border",
           "bg-surface backdrop-blur-[20px]",
         ].join(" ")}
       >
@@ -180,7 +180,7 @@ export default function ModelProviderDropdown({
       {/* Popover */}
       {isOpen && (
         <div
-          className="absolute z-50 left-0 top-full -mt-px w-full md:w-80 rounded-b-lg overflow-hidden border border-t-0 border-border shadow-[0_20px_40px_-8px_rgba(0,0,0,0.7)] bg-surface backdrop-blur-[20px]"
+          className="absolute z-50 left-0 top-full -mt-px w-full md:w-80 rounded-b-2xl overflow-hidden border border-t-0 border-border shadow-[0_20px_40px_-8px_rgba(0,0,0,0.7)] bg-surface backdrop-blur-[20px]"
         >
           {/* List */}
           <div

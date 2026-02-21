@@ -1,11 +1,9 @@
-/**
- * Settings DB — key-value store for user preferences.
- *
- * Used to persist things like the selected model and provider
- * so the choice survives across browser sessions and devices.
- */
-
 import type { Database } from "bun:sqlite";
+import {
+  type PromptTemplate,
+  DEFAULT_PROMPT_TEMPLATE,
+  mergeWithDefaults,
+} from "../../shared/prompt-template.ts";
 
 /** Get a setting value by key. Returns null if not set. */
 export function getSetting(db: Database, key: string): string | null {
@@ -48,4 +46,21 @@ export function getSettings(
     }
   }
   return result;
+}
+
+const PROMPT_TEMPLATE_KEY = "prompt_template";
+
+export function getPromptTemplate(db: Database): PromptTemplate {
+  const json = getSetting(db, PROMPT_TEMPLATE_KEY);
+  if (!json) return structuredClone(DEFAULT_PROMPT_TEMPLATE);
+  try {
+    const parsed = JSON.parse(json) as PromptTemplate;
+    return mergeWithDefaults(parsed);
+  } catch {
+    return structuredClone(DEFAULT_PROMPT_TEMPLATE);
+  }
+}
+
+export function setPromptTemplate(db: Database, template: PromptTemplate): void {
+  setSetting(db, PROMPT_TEMPLATE_KEY, JSON.stringify(template));
 }

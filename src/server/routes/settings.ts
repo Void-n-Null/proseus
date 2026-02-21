@@ -7,7 +7,9 @@
 
 import { Hono } from "hono";
 import type { Database } from "bun:sqlite";
-import { getSettings, setSetting } from "../db/settings.ts";
+import { getSettings, setSetting, getPromptTemplate, setPromptTemplate } from "../db/settings.ts";
+import { mergeWithDefaults } from "../../shared/prompt-template.ts";
+import type { PromptTemplate } from "../../shared/prompt-template.ts";
 
 /** Known setting keys for model selection. */
 const MODEL_KEYS = ["selected_model", "selected_provider"] as const;
@@ -47,6 +49,21 @@ export function createSettingsRouter(db: Database) {
     }
 
     return c.json({ settings: updated });
+  });
+
+  router.get("/prompt-template", (c) => {
+    const template = getPromptTemplate(db);
+    return c.json({ template });
+  });
+
+  router.put("/prompt-template", async (c) => {
+    const body = await c.req.json<{ template: PromptTemplate }>();
+    if (!body?.template || !Array.isArray(body.template.slots)) {
+      return c.json({ error: "Invalid template: expected { template: { slots: [...] } }" }, 400);
+    }
+    const merged = mergeWithDefaults(body.template);
+    setPromptTemplate(db, merged);
+    return c.json({ template: merged });
   });
 
   return router;

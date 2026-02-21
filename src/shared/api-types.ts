@@ -141,6 +141,46 @@ export interface CreateChatFromCharacterRequest {
   character_id: string;
 }
 
+export interface CreateCharacterRequest {
+  name: string;
+  description?: string;
+  personality?: string;
+  scenario?: string;
+  first_mes?: string;
+  mes_example?: string;
+  creator_notes?: string;
+  system_prompt?: string;
+  post_history_instructions?: string;
+  alternate_greetings?: string[];
+  tags?: string[];
+  creator?: string;
+  character_version?: string;
+}
+
+export interface CreateCharacterResponse {
+  character: Character;
+}
+
+export interface UpdateCharacterRequest {
+  name?: string;
+  description?: string;
+  personality?: string;
+  scenario?: string;
+  first_mes?: string;
+  mes_example?: string;
+  creator_notes?: string;
+  system_prompt?: string;
+  post_history_instructions?: string;
+  alternate_greetings?: string[];
+  tags?: string[];
+  creator?: string;
+  character_version?: string;
+}
+
+export interface UpdateCharacterResponse {
+  character: Character;
+}
+
 // ── Speaker endpoints ──
 
 export interface CreateSpeakerRequest {

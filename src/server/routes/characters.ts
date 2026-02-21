@@ -260,6 +260,21 @@ export function createCharactersRouter(db: Database): Hono {
     }
   });
 
+  // GET /:id/recent-chat — return the single most recent chat for this character
+  app.get("/:id/recent-chat", (c) => {
+    const characterId = c.req.param("id");
+    const row = db
+      .query<
+        { id: string; name: string; updated_at: number },
+        { $cid: string }
+      >(
+        "SELECT id, name, updated_at FROM chats WHERE character_id = $cid ORDER BY updated_at DESC LIMIT 1",
+      )
+      .get({ $cid: characterId });
+
+    return c.json({ chat: row ?? null });
+  });
+
   // POST /:id/chat — create a new chat from this character
   app.post("/:id/chat", async (c) => {
     const characterId = c.req.param("id");

@@ -331,11 +331,7 @@ const Composer = React.memo(function Composer({
 
   return (
     <div
-      className="shrink-0 pt-0 pb-4 md:px-6"
-      style={{
-        background: "linear-gradient(to top, var(--color-background) 60%, transparent 100%)",
-        paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
-      }}
+      className="shrink-0 pt-0 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-6 bg-[linear-gradient(to_top,var(--color-background)_60%,transparent_100%)]"
     >
       {/* Hidden SVG gradient for flame icon stroke */}
       <svg width="0" height="0" className="absolute">
@@ -364,18 +360,16 @@ const Composer = React.memo(function Composer({
           {/* Input row */}
           <div className="relative flex items-end gap-3 px-1">
             {/* Hamburger menu — persona picker */}
-            <div ref={menuRef} style={{ position: "relative", alignSelf: "flex-end" }}>
+            <div ref={menuRef} className="relative self-end">
               <button
                 type="button"
                 onClick={() => setMenuOpen(!menuOpen)}
                 title={activePersona ? `Persona: ${activePersona.name}` : "Set persona"}
-                className="shrink-0 p-3 rounded-lg transition-all duration-200"
-                style={{
-                  color: activePersona ? "oklch(0.75 0.12 280)" : "#475569",
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                }}
+                className={[
+                  "shrink-0 p-3 rounded-lg transition-all duration-200",
+                  "bg-transparent border-none cursor-pointer",
+                  activePersona ? "text-[oklch(0.75_0.12_280)]" : "text-[#475569]",
+                ].join(" ")}
               >
                 {activePersona ? (
                   <PersonaAvatar persona={activePersona} size={22} />
@@ -401,29 +395,10 @@ const Composer = React.memo(function Composer({
               {/* Persona dropdown — opens upward from the composer */}
               {menuOpen && (
                 <div
-                  style={{
-                    position: "absolute",
-                    bottom: "calc(100% + 6px)",
-                    left: 0,
-                    minWidth: 200,
-                    background: "var(--color-surface)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-lg)",
-                    boxShadow: "0 -4px 20px rgba(0,0,0,0.45)",
-                    zIndex: 50,
-                    overflow: "hidden",
-                    padding: "0.25rem",
-                  }}
+                  className="absolute bottom-[calc(100%+6px)] left-0 min-w-[200px] bg-surface border border-border rounded-lg shadow-[0_-4px_20px_rgba(0,0,0,0.45)] z-50 overflow-hidden p-1"
                 >
                   <div
-                    style={{
-                      padding: "0.35rem 0.5rem 0.25rem",
-                      fontSize: "0.65rem",
-                      fontWeight: 600,
-                      color: "var(--color-text-dim)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}
+                    className="px-2 pt-[0.35rem] pb-1 text-[0.65rem] font-semibold text-text-dim uppercase tracking-[0.05em]"
                   >
                     Persona
                   </div>
@@ -434,38 +409,21 @@ const Composer = React.memo(function Composer({
                   />
                   {personas.length > 0 && (
                     <div
-                      style={{
-                        height: 1,
-                        background: "var(--color-border)",
-                        margin: "0.25rem 0",
-                      }}
+                      className="h-px bg-border my-1"
                     />
                   )}
                   {personas.map((p) => (
                     <button
                       key={p.id}
                       onClick={() => selectPersona(p.id)}
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        padding: "0.4rem 0.5rem",
-                        background:
-                          personaId === p.id
-                            ? "oklch(0.18 0.04 280)"
-                            : "transparent",
-                        color:
-                          personaId === p.id
-                            ? "oklch(0.75 0.12 280)"
-                            : "var(--color-text-body)",
-                        border: "none",
-                        borderRadius: "var(--radius-sm)",
-                        cursor: "pointer",
-                        fontSize: "0.78rem",
-                        textAlign: "left",
-                        transition: "background 0.1s",
-                      }}
+                      className={[
+                        "w-full flex items-center gap-2 px-2 py-[0.4rem]",
+                        "border-none rounded-sm cursor-pointer",
+                        "text-[0.78rem] text-left transition-[background] duration-100",
+                        personaId === p.id
+                          ? "bg-[oklch(0.18_0.04_280)] text-[oklch(0.75_0.12_280)]"
+                          : "bg-transparent text-text-body",
+                      ].join(" ")}
                       onMouseEnter={(e) => {
                         if (personaId !== p.id)
                           (e.currentTarget as HTMLButtonElement).style.background =
@@ -479,24 +437,13 @@ const Composer = React.memo(function Composer({
                     >
                       <PersonaAvatar persona={p} size={20} />
                       <span
-                        style={{
-                          flex: 1,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
+                        className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis"
                       >
                         {p.name}
                       </span>
                       {p.is_global && (
                         <span
-                          style={{
-                            fontSize: "0.6rem",
-                            padding: "0 0.25rem",
-                            background: "oklch(0.20 0.04 280)",
-                            color: "oklch(0.55 0.10 280)",
-                            borderRadius: "var(--radius-sm)",
-                          }}
+                          className="text-[0.6rem] px-1 bg-[oklch(0.20_0.04_280)] text-[oklch(0.55_0.10_280)] rounded-sm"
                         >
                           global
                         </span>
@@ -527,10 +474,9 @@ const Composer = React.memo(function Composer({
                 "resize-none bg-transparent",
                 "text-[#f8fafc] placeholder-[#475569]",
                 "focus:outline-none",
-                "leading-6",
+                "leading-6 font-body",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
               ].join(" ")}
-              style={{ fontFamily: "'Outfit', system-ui, sans-serif" }}
             />
 
             {/* Send + Mic buttons — stacked vertically */}
@@ -695,11 +641,7 @@ const Composer = React.memo(function Composer({
                   ref={canvasRef}
                   width={600}
                   height={40}
-                  style={{
-                    width: "100%",
-                    height: 40,
-                    display: "block",
-                  }}
+                  className="w-full h-[40px] block"
                 />
               </motion.div>
             )}
@@ -716,20 +658,17 @@ const Composer = React.memo(function Composer({
                 className="overflow-hidden"
               >
                 <div
-                  className="flex items-center justify-center gap-2 py-1.5 text-xs"
-                  style={{
-                    color: isReconnecting ? "#eab308" : "#ef4444",
-                  }}
+                  className={[
+                    "flex items-center justify-center gap-2 py-1.5 text-xs",
+                    isReconnecting ? "text-[#eab308]" : "text-[#ef4444]",
+                  ].join(" ")}
                 >
                   {/* Pulsing dot */}
                   <motion.div
-                    style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      background: isReconnecting ? "#eab308" : "#ef4444",
-                      flexShrink: 0,
-                    }}
+                    className={[
+                      "size-1.5 rounded-full shrink-0",
+                      isReconnecting ? "bg-[#eab308]" : "bg-[#ef4444]",
+                    ].join(" ")}
                     animate={{ opacity: [1, 0.3, 1] }}
                     transition={{
                       duration: isReconnecting ? 1.2 : 2,
@@ -737,7 +676,7 @@ const Composer = React.memo(function Composer({
                       ease: "easeInOut",
                     }}
                   />
-                  <span style={{ fontFamily: "'Outfit', system-ui, sans-serif" }}>
+                  <span className="font-body">
                     {isReconnecting
                       ? "Connection lost — reconnecting..."
                       : "Disconnected from server"}
@@ -784,18 +723,13 @@ function PersonaPickerItem({
   return (
     <button
       onClick={onClick}
-      style={{
-        width: "100%",
-        padding: "0.4rem 0.5rem",
-        background: active ? "var(--color-surface-hover)" : "transparent",
-        color: active ? "var(--color-text-body)" : "var(--color-text-dim)",
-        border: "none",
-        borderRadius: "var(--radius-sm)",
-        cursor: "pointer",
-        fontSize: "0.78rem",
-        textAlign: "left",
-        transition: "background 0.1s",
-      }}
+      className={[
+        "w-full px-2 py-[0.4rem] border-none rounded-sm cursor-pointer",
+        "text-[0.78rem] text-left transition-[background] duration-100",
+        active
+          ? "bg-surface-hover text-text-body"
+          : "bg-transparent text-text-dim",
+      ].join(" ")}
       onMouseEnter={(e) => {
         if (!active)
           (e.currentTarget as HTMLButtonElement).style.background =

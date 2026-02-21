@@ -109,18 +109,11 @@ export default function PromptTemplatePanel() {
 
   if (isLoading || !template) {
     return (
-      <div style={panelStyle}>
-        <div style={headerStyle}>Prompt Template</div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: 1,
-            color: "var(--color-text-dim)",
-            fontSize: "0.82rem",
-          }}
-        >
+      <div className="flex flex-col h-full bg-surface border-r border-border font-body text-text-body w-[320px] min-w-[320px]">
+        <div className="p-3 border-b border-border text-[0.75rem] font-normal tracking-[0.15em] text-text-muted uppercase font-display">
+          Prompt Template
+        </div>
+        <div className="flex items-center justify-center flex-1 text-text-dim text-[0.82rem]">
           Loading...
         </div>
       </div>
@@ -136,14 +129,18 @@ export default function PromptTemplatePanel() {
   }));
 
   return (
-    <div style={panelStyle}>
-      <div style={headerStyle}>Prompt Template</div>
+    <div className="flex flex-col h-full bg-surface border-r border-border font-body text-text-body w-[320px] min-w-[320px]">
+      <div className="p-3 border-b border-border text-[0.75rem] font-normal tracking-[0.15em] text-text-muted uppercase font-display">
+        Prompt Template
+      </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "0.5rem" }}>
+      <div className="flex-1 overflow-y-auto p-2">
         {slotsByZone.map(({ zone, label, items }) => (
-          <div key={zone} style={{ marginBottom: "0.75rem" }}>
-            <div style={zoneLabelStyle}>{label}</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+          <div key={zone} className="mb-3">
+            <div className="text-[0.62rem] font-medium tracking-[0.1em] text-text-dim uppercase px-2 pt-[0.4rem] pb-[0.2rem]">
+              {label}
+            </div>
+            <div className="flex flex-col gap-[2px]">
               {items.map(({ slot, index }) => {
                 const meta = SLOT_META[slot.id];
                 const isExpanded = expandedSlot === slot.id;
@@ -156,15 +153,10 @@ export default function PromptTemplatePanel() {
                 return (
                   <div key={slot.id}>
                     <div
+                      className="flex items-center gap-2 py-[0.45rem] px-2 rounded-sm transition-[background] duration-[120ms]"
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        padding: "0.45rem 0.5rem",
-                        borderRadius: "var(--radius-sm)",
-                        cursor: meta.hasContent ? "pointer" : "default",
-                        transition: "background 0.12s",
-                        background: isExpanded
+                        /* intentionally dynamic */ cursor: meta.hasContent ? "pointer" : "default",
+                        /* intentionally dynamic */ background: isExpanded
                           ? "var(--color-surface-hover)"
                           : "transparent",
                       }}
@@ -182,14 +174,7 @@ export default function PromptTemplatePanel() {
                       }}
                     >
                       {canReorder ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "1px",
-                            flexShrink: 0,
-                          }}
-                        >
+                        <div className="flex flex-col gap-px shrink-0">
                           <ArrowButton
                             direction="up"
                             disabled={isFirst}
@@ -208,7 +193,7 @@ export default function PromptTemplatePanel() {
                           />
                         </div>
                       ) : (
-                        <div style={{ width: 16, flexShrink: 0 }} />
+                        <div className="w-4 shrink-0" />
                       )}
 
                       <button
@@ -217,85 +202,50 @@ export default function PromptTemplatePanel() {
                           if (!meta.required) handleToggle(slot.id);
                         }}
                         disabled={meta.required}
+                        className="relative shrink-0 border-none w-8 h-[18px] rounded-[9px] transition-[background] duration-150"
                         style={{
-                          width: 32,
-                          height: 18,
-                          borderRadius: 9,
-                          border: "none",
-                          cursor: meta.required ? "not-allowed" : "pointer",
-                          background: slot.enabled
+                          /* intentionally dynamic */ cursor: meta.required ? "not-allowed" : "pointer",
+                          /* intentionally dynamic */ background: slot.enabled
                             ? "var(--color-primary)"
                             : "var(--color-surface-raised)",
-                          position: "relative",
-                          flexShrink: 0,
-                          transition: "background 0.15s",
-                          opacity: meta.required ? 0.6 : 1,
+                          /* intentionally dynamic */ opacity: meta.required ? 0.6 : 1,
                         }}
                       >
                         <div
+                          className="absolute rounded-full bg-[oklch(0.95_0_0)] w-3 h-3 top-[3px] transition-[left] duration-150"
                           style={{
-                            width: 12,
-                            height: 12,
-                            borderRadius: "50%",
-                            background: "var(--color-text-body)",
-                            position: "absolute",
-                            top: 3,
-                            left: slot.enabled ? 17 : 3,
-                            transition: "left 0.15s",
+                            /* intentionally dynamic */ left: slot.enabled ? 17 : 3,
                           }}
                         />
                       </button>
 
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="flex-1 min-w-0">
                         <div
+                          className="text-[0.78rem] font-normal whitespace-nowrap overflow-hidden text-ellipsis"
                           style={{
-                            fontSize: "0.78rem",
-                            fontWeight: 400,
-                            color: slot.enabled
+                            /* intentionally dynamic */ color: slot.enabled
                               ? "var(--color-text-body)"
                               : "var(--color-text-dim)",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
                           }}
                         >
                           {meta.label}
                         </div>
-                        <div
-                          style={{
-                            fontSize: "0.65rem",
-                            color: "var(--color-text-dim)",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            marginTop: "1px",
-                          }}
-                        >
+                        <div className="text-[0.65rem] text-text-dim whitespace-nowrap overflow-hidden text-ellipsis mt-px">
                           {meta.description}
                         </div>
                       </div>
 
                       {meta.hasContent && slot.content != null && slot.content.length > 0 && (
-                        <span
-                          style={{
-                            fontSize: "0.62rem",
-                            color: "var(--color-text-dim)",
-                            flexShrink: 0,
-                            fontVariantNumeric: "tabular-nums",
-                          }}
-                        >
+                        <span className="text-[0.62rem] text-text-dim shrink-0 tabular-nums">
                           ~{estimateTokens(slot.content)} tk
                         </span>
                       )}
 
                       {meta.hasContent && (
                         <span
+                          className="text-[0.6rem] text-text-dim shrink-0 transition-transform duration-150"
                           style={{
-                            fontSize: "0.6rem",
-                            color: "var(--color-text-dim)",
-                            flexShrink: 0,
-                            transition: "transform 0.15s",
-                            transform: isExpanded
+                            /* intentionally dynamic */ transform: isExpanded
                               ? "rotate(90deg)"
                               : "rotate(0deg)",
                           }}
@@ -306,44 +256,17 @@ export default function PromptTemplatePanel() {
                     </div>
 
                     {isExpanded && meta.hasContent && (
-                      <div style={{ padding: "0.25rem 0.5rem 0.5rem 2.75rem" }}>
+                      <div className="pt-1 px-2 pb-2 pl-[2.75rem]">
                         <textarea
                           value={slot.content ?? ""}
                           onChange={(e) =>
                             handleContentChange(slot.id, e.target.value)
                           }
                           rows={5}
-                          style={{
-                            width: "100%",
-                            resize: "vertical",
-                            background: "var(--color-surface)",
-                            color: "var(--color-text-body)",
-                            border: "1px solid var(--color-border)",
-                            borderRadius: "var(--radius-sm)",
-                            padding: "0.4rem 0.5rem",
-                            fontSize: "0.75rem",
-                            fontFamily: "var(--font-body)",
-                            lineHeight: 1.5,
-                            outline: "none",
-                            boxSizing: "border-box",
-                          }}
-                          onFocus={(e) => {
-                            e.currentTarget.style.borderColor =
-                              "var(--color-primary)";
-                          }}
-                          onBlur={(e) => {
-                            e.currentTarget.style.borderColor =
-                              "var(--color-border)";
-                          }}
+                          className="w-full resize-y bg-surface text-text-body border border-border rounded-sm px-2 py-[0.4rem] text-[0.75rem] font-body leading-normal outline-none box-border focus:border-primary"
                         />
                         {meta.hasMacros && (
-                          <div
-                            style={{
-                              fontSize: "0.6rem",
-                              color: "var(--color-text-dim)",
-                              marginTop: "0.2rem",
-                            }}
-                          >
+                          <div className="text-[0.6rem] text-text-dim mt-[0.2rem]">
                             {"Supports {{char}} and {{user}} macros"}
                           </div>
                         )}
@@ -358,28 +281,14 @@ export default function PromptTemplatePanel() {
       </div>
 
       {isDirty && (
-        <div
-          style={{
-            padding: "0.5rem 0.75rem",
-            borderTop: "1px solid var(--color-border)",
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
-        >
+        <div className="py-2 px-3 border-t border-border flex justify-end">
           <button
             onClick={handleSave}
             disabled={isUpdating}
+            className="px-4 py-[0.4rem] bg-primary text-background border-none rounded-md text-[0.75rem] font-medium transition-opacity duration-150"
             style={{
-              padding: "0.4rem 1rem",
-              background: "var(--color-primary)",
-              color: "var(--color-background)",
-              border: "none",
-              borderRadius: "var(--radius-md)",
-              cursor: isUpdating ? "wait" : "pointer",
-              fontSize: "0.75rem",
-              fontWeight: 500,
-              opacity: isUpdating ? 0.6 : 1,
-              transition: "opacity 0.15s",
+              /* intentionally dynamic */ cursor: isUpdating ? "wait" : "pointer",
+              /* intentionally dynamic */ opacity: isUpdating ? 0.6 : 1,
             }}
           >
             {isUpdating ? "Saving\u2026" : "Save"}
@@ -403,54 +312,13 @@ function ArrowButton({
     <button
       onClick={onClick}
       disabled={disabled}
+      className="p-0 border-none bg-transparent text-[0.5rem] leading-none flex items-center justify-center w-4 h-[10px]"
       style={{
-        width: 16,
-        height: 10,
-        padding: 0,
-        border: "none",
-        background: "transparent",
-        color: disabled ? "var(--color-surface-raised)" : "var(--color-text-dim)",
-        cursor: disabled ? "default" : "pointer",
-        fontSize: "0.5rem",
-        lineHeight: 1,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        /* intentionally dynamic */ color: disabled ? "var(--color-surface-raised)" : "var(--color-text-dim)",
+        /* intentionally dynamic */ cursor: disabled ? "default" : "pointer",
       }}
     >
       {direction === "up" ? "\u25B2" : "\u25BC"}
     </button>
   );
 }
-
-const panelStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  height: "100%",
-  background: "var(--color-surface)",
-  borderRight: "1px solid var(--color-border)",
-  fontFamily: "var(--font-body)",
-  color: "var(--color-text-body)",
-  width: 320,
-  minWidth: 320,
-};
-
-const headerStyle: React.CSSProperties = {
-  padding: "0.75rem",
-  borderBottom: "1px solid var(--color-border)",
-  fontSize: "0.75rem",
-  fontWeight: 400,
-  letterSpacing: "0.15em",
-  color: "var(--color-text-muted)",
-  textTransform: "uppercase",
-  fontFamily: "var(--font-display)",
-};
-
-const zoneLabelStyle: React.CSSProperties = {
-  fontSize: "0.62rem",
-  fontWeight: 500,
-  letterSpacing: "0.1em",
-  color: "var(--color-text-dim)",
-  textTransform: "uppercase",
-  padding: "0.4rem 0.5rem 0.2rem",
-};

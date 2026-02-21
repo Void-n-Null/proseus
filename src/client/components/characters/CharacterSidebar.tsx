@@ -157,17 +157,7 @@ export default function CharacterSidebar({
   const isImporting = importMutation.isPending || importUrlMutation.isPending;
 
   return (
-    <div
-      style={{
-        width: 280,
-        minWidth: 280,
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--color-surface)",
-        borderRight: "1px solid var(--color-border)",
-      }}
-    >
+    <div className="w-[280px] min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
       {creating && (
         <CharacterEditor
           character={null}
@@ -183,54 +173,18 @@ export default function CharacterSidebar({
       )}
 
       {/* Header */}
-      <div
-        style={{
-          padding: "0.75rem",
-          borderBottom: "1px solid var(--color-border)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.5rem",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "0.75rem",
-              fontWeight: 400,
-              letterSpacing: "0.15em",
-              color: "var(--color-text-muted)",
-              textTransform: "uppercase",
-            }}
-          >
+      <div className="p-3 border-b border-border flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[0.75rem] font-normal tracking-[0.15em] text-text-muted uppercase">
             Characters
           </span>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-            <span
-              style={{
-                fontSize: "0.7rem",
-                color: "var(--color-text-dim)",
-              }}
-            >
+          <div className="flex items-center gap-[0.35rem]">
+            <span className="text-[0.7rem] text-text-dim">
               {characters.length}
             </span>
             <button
               onClick={() => setCreating(true)}
-              style={{
-                padding: "0.15rem 0.45rem",
-                background: "var(--color-primary)",
-                color: "#fff",
-                border: "none",
-                borderRadius: "var(--radius-sm)",
-                cursor: "pointer",
-                fontSize: "0.72rem",
-                lineHeight: 1.4,
-              }}
+              className="px-[0.45rem] py-[0.15rem] bg-primary text-white border-none rounded-sm cursor-pointer text-[0.72rem] leading-[1.4]"
               title="Create new character"
             >
               + New
@@ -239,53 +193,17 @@ export default function CharacterSidebar({
         </div>
 
         {/* Import buttons */}
-        <div style={{ display: "flex", gap: "0.35rem" }}>
+        <div className="flex gap-[0.35rem]">
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isImporting}
-            style={{
-              flex: 1,
-              padding: "0.4rem 0.5rem",
-              background: "var(--color-surface-raised)",
-              color: "var(--color-text-body)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              cursor: isImporting ? "wait" : "pointer",
-              fontSize: "0.75rem",
-              opacity: isImporting ? 0.5 : 1,
-              transition: "background 0.15s",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background =
-                "var(--color-surface-hover)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background =
-                "var(--color-surface-raised)")
-            }
+            className={`flex-1 px-[0.5rem] py-[0.4rem] bg-surface-raised text-text-body border border-border rounded-md text-[0.75rem] transition-[background] duration-150 hover:bg-surface-hover ${isImporting ? "cursor-wait opacity-50" : "cursor-pointer opacity-100"}`}
           >
             {isImporting ? "Importing..." : "Import File"}
           </button>
           <button
             onClick={() => setShowUrlInput(!showUrlInput)}
-            style={{
-              padding: "0.4rem 0.5rem",
-              background: "var(--color-surface-raised)",
-              color: "var(--color-text-muted)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              cursor: "pointer",
-              fontSize: "0.75rem",
-              transition: "background 0.15s",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background =
-                "var(--color-surface-hover)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background =
-                "var(--color-surface-raised)")
-            }
+            className="px-[0.5rem] py-[0.4rem] bg-surface-raised text-text-muted border border-border rounded-md cursor-pointer text-[0.75rem] transition-[background] duration-150 hover:bg-surface-hover"
             title="Import from Chub URL"
           >
             URL
@@ -294,7 +212,7 @@ export default function CharacterSidebar({
 
         {/* URL input */}
         {showUrlInput && (
-          <div style={{ display: "flex", gap: "0.25rem" }}>
+          <div className="flex gap-1">
             <input
               type="text"
               value={urlInput}
@@ -307,30 +225,13 @@ export default function CharacterSidebar({
                 }
               }}
               placeholder="chub.ai/characters/..."
-              style={{
-                flex: 1,
-                padding: "0.35rem 0.5rem",
-                background: "var(--color-background)",
-                color: "var(--color-text-body)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "var(--radius-md)",
-                fontSize: "0.72rem",
-                outline: "none",
-              }}
+              className="flex-1 px-[0.5rem] py-[0.35rem] bg-background text-text-body border border-border rounded-md text-[0.72rem] outline-none"
               autoFocus
             />
             <button
               onClick={handleUrlImport}
               disabled={importUrlMutation.isPending}
-              style={{
-                padding: "0.35rem 0.5rem",
-                background: "var(--color-primary)",
-                color: "#fff",
-                border: "none",
-                borderRadius: "var(--radius-md)",
-                cursor: "pointer",
-                fontSize: "0.72rem",
-              }}
+              className="px-[0.5rem] py-[0.35rem] bg-primary text-white border-none rounded-md cursor-pointer text-[0.72rem]"
             >
               Go
             </button>
@@ -341,7 +242,7 @@ export default function CharacterSidebar({
           ref={fileInputRef}
           type="file"
           accept=".png,.json"
-          style={{ display: "none" }}
+          className="hidden"
           onChange={(e) => {
             handleFileImport(e.target.files);
             e.target.value = "";
@@ -351,43 +252,19 @@ export default function CharacterSidebar({
         {/* Status message */}
         {statusMessage && (
           <div
-            style={{
-              padding: "0.35rem 0.5rem",
-              borderRadius: "var(--radius-md)",
-              fontSize: "0.72rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "0.35rem",
-              background:
-                statusMessage.type === "success"
-                  ? "oklch(0.30 0.08 155)"
-                  : statusMessage.type === "warn"
-                    ? "oklch(0.28 0.08 65)"
-                    : "oklch(0.25 0.08 25)",
-              color:
-                statusMessage.type === "success"
-                  ? "oklch(0.80 0.10 155)"
-                  : statusMessage.type === "warn"
-                    ? "oklch(0.85 0.10 65)"
-                    : "oklch(0.80 0.10 25)",
-            }}
+            className={`px-[0.5rem] py-[0.35rem] rounded-md text-[0.72rem] flex items-center justify-between gap-[0.35rem] ${
+              statusMessage.type === "success"
+                ? "bg-[oklch(0.30_0.08_155)] text-[oklch(0.80_0.10_155)]"
+                : statusMessage.type === "warn"
+                  ? "bg-[oklch(0.28_0.08_65)] text-[oklch(0.85_0.10_65)]"
+                  : "bg-[oklch(0.25_0.08_25)] text-[oklch(0.80_0.10_25)]"
+            }`}
           >
             <span>{statusMessage.text}</span>
             {statusMessage.action && (
               <button
                 onClick={statusMessage.action.onClick}
-                style={{
-                  padding: "0.2rem 0.4rem",
-                  background: "oklch(0.35 0.06 65)",
-                  color: "oklch(0.90 0.08 65)",
-                  border: "none",
-                  borderRadius: "var(--radius-sm)",
-                  cursor: "pointer",
-                  fontSize: "0.68rem",
-                  fontWeight: 400,
-                  whiteSpace: "nowrap",
-                }}
+                className="px-[0.4rem] py-[0.2rem] bg-[oklch(0.35_0.06_65)] text-[oklch(0.90_0.08_65)] border-none rounded-sm cursor-pointer text-[0.68rem] font-normal whitespace-nowrap"
               >
                 {statusMessage.action.label}
               </button>
@@ -404,76 +281,31 @@ export default function CharacterSidebar({
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "0.35rem",
-          position: "relative",
-        }}
+        className="flex-1 overflow-y-auto p-[0.35rem] relative"
       >
         {/* Drag overlay */}
         {dragOver && (
-          <div
-            style={{
-              position: "absolute",
-              inset: "0.35rem",
-              border: "2px dashed var(--color-primary)",
-              borderRadius: "var(--radius-lg)",
-              background: "oklch(0.15 0.04 280 / 0.5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 10,
-              pointerEvents: "none",
-            }}
-          >
-            <span
-              style={{
-                color: "var(--color-primary)",
-                fontSize: "0.85rem",
-                fontWeight: 400,
-              }}
-            >
+          <div className="absolute inset-[0.35rem] border-2 border-dashed border-primary rounded-lg bg-[oklch(0.15_0.04_280/0.5)] flex items-center justify-center z-10 pointer-events-none">
+            <span className="text-primary text-[0.85rem] font-normal">
               Drop character card
             </span>
           </div>
         )}
 
         {isLoading ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              color: "var(--color-text-dim)",
-              fontSize: "0.8rem",
-            }}
-          >
+          <div className="flex items-center justify-center h-full text-text-dim text-[0.8rem]">
             Loading...
           </div>
         ) : characters.length === 0 ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              gap: "0.5rem",
-              color: "var(--color-text-dim)",
-              textAlign: "center",
-              padding: "1rem",
-            }}
-          >
-            <p style={{ fontSize: "0.85rem" }}>No characters yet</p>
-            <p style={{ fontSize: "0.72rem", lineHeight: 1.4 }}>
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-text-dim text-center p-4">
+            <p className="text-[0.85rem]">No characters yet</p>
+            <p className="text-[0.72rem] leading-[1.4]">
               Import a PNG character card or JSON file to get started.
               Drag and drop works too.
             </p>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+          <div className="flex flex-col gap-0.5">
             {characters.map((char) => (
               <CharacterCard
                 key={char.id}
@@ -545,42 +377,20 @@ function CharacterCard({
       ref={cardRef}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={{
-        borderRadius: "var(--radius-md)",
-        cursor: showPopover ? "default" : "pointer",
-        transition: "background 0.15s",
-        background: hovered || showPopover ? "var(--color-surface-hover)" : "transparent",
-      }}
+      className={`rounded-md transition-[background] duration-150 ${showPopover ? "cursor-default bg-surface-hover" : "cursor-pointer"} ${hovered && !showPopover ? "bg-surface-hover" : ""} ${!hovered && !showPopover ? "bg-transparent" : ""}`}
       onClick={handleClick}
     >
       {showPopover && recentChat ? (
         <div
           onClick={(e) => e.stopPropagation()}
-          style={{
-            padding: "0.35rem",
-            display: "flex",
-            flexDirection: "row",
-            gap: "0.25rem",
-          }}
+          className="p-[0.35rem] flex flex-row gap-1"
         >
           <button
             onClick={() => {
               setShowPopover(false);
               onContinueChat(recentChat.id);
             }}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              padding: "0.5rem 0.6rem",
-              background: "var(--color-primary)",
-              color: "#fff",
-              border: "none",
-              borderRadius: "var(--radius-sm)",
-              cursor: "pointer",
-              fontSize: "0.72rem",
-              textAlign: "center",
-              whiteSpace: "nowrap",
-            }}
+            className="flex-1 min-w-0 px-[0.6rem] py-[0.5rem] bg-primary text-white border-none rounded-sm cursor-pointer text-[0.72rem] text-center whitespace-nowrap"
             title={`Continue "${recentChat.name}"`}
           >
             ↩ Continue
@@ -590,118 +400,40 @@ function CharacterCard({
               setShowPopover(false);
               onStartChat();
             }}
-            style={{
-              flex: 1,
-              padding: "0.5rem 0.6rem",
-              background: "transparent",
-              color: "var(--color-text-muted)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-sm)",
-              cursor: "pointer",
-              fontSize: "0.72rem",
-              textAlign: "center",
-              whiteSpace: "nowrap",
-            }}
+            className="flex-1 px-[0.6rem] py-[0.5rem] bg-transparent text-text-muted border border-border rounded-sm cursor-pointer text-[0.72rem] text-center whitespace-nowrap"
           >
             + New
           </button>
         </div>
       ) : (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            padding: "0.5rem",
-            position: "relative",
-          }}
-        >
+        <div className="flex items-center gap-2 p-2 relative">
           {character.avatar_url ? (
             <Avatar src={character.avatar_url} alt={character.name} size={36} />
           ) : (
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: "var(--radius-md)",
-                background: "var(--color-surface-raised)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.85rem",
-                fontWeight: 500,
-                color: "var(--color-text-muted)",
-                flexShrink: 0,
-              }}
-            >
+            <div className="w-9 h-9 rounded-md bg-surface-raised flex items-center justify-center text-[0.85rem] font-medium text-text-muted shrink-0">
               {character.name.charAt(0).toUpperCase()}
             </div>
           )}
 
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: "0.8rem",
-                fontWeight: 400,
-                color: "var(--color-text-body)",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
+          <div className="flex-1 min-w-0">
+            <div className="text-[0.8rem] font-normal text-text-body whitespace-nowrap overflow-hidden text-ellipsis">
               {character.name}
             </div>
             {character.creator && (
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--color-text-dim)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
+              <div className="text-[0.68rem] text-text-dim whitespace-nowrap overflow-hidden text-ellipsis">
                 by {character.creator}
               </div>
             )}
           </div>
 
           {hovered && (
-            <div
-              style={{
-                position: "absolute",
-                top: "0.35rem",
-                right: "0.35rem",
-                display: "flex",
-                gap: "0.2rem",
-              }}
-            >
+            <div className="absolute top-[0.35rem] right-[0.35rem] flex gap-[0.2rem]">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onEdit();
                 }}
-                style={{
-                  width: 20,
-                  height: 20,
-                  padding: 0,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--color-text-dim)",
-                  fontSize: "0.65rem",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "var(--radius-sm)",
-                  transition: "color 0.15s",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.color = "var(--color-primary)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = "var(--color-text-dim)")
-                }
+                className="w-5 h-5 p-0 bg-none border-none cursor-pointer text-text-dim text-[0.65rem] flex items-center justify-center rounded-sm transition-[color] duration-150 hover:text-primary"
                 title="Edit character"
               >
                 ✎
@@ -711,27 +443,7 @@ function CharacterCard({
                   e.stopPropagation();
                   onDelete();
                 }}
-                style={{
-                  width: 20,
-                  height: 20,
-                  padding: 0,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--color-text-dim)",
-                  fontSize: "0.75rem",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "var(--radius-sm)",
-                  transition: "color 0.15s",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.color = "var(--color-destructive)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = "var(--color-text-dim)")
-                }
+                className="w-5 h-5 p-0 bg-none border-none cursor-pointer text-text-dim text-[0.75rem] flex items-center justify-center rounded-sm transition-[color] duration-150 hover:text-destructive"
                 title="Delete character"
               >
                 &times;

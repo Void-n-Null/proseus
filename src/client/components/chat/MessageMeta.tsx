@@ -32,28 +32,18 @@ const MessageMeta = React.memo(function MessageMeta({
   updatedAt,
 }: MessageMetaProps) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "baseline",
-        gap: "0.4rem",
-        marginBottom: "0.15rem",
-      }}
-    >
+    <div className="flex items-baseline gap-[0.4rem] mb-[0.15rem]">
       <span
-        style={{
-          fontWeight: 600,
-          fontSize: "1.1rem",
-          color: speaker.color ?? "#e0e0e0",
-        }}
+        className="font-semibold text-[1.1rem]"
+        style={{ color: speaker.color ?? "#e0e0e0" /* intentionally dynamic */ }}
       >
         {speaker.name}
       </span>
-      <span style={{ fontSize: "0.7rem", color: "#555" }}>
+      <span className="text-[0.7rem] text-[#555]">
         {formatSmartTimestamp(createdAt)}
       </span>
       {updatedAt !== null && (
-        <span style={{ fontSize: "0.65rem", color: "#4a4a4a", fontStyle: "italic" }}>
+        <span className="text-[0.65rem] text-[#4a4a4a] italic">
           (edited)
         </span>
       )}

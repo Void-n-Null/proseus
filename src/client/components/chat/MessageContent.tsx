@@ -20,14 +20,8 @@ function applyUserPlaceholder(content: string, userName: string): string {
   return content.replace(/\{\{user\}\}/gi, userName);
 }
 
-/** Stable style for the content display container. */
-const contentStyle: React.CSSProperties = {
-  fontSize: "1rem",
-  fontFamily: "sans-serif",
-  lineHeight: 1.5,
-  color: "#ddd",
-  wordBreak: "break-word",
-};
+const contentClass =
+  "text-base font-body leading-[1.5] text-foreground break-words";
 
 const MessageContent = React.memo(function MessageContent({
   message,
@@ -42,18 +36,15 @@ const MessageContent = React.memo(function MessageContent({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const streamContentRef = useRef<HTMLDivElement>(null);
 
-  // Reset draft when entering edit mode
   useEffect(() => {
     if (isEditing) {
       setDraft(message);
-      // Focus textarea after render
       requestAnimationFrame(() => {
         textareaRef.current?.focus();
       });
     }
   }, [isEditing, message]);
 
-  // ── Streaming mode: subscribe to buffer, write directly to DOM ──
   useEffect(() => {
     if (!isStreaming) return;
 
@@ -67,7 +58,6 @@ const MessageContent = React.memo(function MessageContent({
     return unsub;
   }, [isStreaming, userName]);
 
-  // ── Memoize rendered markdown for normal mode ──
   const renderedHtml = useMemo(
     () => renderMarkdown(applyUserPlaceholder(message, userName)),
     [message, userName],
@@ -94,58 +84,22 @@ const MessageContent = React.memo(function MessageContent({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
-          style={{
-            width: "100%",
-            minHeight: "3rem",
-            padding: "0.5rem",
-            background: "#1a1a1a",
-            color: "#e0e0e0",
-            border: "1px solid #333",
-            borderRadius: "4px",
-            fontFamily: "inherit",
-            fontSize: "0.9rem",
-            lineHeight: 1.5,
-            resize: "vertical",
-            outline: "none",
-            boxSizing: "border-box",
-          }}
+          className="w-full min-h-[3rem] p-2 bg-[#1a1a1a] text-[#e0e0e0] border border-[#333] rounded-[4px] font-[inherit] text-[0.9rem] leading-[1.5] resize-y outline-none box-border"
         />
-        <div
-          style={{
-            display: "flex",
-            gap: "0.4rem",
-            marginTop: "0.3rem",
-          }}
-        >
+        <div className="flex gap-[0.4rem] mt-[0.3rem]">
           <button
             onClick={() => onEditSubmit(draft)}
-            style={{
-              padding: "0.25rem 0.6rem",
-              background: "#2563eb",
-              color: "#fff",
-              border: "none",
-              borderRadius: "3px",
-              cursor: "pointer",
-              fontSize: "0.75rem",
-            }}
+            className="py-[0.25rem] px-[0.6rem] bg-[#2563eb] text-white border-none rounded-[3px] cursor-pointer text-[0.75rem]"
           >
             Save
           </button>
           <button
             onClick={onEditCancel}
-            style={{
-              padding: "0.25rem 0.6rem",
-              background: "transparent",
-              color: "#888",
-              border: "1px solid #333",
-              borderRadius: "3px",
-              cursor: "pointer",
-              fontSize: "0.75rem",
-            }}
+            className="py-[0.25rem] px-[0.6rem] bg-transparent text-[#888] border border-[#333] rounded-[3px] cursor-pointer text-[0.75rem]"
           >
             Cancel
           </button>
-          <span style={{ fontSize: "0.65rem", color: "#555", alignSelf: "center" }}>
+          <span className="text-[0.65rem] text-[#555] self-center">
             Ctrl+Enter to save, Esc to cancel
           </span>
         </div>
@@ -153,22 +107,13 @@ const MessageContent = React.memo(function MessageContent({
     );
   }
 
-  // ── Streaming mode: ref-based content with blinking cursor ──
   if (isStreaming) {
     return (
-      <div className="message-content" style={contentStyle}>
+      <div className={`message-content ${contentClass}`}>
         <div ref={streamContentRef} />
         <span
-          className="streaming-cursor"
-          style={{
-            display: "inline-block",
-            width: "2px",
-            height: "1em",
-            background: speakerColor ?? "#888",
-            marginLeft: "1px",
-            verticalAlign: "text-bottom",
-            animation: "etherealCursor 1s step-end infinite",
-          }}
+          className="streaming-cursor inline-block w-[2px] h-[1em] ml-px align-text-bottom animate-[etherealCursor_1s_step-end_infinite]"
+          style={{ background: speakerColor ?? "#888" /* intentionally dynamic */ }}
         />
         <style>{`
           @keyframes etherealCursor {
@@ -180,11 +125,9 @@ const MessageContent = React.memo(function MessageContent({
     );
   }
 
-  // ── Normal mode: render persisted message as markdown ──
   return (
     <div
-      className="message-content"
-      style={contentStyle}
+      className={`message-content ${contentClass}`}
       dangerouslySetInnerHTML={{ __html: renderedHtml }}
     />
   );

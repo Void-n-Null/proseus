@@ -257,32 +257,13 @@ export default function CharacterEditor({
         />
       )}
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 200,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "oklch(0 0 0 / 0.65)",
-        backdropFilter: "blur(2px)",
-      }}
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-[oklch(0_0_0_/_0.65)] backdrop-blur-[2px]"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        style={{
-          width: "min(720px, 96vw)",
-          maxHeight: "88vh",
-          display: "flex",
-          flexDirection: "column",
-          background: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius-lg)",
-          overflow: "hidden",
-          boxShadow: "0 24px 64px oklch(0 0 0 / 0.5)",
-        }}
+        className="w-[min(720px,96vw)] max-h-[88vh] flex flex-col bg-surface border border-border rounded-lg overflow-hidden shadow-[0_24px_64px_oklch(0_0_0_/_0.5)]"
         onClick={(e) => e.stopPropagation()}
       >
         <Header
@@ -295,26 +276,9 @@ export default function CharacterEditor({
           totalTokens={totalTokens}
         />
 
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: "1.25rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "1.25rem",
-          }}
-        >
+        <div className="flex-1 overflow-y-auto p-[1.25rem] flex flex-col gap-[1.25rem]">
           {error && (
-            <div
-              style={{
-                padding: "0.5rem 0.75rem",
-                borderRadius: "var(--radius-md)",
-                background: "oklch(0.22 0.08 25)",
-                color: "oklch(0.80 0.10 25)",
-                fontSize: "0.78rem",
-              }}
-            >
+            <div className="px-3 py-2 rounded-md bg-[oklch(0.22_0.08_25)] text-[oklch(0.80_0.10_25)] text-[0.78rem]">
               {error}
             </div>
           )}
@@ -332,7 +296,7 @@ export default function CharacterEditor({
             ref={fileInputRef}
             type="file"
             accept="image/png,image/jpeg,image/webp,image/gif"
-            style={{ display: "none" }}
+            className="hidden"
             onChange={(e) => {
               handleAvatarSelect(e.target.files);
               e.target.value = "";
@@ -428,7 +392,7 @@ export default function CharacterEditor({
               placeholder="(Describe the bot, give use tips, or list the chat models it has been tested on.)"
               noTokens
             />
-            <div style={{ display: "flex", gap: "0.75rem" }}>
+            <div className="flex gap-3">
               <SimpleField
                 label="Tags"
                 value={tags}
@@ -477,61 +441,29 @@ function Header({
   totalTokens: number;
 }) {
   return (
-    <div
-      style={{
-        padding: "0.85rem 1.25rem",
-        borderBottom: "1px solid var(--color-border)",
-        display: "flex",
-        alignItems: "center",
-        gap: "0.75rem",
-        flexShrink: 0,
-      }}
-    >
+    <div className="px-[1.25rem] py-[0.85rem] border-b border-border flex items-center gap-3 shrink-0">
       <button
         onClick={onClose}
-        style={{
-          background: "none",
-          border: "none",
-          color: "var(--color-text-dim)",
-          cursor: "pointer",
-          fontSize: "1rem",
-          padding: "0.1rem 0.25rem",
-          lineHeight: 1,
-        }}
+        className="bg-transparent border-none text-text-dim cursor-pointer text-[1rem] px-[0.25rem] py-[0.1rem] leading-none"
         title="Close"
       >
         ←
       </button>
 
-      <span
-        style={{
-          flex: 1,
-          fontSize: "0.85rem",
-          fontWeight: 500,
-          color: "var(--color-text-body)",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
+      <span className="flex-1 text-[0.85rem] font-medium text-text-body overflow-hidden text-ellipsis whitespace-nowrap">
         {title}
       </span>
 
-      <span
-        style={{
-          fontSize: "0.7rem",
-          color: "var(--color-text-dim)",
-          whiteSpace: "nowrap",
-        }}
-      >
+      <span className="text-[0.7rem] text-text-dim whitespace-nowrap">
         ~{totalTokens.toLocaleString()} tok total
       </span>
 
       <button
         onClick={onSave}
         disabled={!nameValid || saving}
+        className="px-[0.9rem] py-[0.4rem] border-none rounded-md text-[0.78rem] font-medium transition-all duration-150 whitespace-nowrap"
         style={{
-          padding: "0.4rem 0.9rem",
+          /* intentionally dynamic — depends on saved/nameValid state */
           background: saved
             ? "oklch(0.35 0.10 155)"
             : !nameValid
@@ -542,13 +474,7 @@ function Header({
             : !nameValid
               ? "var(--color-text-dim)"
               : "#fff",
-          border: "none",
-          borderRadius: "var(--radius-md)",
           cursor: !nameValid || saving ? "not-allowed" : "pointer",
-          fontSize: "0.78rem",
-          fontWeight: 500,
-          transition: "all 0.15s",
-          whiteSpace: "nowrap",
           opacity: saving ? 0.7 : 1,
         }}
       >
@@ -574,24 +500,10 @@ function AvatarNameRow({
   charInitial: string;
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+    <div className="flex items-center gap-4">
       <div
         onClick={onAvatarClick}
-        style={{
-          width: 80,
-          height: 80,
-          borderRadius: "var(--radius-lg)",
-          flexShrink: 0,
-          cursor: "pointer",
-          overflow: "hidden",
-          background: "var(--color-surface-raised)",
-          border: "2px solid var(--color-border)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          position: "relative",
-          transition: "border-color 0.15s",
-        }}
+        className="w-[80px] h-[80px] rounded-lg shrink-0 cursor-pointer overflow-hidden bg-surface-raised border-2 border-border flex items-center justify-center relative transition-[border-color] duration-150"
         onMouseEnter={(e) =>
           ((e.currentTarget as HTMLDivElement).style.borderColor =
             "var(--color-primary)")
@@ -606,68 +518,29 @@ function AvatarNameRow({
           <img
             src={avatarUrl}
             alt="avatar"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            className="w-full h-full object-cover"
           />
         ) : (
-          <span
-            style={{
-              fontSize: "2rem",
-              fontWeight: 500,
-              color: "var(--color-text-muted)",
-              fontFamily: "var(--font-display)",
-            }}
-          >
+          <span className="text-[2rem] font-medium text-text-muted font-[var(--font-display)]">
             {charInitial}
           </span>
         )}
         {uploading && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "oklch(0 0 0 / 0.5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "0.65rem",
-              color: "#fff",
-            }}
-          >
+          <div className="absolute inset-0 bg-[oklch(0_0_0_/_0.5)] flex items-center justify-center text-[0.65rem] text-white">
             Uploading
           </div>
         )}
         <div
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: "0.2rem",
-            background: "oklch(0 0 0 / 0.5)",
-            fontSize: "0.6rem",
-            color: "oklch(0.85 0 0)",
-            textAlign: "center",
-            opacity: 0,
-            transition: "opacity 0.15s",
-          }}
-          className="avatar-edit-label"
+          className="avatar-edit-label absolute bottom-0 left-0 right-0 p-[0.2rem] bg-[oklch(0_0_0_/_0.5)] text-[0.6rem] text-[oklch(0.85_0_0)] text-center opacity-0 transition-opacity duration-150"
         >
           Edit
         </div>
       </div>
 
-      <div style={{ flex: 1 }}>
-        <label
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.25rem",
-          }}
-        >
-          <span
-            style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}
-          >
-            Name <span style={{ color: "oklch(0.65 0.15 25)" }}>*</span>
+      <div className="flex-1">
+        <label className="flex flex-col gap-1">
+          <span className="text-[0.72rem] text-text-muted">
+            Name <span className="text-[oklch(0.65_0.15_25)]">*</span>
           </span>
           <input
             type="text"
@@ -675,28 +548,18 @@ function AvatarNameRow({
             onChange={(e) => onNameChange(e.target.value)}
             placeholder="Character name"
             autoFocus
-            style={{
-              padding: "0.5rem 0.65rem",
-              background: "var(--color-background)",
-              color: "var(--color-text-body)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              fontSize: "1rem",
-              fontWeight: 400,
-              outline: "none",
-              width: "100%",
-              boxSizing: "border-box",
-              fontFamily: "var(--font-display)",
-            }}
+            className="px-[0.65rem] py-2 bg-background text-text-body border border-border rounded-md text-[1rem] font-normal outline-none w-full box-border font-[var(--font-display)]"
+            onFocus={(e) =>
+              ((e.currentTarget as HTMLInputElement).style.borderColor =
+                "var(--color-primary)")
+            }
+            onBlur={(e) =>
+              ((e.currentTarget as HTMLInputElement).style.borderColor =
+                "var(--color-border)")
+            }
           />
         </label>
-        <div
-          style={{
-            marginTop: "0.3rem",
-            fontSize: "0.67rem",
-            color: "var(--color-text-dim)",
-          }}
-        >
+        <div className="mt-[0.3rem] text-[0.67rem] text-text-dim">
           ~{tok(name)} tok
         </div>
       </div>
@@ -722,40 +585,19 @@ function Field({
   noTokens?: boolean;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          gap: "0.5rem",
-        }}
-      >
-        <span
-          style={{
-            fontSize: "0.75rem",
-            fontWeight: 500,
-            color: "var(--color-text-muted)",
-          }}
-        >
+    <div className="flex flex-col gap-[0.3rem]">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[0.75rem] font-medium text-text-muted">
           {label}
         </span>
         {!noTokens && (
-          <span
-            style={{ fontSize: "0.67rem", color: "var(--color-text-dim)" }}
-          >
+          <span className="text-[0.67rem] text-text-dim">
             ~{tok(value)} tok
           </span>
         )}
       </div>
       {hint && (
-        <span
-          style={{
-            fontSize: "0.67rem",
-            color: "var(--color-text-dim)",
-            lineHeight: 1.4,
-          }}
-        >
+        <span className="text-[0.67rem] text-text-dim leading-[1.4]">
           {hint}
         </span>
       )}
@@ -764,20 +606,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
         placeholder={placeholder}
-        style={{
-          padding: "0.5rem 0.65rem",
-          background: "var(--color-background)",
-          color: "var(--color-text-body)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius-md)",
-          fontSize: "0.82rem",
-          fontFamily: "var(--font-body)",
-          lineHeight: 1.55,
-          resize: "vertical",
-          outline: "none",
-          width: "100%",
-          boxSizing: "border-box",
-        }}
+        className="px-[0.65rem] py-2 bg-background text-text-body border border-border rounded-md text-[0.82rem] font-[var(--font-body)] leading-[1.55] resize-y outline-none w-full box-border"
         onFocus={(e) =>
           ((e.currentTarget as HTMLTextAreaElement).style.borderColor =
             "var(--color-primary)")
@@ -806,14 +635,13 @@ function SimpleField({
 }) {
   return (
     <label
+      className="flex flex-col gap-1"
       style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.25rem",
+        /* intentionally dynamic — flex value from prop */
         flex: flex ?? 1,
       }}
     >
-      <span style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}>
+      <span className="text-[0.72rem] text-text-muted">
         {label}
       </span>
       <input
@@ -821,17 +649,7 @@ function SimpleField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        style={{
-          padding: "0.4rem 0.5rem",
-          background: "var(--color-background)",
-          color: "var(--color-text-body)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius-md)",
-          fontSize: "0.78rem",
-          outline: "none",
-          width: "100%",
-          boxSizing: "border-box",
-        }}
+        className="px-[0.5rem] py-[0.4rem] bg-background text-text-body border border-border rounded-md text-[0.78rem] outline-none w-full box-border"
         onFocus={(e) =>
           ((e.currentTarget as HTMLInputElement).style.borderColor =
             "var(--color-primary)")
@@ -857,35 +675,14 @@ function AlternateGreetings({
   onRemove: (index: number) => void;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <span
-          style={{
-            fontSize: "0.75rem",
-            fontWeight: 500,
-            color: "var(--color-text-muted)",
-          }}
-        >
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[0.75rem] font-medium text-text-muted">
           Alternate Greetings
         </span>
         <button
           onClick={onAdd}
-          style={{
-            padding: "0.2rem 0.5rem",
-            background: "var(--color-surface-raised)",
-            color: "var(--color-text-muted)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-sm)",
-            cursor: "pointer",
-            fontSize: "0.7rem",
-            transition: "background 0.15s",
-          }}
+          className="px-2 py-[0.2rem] bg-surface-raised text-text-muted border border-border rounded-sm cursor-pointer text-[0.7rem] transition-[background] duration-150"
           onMouseEnter={(e) =>
             ((e.currentTarget as HTMLButtonElement).style.background =
               "var(--color-surface-hover)")
@@ -900,52 +697,20 @@ function AlternateGreetings({
       </div>
 
       {greetings.length === 0 ? (
-        <div
-          style={{
-            padding: "0.5rem",
-            borderRadius: "var(--radius-md)",
-            border: "1px dashed var(--color-border)",
-            fontSize: "0.72rem",
-            color: "var(--color-text-dim)",
-            textAlign: "center",
-          }}
-        >
+        <div className="p-2 rounded-md border border-dashed border-border text-[0.72rem] text-text-dim text-center">
           No alternate greetings. Click + Add to give users different opening
           scenes.
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <div className="flex flex-col gap-2">
           {greetings.map((g, i) => (
-            <div key={i} style={{ display: "flex", gap: "0.4rem", alignItems: "flex-start" }}>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.2rem",
-                  flex: 1,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "0.67rem",
-                      color: "var(--color-text-dim)",
-                    }}
-                  >
+            <div key={i} className="flex gap-[0.4rem] items-start">
+              <div className="flex flex-col gap-[0.2rem] flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[0.67rem] text-text-dim">
                     #{i + 1}
                   </span>
-                  <span
-                    style={{
-                      fontSize: "0.67rem",
-                      color: "var(--color-text-dim)",
-                    }}
-                  >
+                  <span className="text-[0.67rem] text-text-dim">
                     ~{tok(g)} tok
                   </span>
                 </div>
@@ -954,20 +719,7 @@ function AlternateGreetings({
                   onChange={(e) => onChange(i, e.target.value)}
                   rows={4}
                   placeholder="Alternative opening message..."
-                  style={{
-                    padding: "0.5rem 0.65rem",
-                    background: "var(--color-background)",
-                    color: "var(--color-text-body)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-md)",
-                    fontSize: "0.82rem",
-                    fontFamily: "var(--font-body)",
-                    lineHeight: 1.55,
-                    resize: "vertical",
-                    outline: "none",
-                    width: "100%",
-                    boxSizing: "border-box",
-                  }}
+                  className="px-[0.65rem] py-2 bg-background text-text-body border border-border rounded-md text-[0.82rem] font-[var(--font-body)] leading-[1.55] resize-y outline-none w-full box-border"
                   onFocus={(e) =>
                     ((e.currentTarget as HTMLTextAreaElement).style.borderColor =
                       "var(--color-primary)")
@@ -980,23 +732,7 @@ function AlternateGreetings({
               </div>
               <button
                 onClick={() => onRemove(i)}
-                style={{
-                  marginTop: "1.2rem",
-                  width: 22,
-                  height: 22,
-                  flexShrink: 0,
-                  padding: 0,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--color-text-dim)",
-                  fontSize: "0.8rem",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "var(--radius-sm)",
-                  transition: "color 0.15s",
-                }}
+                className="mt-[1.2rem] w-[22px] h-[22px] shrink-0 p-0 bg-transparent border-none cursor-pointer text-text-dim text-[0.8rem] flex items-center justify-center rounded-sm transition-[color] duration-150"
                 onMouseEnter={(e) =>
                   ((e.currentTarget as HTMLButtonElement).style.color =
                     "var(--color-destructive)")
@@ -1029,28 +765,15 @@ function CollapsibleSection({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      style={{
-        border: "1px solid var(--color-border)",
-        borderRadius: "var(--radius-md)",
-        overflow: "hidden",
-      }}
-    >
+    <div className="border border-border rounded-md overflow-hidden">
       <button
         onClick={onToggle}
+        className="w-full px-[0.85rem] py-[0.6rem] border-none cursor-pointer flex items-center justify-between gap-2 transition-[background] duration-150"
         style={{
-          width: "100%",
-          padding: "0.6rem 0.85rem",
+          /* intentionally dynamic — depends on open state */
           background: open
             ? "var(--color-surface-raised)"
             : "var(--color-surface)",
-          border: "none",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "0.5rem",
-          transition: "background 0.15s",
         }}
         onMouseEnter={(e) =>
           ((e.currentTarget as HTMLButtonElement).style.background =
@@ -1062,38 +785,21 @@ function CollapsibleSection({
             : "var(--color-surface)")
         }
       >
-        <span
-          style={{
-            fontSize: "0.75rem",
-            fontWeight: 500,
-            color: "var(--color-text-muted)",
-            letterSpacing: "0.05em",
-          }}
-        >
+        <span className="text-[0.75rem] font-medium text-text-muted tracking-[0.05em]">
           {label}
         </span>
         <span
+          className="text-[0.7rem] text-text-dim transition-transform duration-200 inline-block"
           style={{
-            fontSize: "0.7rem",
-            color: "var(--color-text-dim)",
+            /* intentionally dynamic — depends on open state */
             transform: open ? "rotate(180deg)" : "none",
-            transition: "transform 0.2s",
-            display: "inline-block",
           }}
         >
           ▾
         </span>
       </button>
       {open && (
-        <div
-          style={{
-            padding: "0.85rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.85rem",
-            borderTop: "1px solid var(--color-border)",
-          }}
-        >
+        <div className="p-[0.85rem] flex flex-col gap-[0.85rem] border-t border-border">
           {children}
         </div>
       )}
@@ -1245,33 +951,40 @@ function CropModal({
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, zIndex: 210, display: "flex", alignItems: "center", justifyContent: "center", background: "oklch(0 0 0 / 0.75)" }}
+      className="fixed inset-0 z-[210] flex items-center justify-center bg-[oklch(0_0_0_/_0.75)]"
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div
-        style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.85rem", padding: "1.25rem", background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", boxShadow: "0 24px 64px oklch(0 0 0 / 0.6)", maxWidth: "92vw" }}
+        className="flex flex-col items-center gap-[0.85rem] p-[1.25rem] bg-surface border border-border rounded-lg shadow-[0_24px_64px_oklch(0_0_0_/_0.6)] max-w-[92vw]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "1rem" }}>
-          <span style={{ fontSize: "0.82rem", fontWeight: 500, color: "var(--color-text-body)" }}>Crop Avatar</span>
-          <span style={{ fontSize: "0.72rem", color: "var(--color-text-dim)" }}>{cropDimLabel ?? "Loading…"}</span>
+        <div className="flex items-center justify-between w-full gap-4">
+          <span className="text-[0.82rem] font-medium text-text-body">Crop Avatar</span>
+          <span className="text-[0.72rem] text-text-dim">{cropDimLabel ?? "Loading…"}</span>
         </div>
 
         {!displaySize || !imgSrc ? (
-          <div style={{ width: 200, height: 120, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-dim)", fontSize: "0.8rem" }}>
+          <div className="w-[200px] h-[120px] flex items-center justify-center text-text-dim text-[0.8rem]">
             Loading image…
           </div>
         ) : (
-          <div style={{ position: "relative", width: displaySize.w, height: displaySize.h, flexShrink: 0, userSelect: "none" }}>
+          <div
+            className="relative shrink-0 select-none"
+            style={{
+              /* intentionally dynamic — computed from image dimensions */
+              width: displaySize.w,
+              height: displaySize.h,
+            }}
+          >
             <img
               src={imgSrc}
               alt="crop source"
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block", objectFit: "fill", pointerEvents: "none" }}
+              className="absolute inset-0 w-full h-full block object-fill pointer-events-none"
               draggable={false}
             />
             {crop && (
               <svg
-                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", overflow: "visible" }}
+                className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
                 viewBox={`0 0 ${displaySize.w} ${displaySize.h}`}
               >
                 <path
@@ -1289,7 +1002,11 @@ function CropModal({
               </svg>
             )}
             <div
-              style={{ position: "absolute", inset: 0, cursor }}
+              className="absolute inset-0"
+              style={{
+                /* intentionally dynamic — cursor changes based on drag mode */
+                cursor,
+              }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
@@ -1297,17 +1014,21 @@ function CropModal({
           </div>
         )}
 
-        <div style={{ display: "flex", gap: "0.5rem", alignSelf: "flex-end" }}>
+        <div className="flex gap-2 self-end">
           <button
             onClick={onCancel}
-            style={{ padding: "0.4rem 0.85rem", background: "var(--color-surface-raised)", color: "var(--color-text-muted)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", cursor: "pointer", fontSize: "0.78rem" }}
+            className="px-[0.85rem] py-[0.4rem] bg-surface-raised text-text-muted border border-border rounded-md cursor-pointer text-[0.78rem]"
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
             disabled={!crop || !displaySize}
-            style={{ padding: "0.4rem 0.85rem", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", cursor: "pointer", fontSize: "0.78rem", fontWeight: 500, opacity: !crop ? 0.5 : 1 }}
+            className="px-[0.85rem] py-[0.4rem] bg-primary text-white border-none rounded-md cursor-pointer text-[0.78rem] font-medium"
+            style={{
+              /* intentionally dynamic — depends on crop state */
+              opacity: !crop ? 0.5 : 1,
+            }}
           >
             Crop & Use
           </button>

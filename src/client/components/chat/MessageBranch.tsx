@@ -28,44 +28,27 @@ export default function MessageBranch({
   const atStart = siblingInfo.index === 0;
   const atEnd = siblingInfo.index === siblingInfo.total - 1;
 
-  const arrowStyle = (disabled: boolean): React.CSSProperties => ({
-    background: "none",
-    border: "none",
-    color: disabled ? "#333" : "#777",
-    cursor: disabled ? "default" : "pointer",
-    padding: "0 0.25rem",
-    fontSize: "0.8rem",
-    fontWeight: 700,
-    lineHeight: 1,
-  });
-
   return (
-    <div
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "0.15rem",
-        marginTop: "0.25rem",
-        fontSize: "0.7rem",
-        color: "#666",
-        userSelect: "none",
-      }}
-    >
+    <div className="inline-flex items-center gap-[0.15rem] mt-[0.25rem] text-[0.7rem] text-[#666] select-none">
       <button
         onClick={handlePrev}
         disabled={atStart}
-        style={arrowStyle(atStart)}
+        className={`bg-transparent border-none px-[0.25rem] py-0 text-[0.8rem] font-bold leading-none ${
+          atStart ? "text-[#333] cursor-default" : "text-[#777] cursor-pointer"
+        }`}
         aria-label="Previous sibling"
       >
         &larr;
       </button>
-      <span style={{ minWidth: "2rem", textAlign: "center" }}>
+      <span className="min-w-[2rem] text-center">
         {siblingInfo.index + 1}/{siblingInfo.total}
       </span>
       <button
         onClick={handleNext}
         disabled={atEnd}
-        style={arrowStyle(atEnd)}
+        className={`bg-transparent border-none px-[0.25rem] py-0 text-[0.8rem] font-bold leading-none ${
+          atEnd ? "text-[#333] cursor-default" : "text-[#777] cursor-pointer"
+        }`}
         aria-label="Next sibling"
       >
         &rarr;

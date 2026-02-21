@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client.ts";
+import type { CreateCharacterRequest, UpdateCharacterRequest } from "../../shared/api-types.ts";
 
 export function useCharacters() {
   return useQuery({
@@ -58,6 +59,43 @@ export function useCreateChatFromCharacter() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chats"] });
       queryClient.invalidateQueries({ queryKey: ["speakers"] });
+    },
+  });
+}
+
+export function useCreateCharacter() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: CreateCharacterRequest) => api.characters.create(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+    },
+  });
+}
+
+export function useUpdateCharacter() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & UpdateCharacterRequest) =>
+      api.characters.update(id, body),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+      queryClient.invalidateQueries({ queryKey: ["character", id] });
+    },
+  });
+}
+
+export function useUploadCharacterAvatar() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) =>
+      api.characters.uploadAvatar(id, file),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+      queryClient.invalidateQueries({ queryKey: ["character", id] });
     },
   });
 }

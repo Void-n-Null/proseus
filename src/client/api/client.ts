@@ -20,6 +20,10 @@ import type {
   ImportCharacterResponse,
   ListCharactersResponse,
   GetCharacterResponse,
+  CreateCharacterRequest,
+  CreateCharacterResponse,
+  UpdateCharacterRequest,
+  UpdateCharacterResponse,
   ListConnectionsResponse,
   SaveConnectionResponse,
   DeleteConnectionResponse,
@@ -144,6 +148,29 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ url }),
       }),
+    create: (body: CreateCharacterRequest) =>
+      fetchJson<CreateCharacterResponse>("/characters", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    update: (id: string, body: UpdateCharacterRequest) =>
+      fetchJson<UpdateCharacterResponse>(`/characters/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    uploadAvatar: async (id: string, file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`${BASE}/characters/${id}/avatar`, {
+        method: "POST",
+        body: form,
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error((error as { error?: string }).error || res.statusText);
+      }
+      return res.json() as Promise<GetCharacterResponse>;
+    },
     delete: (id: string) =>
       fetchJson<{ ok: true }>(`/characters/${id}`, { method: "DELETE" }),
     createChat: (characterId: string) =>

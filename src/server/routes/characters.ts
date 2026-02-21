@@ -7,6 +7,7 @@ import {
   getCharacterAvatar,
   listCharacters,
   deleteCharacter,
+  updateCharacter,
 } from "../db/characters.ts";
 import {
   extractCardFromPNG,
@@ -119,6 +120,37 @@ export function createCharactersRouter(db: Database): Hono {
         "Cache-Control": "public, max-age=86400, must-revalidate",
       },
     });
+  });
+
+  // POST / — create a character from scratch (JSON body, no file)
+  app.post("/", async (c) => {
+    const body = await c.req.json<{ name?: string; description?: string; personality?: string; scenario?: string; first_mes?: string; mes_example?: string; creator_notes?: string; system_prompt?: string; post_history_instructions?: string; alternate_greetings?: string[]; tags?: string[]; creator?: string; character_version?: string }>();
+
+    if (!body.name?.trim()) {
+      return c.json({ error: "name is required" }, 400);
+    }
+
+    const card: import("../lib/character-card-parser.ts").NormalizedCard = {
+      name: body.name.trim(),
+      description: body.description ?? "",
+      personality: body.personality ?? "",
+      scenario: body.scenario ?? "",
+      first_mes: body.first_mes ?? "",
+      mes_example: body.mes_example ?? "",
+      creator_notes: body.creator_notes ?? "",
+      system_prompt: body.system_prompt ?? "",
+      post_history_instructions: body.post_history_instructions ?? "",
+      alternate_greetings: body.alternate_greetings ?? [],
+      tags: body.tags ?? [],
+      creator: body.creator ?? "",
+      character_version: body.character_version ?? "",
+      source_spec: "v2",
+      extensions: {},
+      character_book: null,
+    };
+
+    const { character } = await createCharacter(db, card, undefined, { force: true });
+    return c.json({ character }, 201);
   });
 
   // POST /import — multipart file upload (PNG or JSON)
@@ -329,6 +361,47 @@ export function createCharactersRouter(db: Database): Hono {
         bot_id: botSpeakerId,
       },
     });
+  });
+
+  // PATCH /:id — update character fields
+  app.patch("/:id", async (c) => {
+    const id = c.req.param("id");
+    const body = await c.req.json<{ name?: string; description?: string; personality?: string; scenario?: string; first_mes?: string; mes_example?: string; creator_notes?: string; system_prompt?: string; post_history_instructions?: string; alternate_greetings?: string[]; tags?: string[]; creator?: string; character_version?: string }>();
+    const updated = updateCharacter(db, id, body);
+    if (!updated) return c.json({ error: "Character not found" }, 404);
+    return c.json({ character: updated });
+  });
+
+  // POST /:id/avatar — upload or replace avatar image
+  app.post("/:id/avatar", async (c) => {
+    const id = c.req.param("id");
+    const existing = getCharacter(db, id);
+    if (!existing) return c.json({ error: "Character not found" }, 404);
+
+    let formData: FormData;
+    try {
+      formData = await c.req.formData();
+    } catch {
+      return c.json({ error: "Expected multipart/form-data with a 'file' field" }, 400);
+    }
+
+    const file = formData.get("file");
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: "No file provided. Include a 'file' field." }, 400);
+    }
+
+    const buffer = new Uint8Array(await file.arrayBuffer());
+    const hasher = new Bun.CryptoHasher("sha256");
+    hasher.update(buffer);
+    const avatarHash = hasher.digest("hex");
+
+    db.query(
+      "UPDATE characters SET avatar = $avatar, avatar_hash = $hash, updated_at = $now WHERE id = $id",
+    ).run({ $avatar: buffer, $hash: avatarHash, $now: Date.now(), $id: id });
+
+    const updated = getCharacter(db, id);
+    if (!updated) return c.json({ error: "Character not found" }, 404);
+    return c.json({ character: updated });
   });
 
   // DELETE /:id — delete a character

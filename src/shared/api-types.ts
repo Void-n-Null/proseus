@@ -196,3 +196,15 @@ export interface UpdateSettingsRequest {
 export interface UpdateSettingsResponse {
   settings: Record<string, string>;
 }
+
+// ── Prompt template endpoints ──
+
+import type { PromptTemplate } from "./prompt-template.ts";
+
+export interface GetPromptTemplateResponse {
+  template: PromptTemplate;
+}
+
+export interface UpdatePromptTemplateResponse {
+  template: PromptTemplate;
+}

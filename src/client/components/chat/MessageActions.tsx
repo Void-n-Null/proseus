@@ -47,7 +47,7 @@ export default function MessageActions({
       </button>
       <button
         onClick={handleDelete}
-        className={`${btnClass} !text-[#c44]`}
+        className={`${btnClass} text-[#c44]!`}
       >
         Delete
       </button>

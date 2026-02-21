@@ -212,7 +212,7 @@ export default function PromptTemplatePanel() {
                         }}
                       >
                         <div
-                          className="absolute rounded-full bg-text-body w-3 h-3 top-[3px] transition-[left] duration-150"
+                          className="absolute rounded-full bg-[oklch(0.95_0_0)] w-3 h-3 top-[3px] transition-[left] duration-150"
                           style={{
                             /* intentionally dynamic */ left: slot.enabled ? 17 : 3,
                           }}

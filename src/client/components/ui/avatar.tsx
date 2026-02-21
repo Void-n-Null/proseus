@@ -80,7 +80,7 @@ export const Avatar = React.memo(function Avatar({
     return (
       <div
         className={`shrink-0 overflow-hidden rounded-lg ${className ?? ""}`}
-        style={{ maxWidth: w, ...style }} /* intentionally dynamic: maxWidth from prop */
+        style={{ maxWidth: w, borderRadius, ...style }} /* intentionally dynamic: maxWidth, borderRadius from props */
       >
         <img
           src={thumbSrc}

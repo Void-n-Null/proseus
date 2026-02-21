@@ -3,11 +3,13 @@ import type { CharacterListItem } from "../../../shared/types.ts";
 import { Avatar } from "../ui/avatar.tsx";
 import {
   useCharacters,
+  useCharacter,
   useImportCharacter,
   useImportCharacterUrl,
   useCreateChatFromCharacter,
   useDeleteCharacter,
 } from "../../hooks/useCharacters.ts";
+import CharacterEditor from "./CharacterEditor.tsx";
 
 interface CharacterSidebarProps {
   onChatCreated: (chatId: string) => void;
@@ -25,6 +27,8 @@ export default function CharacterSidebar({
   const [dragOver, setDragOver] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const [showUrlInput, setShowUrlInput] = useState(false);
+  const [editingCharacterId, setEditingCharacterId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{
     text: string;
     type: "success" | "error" | "warn";
@@ -156,6 +160,20 @@ export default function CharacterSidebar({
         borderRight: "1px solid var(--color-border)",
       }}
     >
+      {creating && (
+        <CharacterEditor
+          character={null}
+          onClose={() => setCreating(false)}
+          onCreate={() => setCreating(false)}
+        />
+      )}
+      {editingCharacterId && (
+        <CharacterEditorLoader
+          id={editingCharacterId}
+          onClose={() => setEditingCharacterId(null)}
+        />
+      )}
+
       {/* Header */}
       <div
         style={{
@@ -184,14 +202,32 @@ export default function CharacterSidebar({
           >
             Characters
           </span>
-          <span
-            style={{
-              fontSize: "0.7rem",
-              color: "var(--color-text-dim)",
-            }}
-          >
-            {characters.length}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <span
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--color-text-dim)",
+              }}
+            >
+              {characters.length}
+            </span>
+            <button
+              onClick={() => setCreating(true)}
+              style={{
+                padding: "0.15rem 0.45rem",
+                background: "var(--color-primary)",
+                color: "#fff",
+                border: "none",
+                borderRadius: "var(--radius-sm)",
+                cursor: "pointer",
+                fontSize: "0.72rem",
+                lineHeight: 1.4,
+              }}
+              title="Create new character"
+            >
+              + New
+            </button>
+          </div>
         </div>
 
         {/* Import buttons */}
@@ -436,6 +472,7 @@ export default function CharacterSidebar({
                 character={char}
                 onStartChat={() => handleStartChat(char.id)}
                 onDelete={() => handleDelete(char.id, char.name)}
+                onEdit={() => setEditingCharacterId(char.id)}
                 isCreatingChat={createChatMutation.isPending}
               />
             ))}
@@ -450,11 +487,13 @@ function CharacterCard({
   character,
   onStartChat,
   onDelete,
+  onEdit,
   isCreatingChat,
 }: {
   character: CharacterListItem;
   onStartChat: () => void;
   onDelete: () => void;
+  onEdit: () => void;
   isCreatingChat: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -534,40 +573,89 @@ function CharacterCard({
 
       {/* Actions on hover */}
       {hovered && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
+        <div
           style={{
             position: "absolute",
             top: "0.35rem",
             right: "0.35rem",
-            width: 18,
-            height: 18,
-            padding: 0,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--color-text-dim)",
-            fontSize: "0.7rem",
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: "var(--radius-sm)",
-            transition: "color 0.15s",
+            gap: "0.2rem",
           }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.color = "var(--color-destructive)")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.color = "var(--color-text-dim)")
-          }
-          title="Delete character"
         >
-          &times;
-        </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            style={{
+              width: 20,
+              height: 20,
+              padding: 0,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-text-dim)",
+              fontSize: "0.65rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "var(--radius-sm)",
+              transition: "color 0.15s",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.color = "var(--color-primary)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.color = "var(--color-text-dim)")
+            }
+            title="Edit character"
+          >
+            ✎
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            style={{
+              width: 20,
+              height: 20,
+              padding: 0,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-text-dim)",
+              fontSize: "0.75rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "var(--radius-sm)",
+              transition: "color 0.15s",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.color = "var(--color-destructive)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.color = "var(--color-text-dim)")
+            }
+            title="Delete character"
+          >
+            &times;
+          </button>
+        </div>
       )}
     </div>
   );
+}
+
+function CharacterEditorLoader({
+  id,
+  onClose,
+}: {
+  id: string;
+  onClose: () => void;
+}) {
+  const { data, isLoading } = useCharacter(id);
+  if (isLoading || !data) return null;
+  return <CharacterEditor character={data.character} onClose={onClose} />;
 }

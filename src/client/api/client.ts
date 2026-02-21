@@ -32,7 +32,10 @@ import type {
   UpdatePersonaRequest,
   UpdatePersonaResponse,
   SetChatPersonaResponse,
+  GetPromptTemplateResponse,
+  UpdatePromptTemplateResponse,
 } from "../../shared/api-types.ts";
+import type { PromptTemplate } from "../../shared/prompt-template.ts";
 import type { Chat, Speaker } from "../../shared/types.ts";
 import type { ProviderName } from "../../shared/providers.ts";
 
@@ -166,6 +169,13 @@ export const api = {
       fetchJson<UpdateSettingsResponse>("/settings", {
         method: "PUT",
         body: JSON.stringify({ settings }),
+      }),
+    getPromptTemplate: () =>
+      fetchJson<GetPromptTemplateResponse>("/settings/prompt-template"),
+    updatePromptTemplate: (template: PromptTemplate) =>
+      fetchJson<UpdatePromptTemplateResponse>("/settings/prompt-template", {
+        method: "PUT",
+        body: JSON.stringify({ template }),
       }),
   },
   personas: {

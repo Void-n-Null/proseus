@@ -40,6 +40,7 @@ interface ActiveStream {
   content: string;
   startedAt: number;
   abortController?: AbortController;
+  assistantPrefill: string | null;
 }
 
 // ── Test content ───────────────────────────────────────────────
@@ -164,6 +165,7 @@ export class StreamManager {
       nodeId,
       content: "",
       startedAt: Date.now(),
+      assistantPrefill: null,
     };
 
     this.activeStreams.set(streamId, stream);
@@ -240,6 +242,7 @@ export class StreamManager {
       content: "",
       startedAt: Date.now(),
       abortController,
+      assistantPrefill: null,
     };
 
     this.activeStreams.set(streamId, stream);
@@ -279,15 +282,23 @@ export class StreamManager {
   ): Promise<void> {
     const aiModel = await createModel(this.db, provider, model);
 
-    // Assemble the full prompt from character + chat history
     const prompt = assemblePrompt(this.db, stream.chatId);
     if (!prompt || prompt.messages.length === 0) {
       throw new Error("Chat has no messages or could not assemble prompt");
     }
 
+    stream.assistantPrefill = prompt.assistantPrefill;
+
+    const finalMessages = prompt.assistantPrefill
+      ? [
+          ...prompt.messages,
+          { role: "assistant" as const, content: prompt.assistantPrefill },
+        ]
+      : prompt.messages;
+
     const result = streamText({
       model: aiModel,
-      messages: prompt.messages,
+      messages: finalMessages,
       abortSignal: stream.abortController?.signal,
     });
 

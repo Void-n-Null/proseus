@@ -1,28 +1,3 @@
-/**
- * Chat Pipeline — Server-side prompt assembly.
- *
- * Builds the full messages array for an OpenRouter API call from:
- *   1. Character card fields (system prompt, description, personality, scenario)
- *   2. Chat history (active path through the message tree)
- *   3. Post-history instructions (the "jailbreak"/"UJB" slot)
- *
- * Follows the SillyTavern-style prompt template:
- *   [system] system_prompt + character card
- *   [user/assistant...] chat history
- *   [system] post_history_instructions (if present)
- *
- * This module is intentionally a pure function — it reads from the DB
- * and returns a messages array. No streaming, no API calls. The
- * StreamManager calls this, then feeds the result to streamText().
- *
- * Future expansion points (marked with comments):
- *   - Lorebook injection (scan history for keywords, inject entries)
- *   - Token counting / context window management
- *   - Per-character model overrides
- *   - Persona/user character card
- *   - Example messages (mes_example) injection
- */
-
 import type { Database } from "bun:sqlite";
 import type { ChatNode } from "../../shared/types.ts";
 import { getActivePath } from "../../shared/tree.ts";
@@ -30,29 +5,22 @@ import { getChatTree } from "../db/messages.ts";
 import { getChat } from "../db/chats.ts";
 import { getCharacter } from "../db/characters.ts";
 import { getPersonaForChat } from "../db/personas.ts";
+import { getPromptTemplate } from "../db/settings.ts";
+import { applyMacros, parseMesExample } from "../../shared/prompt-template.ts";
 
-/** A single message in the prompt, ready for the AI SDK. */
 export interface PromptMessage {
   role: "system" | "user" | "assistant";
   content: string;
 }
 
-/** Full assembled prompt + metadata for the StreamManager. */
 export interface AssembledPrompt {
   messages: PromptMessage[];
-  /** The character's name, used for logging/display. */
   characterName: string | null;
-  /** The model to use, if the character specifies one (future). */
   modelOverride: string | null;
+  /** Trimmed prefill text to append as a partial assistant turn, or null. */
+  assistantPrefill: string | null;
 }
 
-/**
- * Assemble a complete prompt for an AI generation request.
- *
- * @param db - Database instance
- * @param chatId - The chat to build the prompt for
- * @returns The assembled messages array, or null if the chat doesn't exist
- */
 export function assemblePrompt(
   db: Database,
   chatId: string,
@@ -60,106 +28,108 @@ export function assemblePrompt(
   const chat = getChat(db, chatId);
   if (!chat?.root_node_id) return null;
 
-  // Load the full message tree and compute the active path
   const treeRecord = getChatTree(db, chatId);
   const nodesMap = new Map<string, ChatNode>(Object.entries(treeRecord));
   const pathIds = getActivePath(chat.root_node_id, nodesMap);
 
-  // Try to load the character and persona associated with this chat
   const characterId = getCharacterIdForChat(db, chatId);
   const character = characterId ? getCharacter(db, characterId) : null;
   const persona = getPersonaForChat(db, chatId);
+  const template = getPromptTemplate(db);
+
+  const charName = character?.name ?? "Character";
+  const userName = persona?.name ?? "User";
 
   const messages: PromptMessage[] = [];
+  let assistantPrefill: string | null = null;
 
-  // ── 1. System prompt (character card) ──
-  const systemParts: string[] = [];
+  const enabledSlots = template.slots.filter((s) => s.enabled);
 
-  if (character) {
-    // Character's explicit system prompt takes priority
-    if (character.system_prompt) {
-      systemParts.push(character.system_prompt);
+  // Zone 1: Pre-history — all enabled pre_history slots concatenated into one system message
+  const preHistoryParts: string[] = [];
+
+  for (const slot of enabledSlots) {
+    if (slot.id === "history" || slot.id === "post_history" || slot.id === "assistant_prefill") {
+      continue;
     }
 
-    // Assemble the character card block
-    const cardParts: string[] = [];
-
-    if (character.description) {
-      cardParts.push(character.description);
+    switch (slot.id) {
+      case "main": {
+        const text = slot.content ?? "";
+        if (text.trim()) preHistoryParts.push(applyMacros(text, charName, userName));
+        break;
+      }
+      case "char_system_prompt": {
+        if (character?.system_prompt?.trim()) preHistoryParts.push(character.system_prompt);
+        break;
+      }
+      case "char_description": {
+        if (character?.description?.trim()) preHistoryParts.push(character.description);
+        break;
+      }
+      case "char_personality": {
+        if (character?.personality?.trim()) preHistoryParts.push(`Personality: ${character.personality}`);
+        break;
+      }
+      case "char_scenario": {
+        if (character?.scenario?.trim()) preHistoryParts.push(`Scenario: ${character.scenario}`);
+        break;
+      }
+      case "persona": {
+        if (persona) {
+          const parts = [`[User: ${persona.name}]`];
+          if (persona.prompt?.trim()) parts.push(persona.prompt);
+          preHistoryParts.push(parts.join("\n"));
+        }
+        break;
+      }
+      case "mes_example": {
+        if (character?.mes_example) {
+          const parsed = parseMesExample(character.mes_example);
+          if (parsed) preHistoryParts.push(parsed);
+        }
+        break;
+      }
     }
-    if (character.personality) {
-      cardParts.push(`Personality: ${character.personality}`);
-    }
-    if (character.scenario) {
-      cardParts.push(`Scenario: ${character.scenario}`);
-    }
-
-    if (cardParts.length > 0) {
-      systemParts.push(cardParts.join("\n"));
-    }
-
-    // TODO: Example messages (mes_example) could be injected here
-    // as few-shot examples. SillyTavern parses the <START> format
-    // and converts to user/assistant pairs. For now, we skip this.
-
-    // TODO: Lorebook entries would be injected here based on keyword
-    // scanning of the chat history. character.character_book contains
-    // the entries but activation logic is not implemented yet.
   }
 
-  // ── Persona context (injected into the system prompt) ──
-  if (persona) {
-    const personaParts: string[] = [`[User: ${persona.name}]`];
-    if (persona.prompt) {
-      personaParts.push(persona.prompt);
+  if (preHistoryParts.length > 0) {
+    messages.push({ role: "system", content: preHistoryParts.join("\n\n") });
+  }
+
+  if (enabledSlots.some((s) => s.id === "history")) {
+    for (const nodeId of pathIds) {
+      const node = nodesMap.get(nodeId);
+      if (!node || !node.message.trim()) continue;
+      messages.push({
+        role: node.is_bot ? "assistant" : "user",
+        content: node.message,
+      });
     }
-    systemParts.push(personaParts.join("\n"));
   }
 
-  if (systemParts.length > 0) {
-    messages.push({
-      role: "system",
-      content: systemParts.join("\n\n"),
-    });
-  }
-
-  // ── 2. Chat history ──
-  for (const nodeId of pathIds) {
-    const node = nodesMap.get(nodeId);
-    if (!node) continue;
-
-    // Skip empty messages (shouldn't happen, but defensive)
-    if (!node.message.trim()) continue;
-
-    messages.push({
-      role: node.is_bot ? "assistant" : "user",
-      content: node.message,
-    });
-  }
-
-  // ── 3. Post-history instructions (jailbreak/UJB slot) ──
-  if (character?.post_history_instructions) {
-    messages.push({
-      role: "system",
-      content: character.post_history_instructions,
-    });
+  // Zone 3: Post-history (fixed order: post_history then assistant_prefill)
+  for (const slot of enabledSlots) {
+    if (slot.id === "post_history") {
+      if (character?.post_history_instructions?.trim()) {
+        messages.push({ role: "system", content: character.post_history_instructions });
+      }
+    }
+    if (slot.id === "assistant_prefill") {
+      const trimmed = (slot.content ?? "").trimEnd();
+      if (trimmed) assistantPrefill = trimmed;
+    }
   }
 
   return {
     messages,
     characterName: character?.name ?? null,
-    modelOverride: null, // TODO: per-character model override
+    modelOverride: null,
+    assistantPrefill,
   };
 }
 
-/**
- * Get the character_id for a chat from the chats table.
- * Returns null if the chat has no associated character.
- */
-function getCharacterIdForChat(
-  db: Database,
-  chatId: string,
-): string | null {
+function getCharacterIdForChat(db: Database, chatId: string): string | null {
   const row = db
     .query("SELECT character_id FROM chats WHERE id = $id")
     .get({ $id: chatId }) as { character_id: string | null } | null;

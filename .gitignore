@@ -1,6 +1,9 @@
 # dependencies (bun install)
 node_modules
 
+# npm lockfile — project uses Bun (bun.lock is the canonical lockfile)
+package-lock.json
+
 # output
 out
 dist

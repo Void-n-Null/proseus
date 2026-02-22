@@ -12,6 +12,7 @@ import MessageList from "./MessageList.tsx";
 import Composer from "./Composer.tsx";
 import StreamDebug from "../debug/StreamDebug.tsx";
 import ModelBrowserModal from "../model/ModelBrowserModal.tsx";
+import ModelSelector from "../model/ModelSelector.tsx";
 import { Avatar } from "../ui/avatar.tsx";
 
 interface ChatPageProps {
@@ -208,42 +209,46 @@ export default function ChatPage({ chatId, onBack }: ChatPageProps) {
           </div>
         </div>
 
-        <div className="relative" ref={exportMenuRef}>
-          <button
-            type="button"
-            disabled={isExporting}
-            onClick={() => setExportMenuOpen((open) => !open)}
-            className="px-3 py-1.5 text-xs bg-surface-raised text-text-muted border border-border rounded-md hover:text-text-body transition-colors disabled:opacity-50 disabled:cursor-wait"
-          >
-            {isExporting ? "Exporting..." : "Export"}
-          </button>
+        {isMobile ? (
+          <ModelSelector className="max-w-[150px]" />
+        ) : (
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              type="button"
+              disabled={isExporting}
+              onClick={() => setExportMenuOpen((open) => !open)}
+              className="px-3 py-1.5 text-xs bg-surface-raised text-text-muted border border-border rounded-md hover:text-text-body transition-colors disabled:opacity-50 disabled:cursor-wait"
+            >
+              {isExporting ? "Exporting..." : "Export"}
+            </button>
 
-          {exportMenuOpen && (
-            <div className="absolute right-0 top-[calc(100%+0.35rem)] min-w-[12.5rem] bg-surface border border-border rounded-md shadow-lg z-20 p-1">
-              <button
-                type="button"
-                onClick={() => void handleExport("chat")}
-                className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded"
-              >
-                Proseus archive (.chat)
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleExport("jsonl")}
-                className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded"
-              >
-                JSONL (SillyTavern)
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleExport("txt")}
-                className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded"
-              >
-                Text transcript (.txt)
-              </button>
-            </div>
-          )}
-        </div>
+            {exportMenuOpen && (
+              <div className="absolute right-0 top-[calc(100%+0.35rem)] min-w-[12.5rem] bg-surface border border-border rounded-md shadow-lg z-20 p-1">
+                <button
+                  type="button"
+                  onClick={() => void handleExport("chat")}
+                  className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded"
+                >
+                  Proseus archive (.chat)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleExport("jsonl")}
+                  className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded"
+                >
+                  JSONL (SillyTavern)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleExport("txt")}
+                  className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded"
+                >
+                  Text transcript (.txt)
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden">

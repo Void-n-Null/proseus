@@ -15,7 +15,11 @@ import { useConnections } from "../../hooks/useConnections.ts";
 import ModelBrowserModal from "./ModelBrowserModal.tsx";
 import { getProviderBranding } from "../../../shared/brandingData.ts";
 
-export default function ModelSelector() {
+interface ModelSelectorProps {
+  className?: string;
+}
+
+export default function ModelSelector({ className }: ModelSelectorProps) {
   const { provider, modelId } = useModelStore();
   const { models } = useProviderModels(provider);
   const { connectionStatus } = useConnections();
@@ -44,13 +48,14 @@ export default function ModelSelector() {
       <button
         onClick={() => setModalOpen(true)}
         className={[
-          "flex items-center gap-1.5 h-8 px-3 max-w-[240px]",
+          "flex items-center gap-1.5 h-8 px-3 max-w-[240px] min-w-0",
           "rounded-lg text-xs font-medium transition-all duration-150",
           "hover:bg-surface-hover active:scale-[0.97]",
           needsProvider
             ? "border border-dashed border-border text-text-dim bg-surface"
             : "border border-border bg-surface-raised hover:border-border",
           isReady ? "text-text-body" : "text-text-dim",
+          className ?? "",
         ].join(" ")}
       >
         {needsProvider ? (

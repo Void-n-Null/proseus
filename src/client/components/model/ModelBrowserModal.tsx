@@ -19,6 +19,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../ui/dialog.tsx";
+import MobileSlideUpSheet from "../ui/mobile-slide-up-sheet.tsx";
+import { useIsMobile } from "../../hooks/useMediaQuery.ts";
 import { useModelStore } from "../../stores/model.ts";
 import { useProviderModels } from "../../hooks/useModels.ts";
 import { useConnections } from "../../hooks/useConnections.ts";
@@ -46,6 +48,7 @@ export default function ModelBrowserModal({
   open,
   onOpenChange,
 }: ModelBrowserModalProps) {
+  const isMobile = useIsMobile();
   const { provider, modelId, setProviderAndModel, setProvider } =
     useModelStore();
   const { models, isLoading } = useProviderModels(provider);
@@ -198,8 +201,141 @@ export default function ModelBrowserModal({
     return () => ro.disconnect();
   }, [providerConnected, provider, connectState, isLoading]);
 
-  const connectedHeight = typeof window !== "undefined" ? 895: 800;
+  const connectedHeight = typeof window !== "undefined" ? 895 : 800;
   const targetHeight = providerConnected ? connectedHeight : (measuredHeight ?? connectedHeight);
+
+  const content = (
+    <div
+      ref={contentRef}
+      className={[
+        "flex flex-col min-h-0",
+        providerConnected && !isMobile ? "h-[894px]" : "",
+      ].join(" ")}
+    >
+      {isMobile ? (
+        <div className="flex flex-col space-y-1.5 px-4 pt-4 pb-0">
+          <h2 className="text-foreground text-lg font-semibold leading-none tracking-tight">
+            Model Browser
+          </h2>
+          <p className="text-text-muted text-sm">
+            Connect providers and select an AI model for your generations.
+          </p>
+        </div>
+      ) : (
+        <DialogHeader className="px-6 pr-12 pt-5 pb-0">
+          <DialogTitle className="text-foreground text-lg font-semibold">
+            Model Browser
+          </DialogTitle>
+          <DialogDescription className="text-text-muted text-sm">
+            Connect providers and select an AI model for your generations.
+          </DialogDescription>
+        </DialogHeader>
+      )}
+
+      {/* Hero: non-scrolling zone so dropdowns aren't clipped */}
+      <div className="flex flex-col gap-3 sm:gap-4 px-4 sm:px-6 pt-3 sm:pt-4 pb-2 shrink-0 overflow-visible relative z-10">
+        <ModelHero
+          provider={provider}
+          onProviderChange={handleProviderChange}
+          connectionStatus={connectionStatus}
+          providerConnected={providerConnected}
+          onSaveKey={handleSaveKey}
+          onDisconnect={handleDisconnect}
+          onOAuth={() => startOpenRouterOAuth()}
+          connectState={connectState}
+          connectError={connectError}
+          onDismissError={() => { setConnectState("idle"); setConnectError(null); }}
+          search={search}
+          onSearchChange={setSearch}
+          searchRef={searchRef}
+          totalCount={models.length}
+          loading={isLoading}
+          selectedModel={selectedModel ?? null}
+          sort={sort}
+          onSortChange={setSort}
+          filters={filters}
+          onToggleFilter={handleToggleFilter}
+        />
+      </div>
+
+      <div className="border-b border-white/5 mx-auto w-full max-w-[98%]" />
+
+      {/* Grid: scrollable zone — hidden entirely when disconnected */}
+      {providerConnected && (
+        <div
+          className={[
+            isMobile
+              ? "px-3 pb-3"
+              : "flex-1 min-h-0 overflow-hidden px-6 pb-0",
+          ].join(" ")}
+        >
+          <div className={isMobile ? "overflow-visible" : "h-full overflow-y-auto"}>
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 pt-1">
+                <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-3" />
+                <span className="text-sm text-text-muted">
+                  Loading models...
+                </span>
+                <span className="text-xs text-text-dim mt-1">
+                  Syncing catalog from models.dev
+                </span>
+              </div>
+            ) : displayModels.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 auto-rows-min pb-2 pt-[5px]">
+                {displayModels.map((m) => (
+                  <ModelGridCard
+                    key={m.id}
+                    model={m}
+                    isSelected={m.id === modelId}
+                    onSelect={() => handleSelect(m.id)}
+                  />
+                ))}
+              </div>
+            ) : search || Object.values(filters).some(Boolean) ? (
+              <div className="py-16 text-center">
+                <span className="text-sm text-text-muted">
+                  No models match
+                  {search ? (
+                    <>
+                      {" "}
+                      <span className="font-mono text-text-body">
+                        &quot;{search}&quot;
+                      </span>
+                    </>
+                  ) : (
+                    ""
+                  )}
+                  {search && Object.values(filters).some(Boolean)
+                    ? " with"
+                    : ""}
+                  {Object.values(filters).some(Boolean)
+                    ? " active filters"
+                    : ""}
+                </span>
+                <p className="text-xs text-text-dim mt-1.5">
+                  Try broadening your search or clearing a filter.
+                </p>
+              </div>
+            ) : (
+              <div className="py-16 text-center">
+                <span className="text-sm text-text-dim">
+                  No models available
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <MobileSlideUpSheet open={open} onClose={() => onOpenChange(false)}>
+        {content}
+      </MobileSlideUpSheet>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -208,104 +344,7 @@ export default function ModelBrowserModal({
           animate={{ height: targetHeight }}
           transition={{ duration: 0.2, ease: "easeOut" }}
         >
-        <div ref={contentRef} className={["flex flex-col", providerConnected ? "h-[894px]" : ""].join(" ")}>
-        <DialogHeader className="px-6 pt-5 pb-0">
-          <DialogTitle className="text-foreground text-lg font-semibold">
-            Model Browser
-          </DialogTitle>
-          <DialogDescription className="text-text-muted text-sm">
-            Connect providers and select an AI model for your generations.
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Hero: non-scrolling zone so dropdowns aren't clipped */}
-        <div className="flex flex-col gap-4 px-6 pt-4 pb-2 shrink-0 overflow-visible relative z-10">
-          <ModelHero
-            provider={provider}
-            onProviderChange={handleProviderChange}
-            connectionStatus={connectionStatus}
-            providerConnected={providerConnected}
-            onSaveKey={handleSaveKey}
-            onDisconnect={handleDisconnect}
-            onOAuth={() => startOpenRouterOAuth()}
-            connectState={connectState}
-            connectError={connectError}
-            onDismissError={() => { setConnectState("idle"); setConnectError(null); }}
-            search={search}
-            onSearchChange={setSearch}
-            searchRef={searchRef}
-            totalCount={models.length}
-            loading={isLoading}
-            selectedModel={selectedModel ?? null}
-            sort={sort}
-            onSortChange={setSort}
-            filters={filters}
-            onToggleFilter={handleToggleFilter}
-          />
-        </div>
-        <div className="border-b border-white/5  mx-auto w-full  max-w-[98%]" />
-
-        {/* Grid: scrollable zone — hidden entirely when disconnected */}
-        {providerConnected && (
-        <div className="flex-1 min-h-0 overflow-hidden px-6 ">
-        <div className="h-full overflow-y-auto">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 pt-1">
-              <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-3" />
-              <span className="text-sm text-text-muted">
-                Loading models...
-              </span>
-              <span className="text-xs text-text-dim mt-1">
-                Syncing catalog from models.dev
-              </span>
-            </div>
-          ) : displayModels.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 auto-rows-min pb-2 pt-[5px]">
-              {displayModels.map((m) => (
-                <ModelGridCard
-                  key={m.id}
-                  model={m}
-                  isSelected={m.id === modelId}
-                  onSelect={() => handleSelect(m.id)}
-                />
-              ))}
-            </div>
-          ) : search || Object.values(filters).some(Boolean) ? (
-            <div className="py-16 text-center">
-              <span className="text-sm text-text-muted">
-                No models match
-                {search ? (
-                  <>
-                    {" "}
-                    <span className="font-mono text-text-body">
-                      &quot;{search}&quot;
-                    </span>
-                  </>
-                ) : (
-                  ""
-                )}
-                {search && Object.values(filters).some(Boolean)
-                  ? " with"
-                  : ""}
-                {Object.values(filters).some(Boolean)
-                  ? " active filters"
-                  : ""}
-              </span>
-              <p className="text-xs text-text-dim mt-1.5">
-                Try broadening your search or clearing a filter.
-              </p>
-            </div>
-          ) : (
-            <div className="py-16 text-center">
-              <span className="text-sm text-text-dim">
-                No models available
-              </span>
-            </div>
-          )}
-        </div>
-        </div>
-        )}
-        </div>
+          {content}
         </motion.div>
       </DialogContent>
     </Dialog>

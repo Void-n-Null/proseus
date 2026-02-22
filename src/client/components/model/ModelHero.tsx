@@ -311,7 +311,7 @@ function NoModelSelectedPane({
       className="relative rounded-2xl px-5 py-4 overflow-hidden border border-dashed border-border bg-surface"
     >
       {/* Top row — matches SelectedModelPane structure (w-11 icon, text-base title) */}
-      <div className="flex items-start justify-between gap-6">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-6">
         <div className="flex items-center gap-3 min-w-0">
           <div
             className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-[oklch(0.50_0_0/0.06)] border border-[oklch(0.50_0_0/0.1)]"
@@ -362,7 +362,7 @@ function NoModelSelectedPane({
       </div>
 
       {/* Bottom row — matches SelectedModelPane capabilities row */}
-      <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+      <div className="flex flex-col items-start gap-2 mt-3 pt-3 border-t border-border sm:flex-row sm:items-center sm:justify-between">
         <span className="text-xs text-text-dim">
           No capabilities to display
         </span>
@@ -429,33 +429,33 @@ function SelectedModelPane({ model }: { model: Model }) {
 
   return (
     <div
-      className="relative rounded-2xl px-5 py-4 overflow-hidden bg-surface-hover border border-border"
+      className="relative rounded-xl sm:rounded-2xl px-3 py-2.5 sm:px-5 sm:py-4 overflow-hidden bg-surface-hover border border-border"
       // intentionally dynamic: shadow for elevation
       style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.2)" }}
     >
       {/* Top row: Identity + Stat blocks */}
-      <div className="flex items-start justify-between gap-6">
+      <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
         {/* Left: Creator icon + model identity */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div
-            className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center"
+            className="shrink-0 w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl flex items-center justify-center"
             // intentionally dynamic: creator brand color
             style={{ backgroundColor: branding.bg }}
           >
-            <ProviderIcon provider={iconProvider} logoUrl={logoUrl} color={branding.logo} size={22} />
+            <ProviderIcon provider={iconProvider} logoUrl={logoUrl} color={branding.logo} size={16} />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-semibold text-foreground truncate leading-snug">
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-[0.82rem] sm:text-base font-semibold text-foreground truncate leading-snug">
                 {model.name}
               </h3>
               {model.status && (
-                <span className="shrink-0 text-[10px] font-semibold tracking-wide uppercase px-1.5 py-0.5 rounded bg-primary/15 text-primary leading-none">
+                <span className="shrink-0 text-[8px] sm:text-[10px] font-semibold tracking-wide uppercase px-1 py-[2px] rounded bg-primary/15 text-primary leading-none">
                   {model.status}
                 </span>
               )}
             </div>
-            <p className="text-xs font-mono text-text-dim truncate mt-0.5">
+            <p className="text-[10px] sm:text-xs font-mono text-text-dim truncate mt-0.5">
               {model.id}
             </p>
           </div>
@@ -463,13 +463,13 @@ function SelectedModelPane({ model }: { model: Model }) {
 
         {/* Right: Labeled stat blocks separated by dividers */}
         {statBlocks.length > 0 && (
-          <div className="shrink-0 flex items-start divide-x divide-border">
+          <div className="w-full sm:w-auto shrink-0 grid grid-cols-1 gap-1 sm:flex sm:flex-wrap sm:items-start sm:divide-x sm:divide-border sm:gap-0 sm:flex-nowrap">
             {statBlocks.map((block) => (
-              <div key={block.label} className="px-4 first:pl-0 last:pr-0">
-                <p className="text-[10px] uppercase tracking-widest text-text-dim font-medium whitespace-nowrap">
+              <div key={block.label} className="rounded-md bg-surface px-2 py-1 sm:rounded-none sm:bg-transparent sm:px-4 sm:py-0 first:sm:pl-0 last:sm:pr-0">
+                <p className="text-[8px] sm:text-[10px] uppercase tracking-widest text-text-dim font-medium whitespace-nowrap">
                   {block.label}
                 </p>
-                <p className="text-sm font-mono font-medium text-text-body mt-0.5 whitespace-nowrap">
+                <p className="text-[0.72rem] sm:text-sm font-mono font-medium text-text-body mt-0.5 sm:whitespace-nowrap">
                   {block.value}
                 </p>
               </div>
@@ -479,15 +479,15 @@ function SelectedModelPane({ model }: { model: Model }) {
       </div>
 
       {/* Bottom row: Capabilities + metadata */}
-      <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col items-start gap-1.5 mt-2.5 pt-2.5 border-t border-border sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           {CAPABILITIES.map(({ key, label, icon }) => {
             const supported = capabilityMap[key];
             return (
               <div
                 key={key}
                 className={[
-                  "flex items-center gap-1.5 transition-opacity",
+                  "flex items-center gap-1 transition-opacity",
                   supported ? "opacity-100" : "opacity-30",
                 ].join(" ")}
               >
@@ -502,9 +502,9 @@ function SelectedModelPane({ model }: { model: Model }) {
                 )}
                 <FilterIcon
                   name={icon}
-                  className={`w-3 h-3 ${supported ? "text-text-body" : "text-text-dim"}`}
+                  className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${supported ? "text-text-body" : "text-text-dim"}`}
                 />
-                <span className={`text-xs ${supported ? "text-text-body" : "text-text-dim"}`}>
+                <span className={`hidden sm:inline text-xs ${supported ? "text-text-body" : "text-text-dim"}`}>
                   {label}
                 </span>
               </div>
@@ -514,7 +514,7 @@ function SelectedModelPane({ model }: { model: Model }) {
 
         {/* Release date / knowledge cutoff */}
         {(model.releaseDate || model.knowledgeCutoff) && (
-          <div className="flex items-center gap-2.5 text-[11px] text-text-dim">
+          <div className="hidden sm:flex flex-wrap items-center gap-2.5 text-[11px] text-text-dim">
             {model.releaseDate && <span>Released {model.releaseDate}</span>}
             {model.releaseDate && model.knowledgeCutoff && (
               <span className="text-text-dim/40">&middot;</span>
@@ -714,7 +714,7 @@ export default function ModelHero({
       ) : null}
 
       {/* Provider dropdown row */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
         <ModelProviderDropdown
           value={provider}
           onChange={onProviderChange}
@@ -726,7 +726,7 @@ export default function ModelHero({
             type="button"
             onClick={onDisconnect}
             disabled={isValidating}
-            className="group flex items-center gap-1.5 text-xs text-text-dim hover:text-destructive transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            className="group self-start flex items-center gap-1.5 text-xs text-text-dim hover:text-destructive transition-colors disabled:opacity-40 disabled:pointer-events-none"
           >
             <FilterIcon name="unlink" className="w-3 h-3" />
             {isValidating ? "Disconnecting..." : "Disconnect"}
@@ -761,7 +761,7 @@ export default function ModelHero({
           )}
 
           {/* Inline API key input */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
             <div className="relative flex-1 group">
               <input
                 type={showKey ? "text" : "password"}
@@ -790,7 +790,7 @@ export default function ModelHero({
               type="button"
               onClick={handleInlineSubmit}
               disabled={!inlineKey.trim() || isValidating}
-              className="h-10 px-5 rounded-lg flex items-center gap-2 shrink-0 text-sm font-semibold transition-all duration-150 bg-primary text-background hover:brightness-110 active:scale-[0.97] disabled:opacity-25 disabled:cursor-not-allowed"
+              className="h-10 w-full sm:w-auto px-5 rounded-lg flex items-center justify-center gap-2 shrink-0 text-sm font-semibold transition-all duration-150 bg-primary text-background hover:brightness-110 active:scale-[0.97] disabled:opacity-25 disabled:cursor-not-allowed"
             >
               {isValidating ? (
                 <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
@@ -916,9 +916,13 @@ export default function ModelHero({
           )}
 
           {/* Spacer */}
-          <div className="flex-1" />
+          <div className="hidden sm:block flex-1" />
 
-          <SortDropdown value={sort} onChange={onSortChange} />
+          <SortDropdown
+            value={sort}
+            onChange={onSortChange}
+            className="w-full sm:w-auto sm:min-w-[180px]"
+          />
         </div>
       )}
     </>

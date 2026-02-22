@@ -109,14 +109,39 @@ export default function App() {
   return (
     <div className="font-body text-foreground bg-background h-dvh flex flex-col">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.06_0.01_250)] border-b border-border shrink-0 gap-3">
-        <span className="text-[1.1rem] font-light tracking-[0.25em] text-text-muted font-display">
-          PROSEUS
-        </span>
+      {isMobile ? (
+        /* ── Mobile top bar ── */
+        <div className="flex items-center justify-between px-3 min-h-[44px] bg-[oklch(0.06_0.01_250)] border-b border-border shrink-0">
+          <span className="text-[1rem] font-light tracking-[0.25em] text-text-muted font-display">
+            PROSEUS
+          </span>
+          <div className="flex gap-[2px] bg-surface rounded-md p-[2px]">
+            <ToggleButton
+              active={sidebarView === "characters"}
+              onClick={() => setSidebarView("characters")}
+              label="Characters"
+            />
+            <ToggleButton
+              active={sidebarView === "personas"}
+              onClick={() => setSidebarView("personas")}
+              label="Personas"
+            />
+            <ToggleButton
+              active={sidebarView === "chats"}
+              onClick={() => setSidebarView("chats")}
+              label={`Chats${chats.length > 0 ? ` (${chats.length})` : ""}`}
+            />
+          </div>
+        </div>
+      ) : (
+        /* ── Desktop top bar (unchanged) ── */
+        <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.06_0.01_250)] border-b border-border shrink-0 gap-3">
+          <span className="text-[1.1rem] font-light tracking-[0.25em] text-text-muted font-display">
+            PROSEUS
+          </span>
 
-        {/* Sidebar view toggle */}
-        <div className="flex items-center gap-[0.35rem]">
-          {!isMobile && (
+          {/* Sidebar view toggle */}
+          <div className="flex items-center gap-[0.35rem]">
             <button
               onClick={() => setSidebarCollapsed((c) => !c)}
               title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
@@ -130,105 +155,105 @@ export default function App() {
             >
               {sidebarCollapsed ? "\u25B6" : "\u25C0"}
             </button>
-          )}
-          <div className="flex gap-[2px] bg-surface rounded-md p-[2px]">
-            <ToggleButton
-              active={sidebarView === "characters"}
-              onClick={() => {
-                setSidebarView("characters");
-                setSidebarCollapsed(false);
-              }}
-              label="Characters"
-            />
-            <ToggleButton
-              active={sidebarView === "personas"}
-              onClick={() => {
-                setSidebarView("personas");
-                setSidebarCollapsed(false);
-              }}
-              label="Personas"
-            />
-            <ToggleButton
-              active={sidebarView === "chats"}
-              onClick={() => {
-                setSidebarView("chats");
-                setSidebarCollapsed(false);
-              }}
-              label={`Chats${chats.length > 0 ? ` (${chats.length})` : ""}`}
-            />
+            <div className="flex gap-[2px] bg-surface rounded-md p-[2px]">
+              <ToggleButton
+                active={sidebarView === "characters"}
+                onClick={() => {
+                  setSidebarView("characters");
+                  setSidebarCollapsed(false);
+                }}
+                label="Characters"
+              />
+              <ToggleButton
+                active={sidebarView === "personas"}
+                onClick={() => {
+                  setSidebarView("personas");
+                  setSidebarCollapsed(false);
+                }}
+                label="Personas"
+              />
+              <ToggleButton
+                active={sidebarView === "chats"}
+                onClick={() => {
+                  setSidebarView("chats");
+                  setSidebarCollapsed(false);
+                }}
+                label={`Chats${chats.length > 0 ? ` (${chats.length})` : ""}`}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Model selector */}
-        <ModelSelector />
+          {/* Model selector */}
+          <ModelSelector />
 
-        <div className="flex gap-2 items-center">
-          <div className="relative" ref={templateMenuRef}>
+          <div className="flex gap-2 items-center">
+            <div className="relative" ref={templateMenuRef}>
+              <button
+                type="button"
+                onClick={() => setTemplateMenuOpen((open) => !open)}
+                title="Design Template"
+                className="px-2 py-[0.35rem] bg-surface-raised text-text-muted border border-border rounded-md cursor-pointer text-[0.78rem] leading-none transition-colors hover:text-text-body"
+              >
+                Template: {DESIGN_TEMPLATES[designTemplateId].label}
+              </button>
+
+              {templateMenuOpen && (
+                <div className="absolute right-0 top-[calc(100%+0.35rem)] min-w-[12rem] bg-surface border border-border rounded-md shadow-lg z-30 p-1">
+                  {Object.values(DESIGN_TEMPLATES).map((template) => {
+                    const isActive = template.id === designTemplateId;
+                    return (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => handleSelectDesignTemplate(template.id)}
+                        className={`w-full text-left px-2 py-1.5 rounded text-xs border-none cursor-pointer transition-colors ${
+                          isActive
+                            ? "bg-surface-raised text-text-body"
+                            : "bg-transparent text-text-muted hover:text-text-body hover:bg-surface-raised"
+                        }`}
+                      >
+                        <div className="font-medium">{template.label}</div>
+                        <div className="text-[0.68rem] text-text-dim mt-0.5">
+                          {template.description}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <button
-              type="button"
-              onClick={() => setTemplateMenuOpen((open) => !open)}
-              title="Design Template"
-              className="px-2 py-[0.35rem] bg-surface-raised text-text-muted border border-border rounded-md cursor-pointer text-[0.78rem] leading-none transition-colors hover:text-text-body"
+              onClick={() => setPromptTemplateOpen(true)}
+              title="Prompt Template"
+              className="px-2 py-[0.35rem] bg-surface-raised text-text-muted border border-border rounded-md cursor-pointer text-[0.85rem] leading-none transition-colors"
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-text-body)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}
             >
-              Template: {DESIGN_TEMPLATES[designTemplateId].label}
+              ⚙
             </button>
-
-            {templateMenuOpen && (
-              <div className="absolute right-0 top-[calc(100%+0.35rem)] min-w-[12rem] bg-surface border border-border rounded-md shadow-lg z-30 p-1">
-                {Object.values(DESIGN_TEMPLATES).map((template) => {
-                  const isActive = template.id === designTemplateId;
-                  return (
-                    <button
-                      key={template.id}
-                      type="button"
-                      onClick={() => handleSelectDesignTemplate(template.id)}
-                      className={`w-full text-left px-2 py-1.5 rounded text-xs border-none cursor-pointer transition-colors ${
-                        isActive
-                          ? "bg-surface-raised text-text-body"
-                          : "bg-transparent text-text-muted hover:text-text-body hover:bg-surface-raised"
-                      }`}
-                    >
-                      <div className="font-medium">{template.label}</div>
-                      <div className="text-[0.68rem] text-text-dim mt-0.5">
-                        {template.description}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+            {resolvedChatId && (
+              <button
+                onClick={handleCloseChat}
+                className="px-3 py-[0.35rem] bg-surface-raised text-text-muted border border-border rounded-md cursor-pointer text-[0.78rem] transition-colors"
+              >
+                Close Chat
+              </button>
             )}
-          </div>
-
-          <button
-            onClick={() => setPromptTemplateOpen(true)}
-            title="Prompt Template"
-            className="px-2 py-[0.35rem] bg-surface-raised text-text-muted border border-border rounded-md cursor-pointer text-[0.85rem] leading-none transition-colors"
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-text-body)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}
-          >
-            ⚙
-          </button>
-          {resolvedChatId && (
             <button
-              onClick={handleCloseChat}
-              className="px-3 py-[0.35rem] bg-surface-raised text-text-muted border border-border rounded-md cursor-pointer text-[0.78rem] transition-colors"
+              onClick={handleSeed}
+              disabled={seeding}
+              className="px-3 py-[0.35rem] bg-surface-raised text-text-muted border border-border rounded-md text-[0.78rem]"
+              style={{
+                cursor: seeding ? "wait" : "pointer",
+                opacity: seeding ? 0.5 : 1,
+              }} /* intentionally dynamic */
             >
-              Close Chat
+              {seeding ? "Seeding..." : "Seed Demo"}
             </button>
-          )}
-          <button
-            onClick={handleSeed}
-            disabled={seeding}
-            className="px-3 py-[0.35rem] bg-surface-raised text-text-muted border border-border rounded-md text-[0.78rem]"
-            style={{
-              cursor: seeding ? "wait" : "pointer",
-              opacity: seeding ? 0.5 : 1,
-            }} /* intentionally dynamic */
-          >
-            {seeding ? "Seeding..." : "Seed Demo"}
-          </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* OAuth callback feedback */}
       {oauthState.status === "exchanging" && (

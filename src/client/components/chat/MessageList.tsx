@@ -120,7 +120,7 @@ const MessageList = React.memo(function MessageList({
       className="h-full overflow-y-auto [contain:strict]"
     >
       <div
-        className={`mx-auto relative ${templateId === "discord" ? "w-full" : "w-full md:w-[60vw]"}`}
+        className={`mx-auto relative ${templateId === "discord" ? "w-full" : "w-full sm:w-[60vw]"}`}
         style={{ height: virtualizer.getTotalSize() /* intentionally dynamic */ }}
       >
         {virtualItems.map((virtualItem) => {

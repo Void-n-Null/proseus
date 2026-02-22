@@ -186,7 +186,7 @@ const renderer = {
 // ---------------------------------------------------------------------------
 
 const marked = new Marked(
-  { gfm: true, breaks: false },
+  { gfm: true, breaks: true },
   { renderer },
   markedHighlight({
     highlight(code: string, language: string) {

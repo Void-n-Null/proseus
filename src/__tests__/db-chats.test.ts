@@ -8,6 +8,8 @@ import {
   listChats,
   updateChat,
   deleteChat,
+  togglePinChat,
+  duplicateChat,
 } from "../server/db/chats.ts";
 import { addMessage } from "../server/db/messages.ts";
 
@@ -123,6 +125,49 @@ describe("chats", () => {
     expect(item).toBeDefined();
     expect(item!.message_count).toBe(2);
     expect(item!.last_message_preview).toBe("Latest message");
+    expect(item!.character_id).toBeNull();
+    expect(item!.character_name).toBeNull();
+    expect(item!.character_avatar_url).toBeNull();
+    expect(item!.is_pinned).toBe(false);
+  });
+
+  test("listChats: supports query filter by chat name", () => {
+    createChat(db, {
+      name: "Dragon Tavern",
+      speaker_ids: [userId],
+    });
+    createChat(db, {
+      name: "Space Station",
+      speaker_ids: [userId],
+    });
+
+    const list = listChats(db, { q: "dragon" });
+    expect(list).toHaveLength(1);
+    expect(list[0]!.name).toBe("Dragon Tavern");
+  });
+
+  test("listChats: supports pinned_first sort", () => {
+    const pinned = createChat(db, {
+      name: "Pinned Chat",
+      speaker_ids: [userId],
+      is_pinned: true,
+    });
+    createChat(db, {
+      name: "Unpinned Chat",
+      speaker_ids: [userId],
+      is_pinned: false,
+    });
+
+    // Ensure pinned chat does not win by updated_at by default
+    db.query("UPDATE chats SET updated_at = $ts WHERE id = $id").run({
+      $id: pinned.id,
+      $ts: Date.now() - 1000,
+    });
+
+    const list = listChats(db, { sort: "pinned_first" });
+    expect(list).toHaveLength(2);
+    expect(list[0]!.name).toBe("Pinned Chat");
+    expect(list[0]!.is_pinned).toBe(true);
   });
 
   test("updateChat: name changes and updated_at bumps", () => {
@@ -198,5 +243,128 @@ describe("chats", () => {
   test("deleteChat: returns false for nonexistent chat", () => {
     const result = deleteChat(db, "nonexistent");
     expect(result).toBe(false);
+  });
+
+  test("togglePinChat: updates pin state and returns true", () => {
+    const chat = createChat(db, {
+      name: "Pin Me",
+      speaker_ids: [userId],
+    });
+
+    const updated = togglePinChat(db, chat.id, true);
+    expect(updated).toBe(true);
+
+    const listed = listChats(db).find((c) => c.id === chat.id);
+    expect(listed).toBeDefined();
+    expect(listed!.is_pinned).toBe(true);
+  });
+
+  test("togglePinChat: returns false for nonexistent chat", () => {
+    const updated = togglePinChat(db, "missing", true);
+    expect(updated).toBe(false);
+  });
+
+  test("duplicateChat: creates copied chat with remapped node graph", () => {
+    const original = createChat(db, {
+      name: "Original Chat",
+      speaker_ids: [userId, botId],
+      tags: ["story", "test"],
+      is_pinned: true,
+    });
+
+    // Simulate a character-linked chat (insert minimal character row for FK)
+    const now = Date.now();
+    db.query(
+      `INSERT INTO characters (
+        id, name, description, personality, scenario, first_mes, mes_example,
+        creator_notes, system_prompt, post_history_instructions, alternate_greetings, tags,
+        creator, character_version, avatar, avatar_hash, source_spec, extensions, character_book,
+        content_hash, created_at, updated_at
+      ) VALUES (
+        $id, $name, '', '', '', '', '',
+        '', '', '', '[]', '[]',
+        '', '', NULL, NULL, 'v2', '{}', NULL,
+        $content_hash, $created_at, $updated_at
+      )`,
+    ).run({
+      $id: "character-123",
+      $name: "Test Character",
+      $content_hash: "character-content-hash-123",
+      $created_at: now,
+      $updated_at: now,
+    });
+
+    db.query("UPDATE chats SET character_id = $character_id WHERE id = $id").run({
+      $id: original.id,
+      $character_id: "character-123",
+    });
+
+    const root = addMessage(db, {
+      chat_id: original.id,
+      parent_id: null,
+      message: "Root node",
+      speaker_id: botId,
+      is_bot: true,
+    });
+    const child = addMessage(db, {
+      chat_id: original.id,
+      parent_id: root.node.id,
+      message: "Child node",
+      speaker_id: userId,
+      is_bot: false,
+    });
+
+    // Ensure root has two children to verify child_id remapping integrity
+    const sibling = addMessage(db, {
+      chat_id: original.id,
+      parent_id: root.node.id,
+      message: "Sibling node",
+      speaker_id: userId,
+      is_bot: false,
+    });
+
+    const copy = duplicateChat(db, original.id);
+    expect(copy).not.toBeNull();
+    expect(copy!.id).not.toBe(original.id);
+    expect(copy!.name).toBe("Original Chat (copy)");
+    expect(copy!.speaker_ids).toHaveLength(2);
+    expect(copy!.speaker_ids).toContain(userId);
+    expect(copy!.speaker_ids).toContain(botId);
+    expect(copy!.tags).toEqual(["story", "test"]);
+
+    const originalTree = db
+      .query("SELECT id FROM chat_nodes WHERE chat_id = $chat_id")
+      .all({ $chat_id: original.id }) as { id: string }[];
+    const copiedTree = db
+      .query("SELECT id, parent_id, child_ids FROM chat_nodes WHERE chat_id = $chat_id")
+      .all({ $chat_id: copy!.id }) as {
+      id: string;
+      parent_id: string | null;
+      child_ids: string;
+    }[];
+
+    expect(copiedTree).toHaveLength(3);
+    const originalIds = new Set(originalTree.map((row) => row.id));
+    for (const row of copiedTree) {
+      expect(originalIds.has(row.id)).toBe(false);
+      if (row.parent_id) {
+        expect(originalIds.has(row.parent_id)).toBe(false);
+      }
+      const childIds = JSON.parse(row.child_ids) as string[];
+      for (const childId of childIds) {
+        expect(originalIds.has(childId)).toBe(false);
+      }
+    }
+
+    // Sanity check source nodes are untouched and still present
+    expect(getChat(db, original.id)).not.toBeNull();
+    expect(getChat(db, copy!.id)).not.toBeNull();
+    expect(root.node.id).not.toBe(child.node.id);
+    expect(sibling.node.id).not.toBe(child.node.id);
+  });
+
+  test("duplicateChat: returns null for nonexistent source chat", () => {
+    const copy = duplicateChat(db, "missing");
+    expect(copy).toBeNull();
   });
 });

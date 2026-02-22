@@ -6,6 +6,9 @@ import {
   listChats,
   updateChat,
   deleteChat,
+  togglePinChat,
+  duplicateChat,
+  type ChatListOptions,
 } from "../db/chats.ts";
 import { addMessage, getChatTree } from "../db/messages.ts";
 import { getSpeaker } from "../db/speakers.ts";
@@ -14,13 +17,30 @@ import { createMessagesRouter } from "./messages.ts";
 
 export function createChatsRouter(db: Database): Hono {
   const app = new Hono();
+  const validSorts: NonNullable<ChatListOptions["sort"]>[] = [
+    "updated_at",
+    "created_at",
+    "message_count",
+    "name",
+    "pinned_first",
+  ];
 
   // Mount message sub-routes under /:chatId/*
   app.route("/:chatId", createMessagesRouter(db));
 
   // GET / — list all chats
   app.get("/", (c) => {
-    const chats = listChats(db);
+    const q = c.req.query("q") ?? undefined;
+    const sortRaw = c.req.query("sort");
+    let sort: ChatListOptions["sort"];
+    if (sortRaw) {
+      if (!validSorts.includes(sortRaw as NonNullable<ChatListOptions["sort"]>)) {
+        return c.json({ error: "Invalid sort parameter" }, 400);
+      }
+      sort = sortRaw as NonNullable<ChatListOptions["sort"]>;
+    }
+
+    const chats = listChats(db, { q, sort });
     return c.json({ chats });
   });
 
@@ -107,6 +127,33 @@ export function createChatsRouter(db: Database): Hono {
       return c.json({ error: "Chat not found" }, 404);
     }
 
+    return c.json({ chat });
+  });
+
+  // PATCH /:chatId/pin — set pin state
+  app.patch("/:chatId/pin", async (c) => {
+    const chatId = c.req.param("chatId");
+    const body = await c.req.json<{ is_pinned?: boolean }>();
+
+    if (typeof body.is_pinned !== "boolean") {
+      return c.json({ error: "is_pinned boolean is required" }, 400);
+    }
+
+    const updated = togglePinChat(db, chatId, body.is_pinned);
+    if (!updated) {
+      return c.json({ error: "Chat not found" }, 404);
+    }
+
+    return c.json({ ok: true });
+  });
+
+  // POST /:chatId/duplicate — duplicate a chat and return the new chat
+  app.post("/:chatId/duplicate", (c) => {
+    const chatId = c.req.param("chatId");
+    const chat = duplicateChat(db, chatId);
+    if (!chat) {
+      return c.json({ error: "Chat not found" }, 404);
+    }
     return c.json({ chat });
   });
 

@@ -120,6 +120,66 @@ describe("Chat API routes", () => {
     expect(data.chats.length).toBe(2);
   });
 
+  test("GET /api/chats?q= — filters by query", async () => {
+    await app.request(
+      "/api/chats",
+      json({ name: "Dragon Keep", speaker_ids: [userId] }),
+    );
+    await app.request(
+      "/api/chats",
+      json({ name: "Ocean Port", speaker_ids: [userId] }),
+    );
+
+    const res = await app.request("/api/chats?q=dragon");
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.chats).toHaveLength(1);
+    expect(data.chats[0].name).toBe("Dragon Keep");
+  });
+
+  test("GET /api/chats?sort=pinned_first — returns pinned first", async () => {
+    const pinnedRes = await app.request(
+      "/api/chats",
+      json({ name: "Pinned", speaker_ids: [userId] }),
+    );
+    const unpinnedRes = await app.request(
+      "/api/chats",
+      json({ name: "Unpinned", speaker_ids: [userId] }),
+    );
+    const pinnedData = await pinnedRes.json();
+    const unpinnedData = await unpinnedRes.json();
+
+    await app.request(`/api/chats/${pinnedData.chat.id}/pin`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_pinned: true }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    // Force pinned chat to look older by updated_at to prove pinned sort takes precedence.
+    db.query("UPDATE chats SET updated_at = $ts WHERE id = $id").run({
+      $id: pinnedData.chat.id,
+      $ts: Date.now() - 1000,
+    });
+    db.query("UPDATE chats SET updated_at = $ts WHERE id = $id").run({
+      $id: unpinnedData.chat.id,
+      $ts: Date.now(),
+    });
+
+    const res = await app.request("/api/chats?sort=pinned_first");
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.chats).toHaveLength(2);
+    expect(data.chats[0].id).toBe(pinnedData.chat.id);
+    expect(data.chats[0].is_pinned).toBe(true);
+  });
+
+  test("GET /api/chats?sort=bad — returns 400", async () => {
+    const res = await app.request("/api/chats?sort=bad");
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBeDefined();
+  });
+
   test("GET /api/chats/:id — returns chat + speakers", async () => {
     const createRes = await app.request(
       "/api/chats",
@@ -245,6 +305,88 @@ describe("Chat API routes", () => {
   test("DELETE /api/chats/:id with bad ID — returns 404", async () => {
     const res = await app.request("/api/chats/nonexistent", {
       method: "DELETE",
+    });
+    expect(res.status).toBe(404);
+  });
+
+  test("PATCH /api/chats/:id/pin — updates pin state", async () => {
+    const createRes = await app.request(
+      "/api/chats",
+      json({ name: "Pin Target", speaker_ids: [userId] }),
+    );
+    const { chat } = await createRes.json();
+
+    const res = await app.request(`/api/chats/${chat.id}/pin`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_pinned: true }),
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.ok).toBe(true);
+
+    const listRes = await app.request("/api/chats?sort=pinned_first");
+    const listData = await listRes.json();
+    const item = listData.chats.find((c: { id: string }) => c.id === chat.id);
+    expect(item).toBeDefined();
+    expect(item.is_pinned).toBe(true);
+  });
+
+  test("PATCH /api/chats/:id/pin without boolean body — returns 400", async () => {
+    const createRes = await app.request(
+      "/api/chats",
+      json({ name: "Pin Body", speaker_ids: [userId] }),
+    );
+    const { chat } = await createRes.json();
+    const res = await app.request(`/api/chats/${chat.id}/pin`, {
+      method: "PATCH",
+      body: JSON.stringify({}),
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test("PATCH /api/chats/:id/pin bad ID — returns 404", async () => {
+    const res = await app.request("/api/chats/nonexistent/pin", {
+      method: "PATCH",
+      body: JSON.stringify({ is_pinned: true }),
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  test("POST /api/chats/:id/duplicate — duplicates chat", async () => {
+    const createRes = await app.request(
+      "/api/chats",
+      json({
+        name: "Copy Me",
+        speaker_ids: [userId, botId],
+        greeting: "Hello from source",
+      }),
+    );
+    const { chat } = await createRes.json();
+    const sourceTree = getChatTree(db, chat.id);
+    const sourceNodeIds = new Set(Object.keys(sourceTree));
+
+    const res = await app.request(`/api/chats/${chat.id}/duplicate`, {
+      method: "POST",
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.chat).toBeDefined();
+    expect(data.chat.id).not.toBe(chat.id);
+    expect(data.chat.name).toBe("Copy Me (copy)");
+
+    const copiedTree = getChatTree(db, data.chat.id);
+    expect(Object.keys(copiedTree).length).toBe(Object.keys(sourceTree).length);
+    for (const copiedId of Object.keys(copiedTree)) {
+      expect(sourceNodeIds.has(copiedId)).toBe(false);
+    }
+  });
+
+  test("POST /api/chats/:id/duplicate bad ID — returns 404", async () => {
+    const res = await app.request("/api/chats/nonexistent/duplicate", {
+      method: "POST",
     });
     expect(res.status).toBe(404);
   });

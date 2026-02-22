@@ -148,6 +148,7 @@ export function runMigrations(db: Database): void {
     `ALTER TABLE chats ADD COLUMN character_id TEXT REFERENCES characters(id) ON DELETE SET NULL`,
     `ALTER TABLE speakers ADD COLUMN character_id TEXT REFERENCES characters(id) ON DELETE SET NULL`,
     `ALTER TABLE chats ADD COLUMN persona_id TEXT REFERENCES personas(id) ON DELETE SET NULL`,
+    `ALTER TABLE chats ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0`,
   ];
   for (const sql of alterColumns) {
     try {

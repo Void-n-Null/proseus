@@ -56,6 +56,10 @@ export interface ChatListItem {
   id: string;
   name: string;
   speaker_ids: string[];
+  character_id: string | null;
+  character_name: string | null;
+  character_avatar_url: string | null;
+  is_pinned: boolean;
   tags: string[];
   message_count: number;
   last_message_preview: string;

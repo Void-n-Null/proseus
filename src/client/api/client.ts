@@ -57,6 +57,24 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+interface FileResponse {
+  blob: Blob;
+  contentDisposition: string | null;
+}
+
+async function fetchFile(path: string, init?: RequestInit): Promise<FileResponse> {
+  const res = await fetch(`${BASE}${path}`, init);
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error((error as { error?: string }).error || res.statusText);
+  }
+
+  return {
+    blob: await res.blob(),
+    contentDisposition: res.headers.get("Content-Disposition"),
+  };
+}
+
 export const api = {
   chats: {
     list: (opts?: {
@@ -89,6 +107,9 @@ export const api = {
         method: "PATCH",
         body: JSON.stringify({ is_pinned: isPinned }),
       }),
+    exportChat: (id: string) => fetchFile(`/chats/${id}/export/chat`),
+    exportJsonl: (id: string) => fetchFile(`/chats/${id}/export/jsonl`),
+    exportTxt: (id: string) => fetchFile(`/chats/${id}/export/txt`),
   },
   messages: {
     getTree: (chatId: string) =>

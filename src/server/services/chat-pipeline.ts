@@ -24,13 +24,21 @@ export interface AssembledPrompt {
 export function assemblePrompt(
   db: Database,
   chatId: string,
+  upToNodeId?: string,
 ): AssembledPrompt | null {
   const chat = getChat(db, chatId);
   if (!chat?.root_node_id) return null;
 
   const treeRecord = getChatTree(db, chatId);
   const nodesMap = new Map<string, ChatNode>(Object.entries(treeRecord));
-  const pathIds = getActivePath(chat.root_node_id, nodesMap);
+  let pathIds = getActivePath(chat.root_node_id, nodesMap);
+
+  if (upToNodeId) {
+    const idx = pathIds.indexOf(upToNodeId);
+    if (idx >= 0) {
+      pathIds = pathIds.slice(0, idx + 1);
+    }
+  }
 
   const characterId = getCharacterIdForChat(db, chatId);
   const character = characterId ? getCharacter(db, characterId) : null;

@@ -26,6 +26,12 @@ export function createWebSocketHandler(streamManager: StreamManager) {
 
       switch (msg.type) {
         case "subscribe": {
+          // Idempotent subscribe: duplicate subscribe calls can happen during
+          // reconnect races. Guarding here prevents duplicate chunk delivery.
+          if (ws.data.subscribedChats.has(msg.chatId)) {
+            break;
+          }
+
           const topic = `chat:${msg.chatId}`;
           ws.subscribe(topic);
           ws.data.subscribedChats.add(msg.chatId);
@@ -59,6 +65,9 @@ export function createWebSocketHandler(streamManager: StreamManager) {
         }
 
         case "unsubscribe": {
+          if (!ws.data.subscribedChats.has(msg.chatId)) {
+            break;
+          }
           const topic = `chat:${msg.chatId}`;
           ws.unsubscribe(topic);
           ws.data.subscribedChats.delete(msg.chatId);
@@ -93,6 +102,7 @@ export function createWebSocketHandler(streamManager: StreamManager) {
             msg.model,
             msg.nodeId,
             msg.provider,
+            msg.regenerate,
           );
           if ("error" in result) {
             console.warn("[generate]", msg.chatId, result.error);

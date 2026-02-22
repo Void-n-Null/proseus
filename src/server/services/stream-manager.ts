@@ -105,11 +105,11 @@ export class StreamManager {
     model: string,
     nodeId: string,
     provider: ProviderName = "openrouter",
+    regenerate?: boolean,
   ): Promise<{ streamId: string } | { error: string }> {
     if (!(await this.hasApiKey(provider))) return { error: `No API key configured for ${provider}` };
     if (this.chatStreams.has(chatId)) return { error: "Chat already streaming" };
 
-    // Resolve parentId: leaf of the active path
     const chat = getChat(this.db, chatId);
     if (!chat?.root_node_id) return { error: "Chat has no messages" };
 
@@ -118,7 +118,15 @@ export class StreamManager {
     const pathIds = getActivePath(chat.root_node_id, nodesMap);
 
     if (pathIds.length === 0) return { error: "Chat has no active path" };
-    const parentId = pathIds[pathIds.length - 1]!;
+
+    let parentId: string;
+    if (regenerate) {
+      // Branch from the parent of the leaf — creates a sibling of the last message
+      if (pathIds.length < 2) return { error: "Cannot regenerate: no parent to branch from" };
+      parentId = pathIds[pathIds.length - 2]!;
+    } else {
+      parentId = pathIds[pathIds.length - 1]!;
+    }
 
     // Resolve speakerId: first non-user speaker in the chat
     const speakerRows = this.db
@@ -282,7 +290,7 @@ export class StreamManager {
   ): Promise<void> {
     const aiModel = await createModel(this.db, provider, model);
 
-    const prompt = assemblePrompt(this.db, stream.chatId);
+    const prompt = assemblePrompt(this.db, stream.chatId, stream.parentId);
     if (!prompt || prompt.messages.length === 0) {
       throw new Error("Chat has no messages or could not assemble prompt");
     }

@@ -108,32 +108,8 @@ export default function App() {
 
   return (
     <div className="font-body text-foreground bg-background h-dvh flex flex-col">
-      {/* Top bar */}
-      {isMobile ? (
-        /* ── Mobile top bar ── */
-        <div className="flex items-center justify-between px-3 min-h-[44px] bg-[oklch(0.06_0.01_250)] border-b border-border shrink-0">
-          <span className="text-[1rem] font-light tracking-[0.25em] text-text-muted font-display">
-            PROSEUS
-          </span>
-          <div className="flex gap-[2px] bg-surface rounded-md p-[2px]">
-            <ToggleButton
-              active={sidebarView === "characters"}
-              onClick={() => setSidebarView("characters")}
-              label="Characters"
-            />
-            <ToggleButton
-              active={sidebarView === "personas"}
-              onClick={() => setSidebarView("personas")}
-              label="Personas"
-            />
-            <ToggleButton
-              active={sidebarView === "chats"}
-              onClick={() => setSidebarView("chats")}
-              label={`Chats${chats.length > 0 ? ` (${chats.length})` : ""}`}
-            />
-          </div>
-        </div>
-      ) : (
+      {/* Top bar (desktop only) */}
+      {!isMobile && (
         /* ── Desktop top bar (unchanged) ── */
         <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.06_0.01_250)] border-b border-border shrink-0 gap-3">
           <span className="text-[1.1rem] font-light tracking-[0.25em] text-text-muted font-display">
@@ -310,18 +286,45 @@ export default function App() {
            Sidebar is the base layer (always rendered, full width).
            Chat slides over it as a full-screen overlay from the right. */
         <div className="flex-1 min-h-0 relative overflow-hidden">
-          {/* Base layer — sidebar */}
-          {sidebarView === "characters" ? (
-            <CharacterSidebar onChatCreated={handleChatCreated} />
-          ) : sidebarView === "personas" ? (
-            <PersonaSidebar />
-          ) : (
-            <ChatGallery
-              activeChatId={resolvedChatId}
-              onSelectChat={handleSelectChat}
-              isLoading={isLoading}
-            />
-          )}
+          {/* Base layer — sidebar plus local mobile nav header */}
+          <div className="absolute inset-0 flex flex-col">
+            <div className="flex items-center justify-between px-3 min-h-[44px] bg-[oklch(0.06_0.01_250)] border-b border-border shrink-0">
+              <span className="text-[1rem] font-light tracking-[0.25em] text-text-muted font-display">
+                PROSEUS
+              </span>
+              <div className="flex gap-[2px] bg-surface rounded-md p-[2px]">
+                <ToggleButton
+                  active={sidebarView === "characters"}
+                  onClick={() => setSidebarView("characters")}
+                  label="Characters"
+                />
+                <ToggleButton
+                  active={sidebarView === "personas"}
+                  onClick={() => setSidebarView("personas")}
+                  label="Personas"
+                />
+                <ToggleButton
+                  active={sidebarView === "chats"}
+                  onClick={() => setSidebarView("chats")}
+                  label={`Chats${chats.length > 0 ? ` (${chats.length})` : ""}`}
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-0">
+              {sidebarView === "characters" ? (
+                <CharacterSidebar onChatCreated={handleChatCreated} />
+              ) : sidebarView === "personas" ? (
+                <PersonaSidebar />
+              ) : (
+                <ChatGallery
+                  activeChatId={resolvedChatId}
+                  onSelectChat={handleSelectChat}
+                  isLoading={isLoading}
+                />
+              )}
+            </div>
+          </div>
 
           {/* Chat overlay — slides in from right */}
           <AnimatePresence>

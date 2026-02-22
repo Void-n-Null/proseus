@@ -106,6 +106,17 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+html.proseus-mobile-scroll-lock,
+html.proseus-mobile-scroll-lock body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+#root {
+  height: 100%;
+}
+
 button,
 a,
 [role="button"],

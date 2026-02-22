@@ -4,6 +4,7 @@ import { useChatList } from "./hooks/useChat.ts";
 import { api } from "./api/client.ts";
 import { useRoute } from "./hooks/useRoute.ts";
 import { useIsMobile } from "./hooks/useMediaQuery.ts";
+import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight.ts";
 import ChatPage from "./components/chat/ChatPage.tsx";
 import ChatGallery from "./components/chat/ChatGallery.tsx";
 import CharacterSidebar from "./components/characters/CharacterSidebar.tsx";
@@ -36,6 +37,14 @@ export default function App() {
   const { oauthState, dismissOAuth } = useOAuthCallback();
   const templateMenuRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useIsMobile();
+  useVisualViewportHeight(isMobile);
+
+  const appViewportStyle = isMobile
+    ? {
+        height: "var(--app-visual-viewport-height, 100dvh)",
+        transform: "translateZ(0)",
+      }
+    : undefined;
 
   const handleSeed = async () => {
     setSeeding(true);
@@ -107,7 +116,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="font-body text-foreground bg-background h-dvh flex flex-col">
+    <div className="font-body text-foreground bg-background h-dvh flex flex-col" style={appViewportStyle}>
       {/* Top bar (desktop only) */}
       {!isMobile && (
         /* ── Desktop top bar (unchanged) ── */

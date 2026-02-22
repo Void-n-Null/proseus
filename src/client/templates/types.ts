@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { MessageItemLayoutProps } from "../components/chat/message-item/types.ts";
 import type { ComposerLayoutProps } from "../components/chat/composer/types.ts";
+import type { ChatHeaderLayoutProps } from "../components/chat/chat-header/types.ts";
 
 /**
  * Contract that every design template must satisfy.
@@ -17,6 +18,9 @@ export interface TemplateModule {
 
   /** Layout component for the chat composer. */
   Composer: ComponentType<ComposerLayoutProps>;
+
+  /** Layout component for the chat header bar. */
+  ChatHeader: ComponentType<ChatHeaderLayoutProps>;
 
   /** Tailwind className for the message list width container. */
   messageListClassName: string;

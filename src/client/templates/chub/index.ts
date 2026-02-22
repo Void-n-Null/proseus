@@ -1,6 +1,7 @@
 import type { TemplateModule } from "../types.ts";
 import ForgeMessageItem from "../forge/MessageItem.tsx";
 import ForgeComposer from "../forge/Composer.tsx";
+import ForgeChatHeader from "../forge/ChatHeader.tsx";
 
 /**
  * Chub template — shares Forge's layout structure.
@@ -13,6 +14,7 @@ import ForgeComposer from "../forge/Composer.tsx";
 export const chubTemplate: TemplateModule = {
   MessageItem: ForgeMessageItem,
   Composer: ForgeComposer,
+  ChatHeader: ForgeChatHeader,
   messageListClassName: "w-full sm:w-[60vw]",
   placeholder: (_personaName, { isDisconnected, isStreaming }) => {
     if (isDisconnected) return "Reconnecting to server...";

@@ -6,13 +6,14 @@ import { useStreamSocket } from "../../hooks/useStreamSocket.ts";
 import { useModelStore } from "../../stores/model.ts";
 import { usePersona } from "../../hooks/usePersonas.ts";
 import { useIsMobile } from "../../hooks/useMediaQuery.ts";
+import { useDesignTemplateId } from "../../hooks/useDesignTemplate.ts";
+import { getTemplate } from "../../templates/index.ts";
 import { api } from "../../api/client.ts";
 import type { Speaker } from "../../../shared/types.ts";
 import MessageList from "./MessageList.tsx";
 import Composer from "./Composer.tsx";
 import StreamDebug from "../debug/StreamDebug.tsx";
 import ModelBrowserModal from "../model/ModelBrowserModal.tsx";
-import ModelSelector from "../model/ModelSelector.tsx";
 import { Avatar } from "../ui/avatar.tsx";
 
 interface ChatPageProps {
@@ -47,6 +48,8 @@ export default function ChatPage({ chatId, onBack }: ChatPageProps) {
   const { data: chatData } = useChat(chatId);
   const { data: treeData } = useChatTree(chatId);
   const isMobile = useIsMobile();
+  const designTemplateId = useDesignTemplateId();
+  const template = getTemplate(designTemplateId);
 
   const activePath = useActivePath(treeData?.nodes, treeData?.rootNodeId);
 
@@ -190,66 +193,16 @@ export default function ChatPage({ chatId, onBack }: ChatPageProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="shrink-0 border-b border-border bg-surface/40 px-3 py-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          {isMobile && onBack && (
-            <button
-              type="button"
-              onClick={onBack}
-              className="shrink-0 w-11 h-11 flex items-center justify-center text-text-muted hover:text-text-body transition-colors -ml-1"
-              aria-label="Back to sidebar"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          )}
-          <div className="text-sm text-text-muted truncate" title={chatData.chat.name}>
-            {chatData.chat.name}
-          </div>
-        </div>
-
-        {isMobile ? (
-          <ModelSelector className="w-[min(42vw,150px)] max-w-[150px] h-11" />
-        ) : (
-          <div className="relative" ref={exportMenuRef}>
-            <button
-              type="button"
-              disabled={isExporting}
-              onClick={() => setExportMenuOpen((open) => !open)}
-              className="px-3 py-1.5 text-xs bg-surface-raised text-text-muted border border-border rounded-md hover:text-text-body transition-colors disabled:opacity-50 disabled:cursor-wait"
-            >
-              {isExporting ? "Exporting..." : "Export"}
-            </button>
-
-            {exportMenuOpen && (
-              <div className="absolute right-0 top-[calc(100%+0.35rem)] min-w-[12.5rem] bg-surface border border-border rounded-md shadow-lg z-20 p-1">
-                <button
-                  type="button"
-                  onClick={() => void handleExport("chat")}
-                  className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded"
-                >
-                  Proseus archive (.chat)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleExport("jsonl")}
-                  className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded"
-                >
-                  JSONL (SillyTavern)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleExport("txt")}
-                  className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded"
-                >
-                  Text transcript (.txt)
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      <template.ChatHeader
+        chatName={chatData.chat.name}
+        isMobile={isMobile}
+        onBack={onBack}
+        isExporting={isExporting}
+        exportMenuOpen={exportMenuOpen}
+        setExportMenuOpen={setExportMenuOpen}
+        exportMenuRef={exportMenuRef}
+        onExport={(format) => void handleExport(format)}
+      />
 
       <div className="flex-1 min-h-0 overflow-hidden">
         {isEmptyChat ? (

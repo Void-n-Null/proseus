@@ -11,6 +11,7 @@ import MessageList from "./MessageList.tsx";
 import Composer from "./Composer.tsx";
 import StreamDebug from "../debug/StreamDebug.tsx";
 import ModelBrowserModal from "../model/ModelBrowserModal.tsx";
+import { Avatar } from "../ui/avatar.tsx";
 
 interface ChatPageProps {
   chatId: string;
@@ -86,6 +87,15 @@ export default function ChatPage({ chatId }: ChatPageProps) {
     if (!userSpeakerId) return "User";
     return speakerMap.get(userSpeakerId)?.name ?? "User";
   }, [userSpeakerId, speakerMap]);
+
+  const characterSpeaker = useMemo(() => {
+    for (const speaker of speakerMap.values()) {
+      if (!speaker.is_user) return speaker;
+    }
+    return null;
+  }, [speakerMap]);
+
+  const isEmptyChat = !activePath || activePath.node_ids.length === 0;
 
   const lastMessageIsUser = useMemo(() => {
     if (!activePath || activePath.node_ids.length === 0) return false;
@@ -219,14 +229,49 @@ export default function ChatPage({ chatId }: ChatPageProps) {
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden">
-        <MessageList
-          activePath={activePath}
-          speakerMap={speakerMap}
-          nodeMap={treeData.nodes}
-          chatId={chatId}
-          userName={userName}
-          onRegenerate={handleRegenerate}
-        />
+        {isEmptyChat ? (
+          <div className="h-full flex items-center justify-center px-6">
+            <div className="w-full max-w-md rounded-xl border border-border bg-surface/60 px-6 py-7 text-center shadow-[0_16px_40px_oklch(0_0_0_/_0.14)]">
+              <div className="flex items-center justify-center">
+                {characterSpeaker?.avatar_url ? (
+                  <Avatar
+                    src={characterSpeaker.avatar_url}
+                    alt={characterSpeaker.name}
+                    size={72}
+                    className="ring-1 ring-border"
+                    borderRadius="0.75rem"
+                  />
+                ) : (
+                  <div className="w-[72px] h-[72px] rounded-xl bg-surface-raised border border-border text-2xl text-text-muted flex items-center justify-center">
+                    {(characterSpeaker?.name ?? chatData.chat.name)
+                      .trim()
+                      .charAt(0)
+                      .toUpperCase() || "?"}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 text-base text-text-body">
+                {characterSpeaker?.name ?? chatData.chat.name}
+              </div>
+              <div className="mt-1 text-sm text-text-muted">
+                No messages yet.
+              </div>
+              <div className="mt-4 text-[0.82rem] text-text-dim leading-relaxed">
+                Start the conversation in the composer below.
+              </div>
+            </div>
+          </div>
+        ) : (
+          <MessageList
+            activePath={activePath}
+            speakerMap={speakerMap}
+            nodeMap={treeData.nodes}
+            chatId={chatId}
+            userName={userName}
+            onRegenerate={handleRegenerate}
+          />
+        )}
       </div>
 
       <Composer

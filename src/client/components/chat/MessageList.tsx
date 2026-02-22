@@ -6,6 +6,7 @@ import { useIsStreaming } from "../../stores/streaming.ts";
 import { subscribeToContent } from "../../lib/streaming-buffer.ts";
 import { useAutoScroll } from "../../hooks/useAutoScroll.ts";
 import { useDesignTemplateId } from "../../hooks/useDesignTemplate.ts";
+import { getTemplate } from "../../templates/index.ts";
 import MessageItem from "./MessageItem.tsx";
 
 interface MessageListProps {
@@ -35,6 +36,7 @@ const MessageList = React.memo(function MessageList({
 }: MessageListProps) {
   const isStreaming = useIsStreaming();
   const templateId = useDesignTemplateId();
+  const template = getTemplate(templateId);
   const nodes = activePath?.nodes ?? [];
 
   const { scrollRef, onScroll, scrollToBottom, forceScrollToBottom, onContentGrow } =
@@ -120,7 +122,7 @@ const MessageList = React.memo(function MessageList({
       className="h-full overflow-y-auto [contain:strict]"
     >
       <div
-        className={`mx-auto relative ${templateId === "discord" ? "w-full" : "w-full sm:w-[60vw]"}`}
+        className={`mx-auto relative ${template.messageListClassName}`}
         style={{ height: virtualizer.getTotalSize() /* intentionally dynamic */ }}
       >
         {virtualItems.map((virtualItem) => {

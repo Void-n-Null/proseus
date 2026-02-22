@@ -3,8 +3,7 @@ import type { ChatNode, Speaker } from "../../../shared/types.ts";
 import { useIsStreamingNode } from "../../stores/streaming.ts";
 import { useChatMutations } from "../../hooks/useMutations.ts";
 import { useDesignTemplateId } from "../../hooks/useDesignTemplate.ts";
-import ForgeMessageItemLayout from "./message-item/ForgeMessageItemLayout.tsx";
-import DiscordMessageItemLayout from "./message-item/DiscordMessageItemLayout.tsx";
+import { getTemplate } from "../../templates/index.ts";
 
 interface MessageItemProps {
   node: ChatNode;
@@ -33,6 +32,7 @@ const MessageItem = React.memo(
     const isStreaming = useIsStreamingNode(node.id);
     const { editMessage } = useChatMutations(chatId);
     const designTemplateId = useDesignTemplateId();
+    const template = getTemplate(designTemplateId);
 
     const handleEditSubmit = useCallback(
       (message: string) => {
@@ -72,11 +72,7 @@ const MessageItem = React.memo(
       handleStartEdit,
     };
 
-    return designTemplateId === "discord" ? (
-      <DiscordMessageItemLayout {...sharedProps} />
-    ) : (
-      <ForgeMessageItemLayout {...sharedProps} />
-    );
+    return <template.MessageItem {...sharedProps} />;
   },
   (prev, next) =>
     prev.node.id === next.node.id &&

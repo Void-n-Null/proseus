@@ -4,8 +4,7 @@ import { useConnectionStatus } from "../../stores/connection.ts";
 import { useChatMutations } from "../../hooks/useMutations.ts";
 import { usePersonas, useSetChatPersona } from "../../hooks/usePersonas.ts";
 import { useDesignTemplateId } from "../../hooks/useDesignTemplate.ts";
-import ForgeComposerLayout from "./composer/ForgeComposerLayout.tsx";
-import DiscordComposerLayout from "./composer/DiscordComposerLayout.tsx";
+import { getTemplate } from "../../templates/index.ts";
 
 interface ComposerProps {
   chatId: string;
@@ -57,21 +56,16 @@ const Composer = React.memo(function Composer({
   const activePersona = personas.find((p) => p.id === personaId) ?? null;
 
   const designTemplateId = useDesignTemplateId();
-  const isDiscordTemplate = designTemplateId === "discord";
+  const template = getTemplate(designTemplateId);
 
   const hasText = draft.trim().length > 0;
   const canSend = hasText && userSpeakerId !== null && isConnected;
   const canGenerate =
     lastMessageIsUser && !hasText && !isStreaming && isConnected;
-  const placeholder = isDiscordTemplate
-    ? isDisconnected
-      ? "Reconnecting to server..."
-      : `Message ${activePersona ? `@${activePersona.name}` : "..."}`
-    : isDisconnected
-      ? "Reconnecting to server..."
-      : isStreaming
-        ? "Generating..."
-        : "Send a message...";
+  const placeholder = template.placeholder(activePersona?.name, {
+    isDisconnected,
+    isStreaming,
+  });
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -353,11 +347,7 @@ const Composer = React.memo(function Composer({
     selectPersona,
   };
 
-  return isDiscordTemplate ? (
-    <DiscordComposerLayout {...sharedProps} />
-  ) : (
-    <ForgeComposerLayout {...sharedProps} />
-  );
+  return <template.Composer {...sharedProps} />;
 });
 
 export default Composer;

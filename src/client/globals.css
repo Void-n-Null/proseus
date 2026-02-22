@@ -3,6 +3,14 @@
 
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Sani Trixie Sans";
+  src: url("../../fonts/SaniTrixieSans.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 /* ============================================
    PROSEUS THEME — Forge-lineage dark UI
    Sister project: proseus-ai
@@ -37,6 +45,7 @@
   /* Font families */
   --font-display: 'Instrument Serif', Georgia, serif;
   --font-body: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-sani: "Sani Trixie Sans", 'Outfit', system-ui, -apple-system, sans-serif;
 
   /* Sharp radius — matches forge aesthetic */
   --radius-sm: 0.125rem;

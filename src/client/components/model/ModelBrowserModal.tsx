@@ -181,7 +181,7 @@ export default function ModelBrowserModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent className="sm:max-w-6xl max-h-[85vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 pt-5 pb-0">
           <DialogTitle className="text-foreground text-lg font-semibold">
             Model Browser

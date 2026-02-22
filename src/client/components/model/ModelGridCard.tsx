@@ -68,9 +68,9 @@ export default function ModelGridCard({
       style={
         isSelected
           ? {
-              background: "oklch(0.70 0.15 280 / 0.06)",
+              background: "oklch(0.28 0.012 280)",
               border: "1px solid oklch(0.70 0.15 280 / 0.25)",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.2), 0 0 0 1px oklch(0.70 0.15 280 / 0.08)",
             }
           : undefined
       }
@@ -81,8 +81,8 @@ export default function ModelGridCard({
         isSelected
           ? ""
           : [
-              "bg-[oklch(1_0_0/0.015)] border border-[oklch(1_0_0/0.04)]",
-              "hover:bg-[oklch(1_0_0/0.05)] hover:border-[oklch(1_0_0/0.14)] hover:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.2)]",
+              "bg-surface border border-border",
+              "hover:bg-surface-raised hover:border-[oklch(1_0_0/0.14)] hover:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.2)]",
               "active:scale-[0.985]",
             ].join(" "),
       ].join(" ")}
@@ -171,26 +171,6 @@ export default function ModelGridCard({
           </div>
         </div>
 
-        {/* Selected check */}
-        {isSelected && (
-          <div className="shrink-0 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              className="text-background"
-            >
-              <path
-                d="M2 6L5 9L10 3"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        )}
       </div>
     </button>
   );

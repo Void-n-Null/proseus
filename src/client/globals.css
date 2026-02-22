@@ -15,6 +15,7 @@
   --color-surface: oklch(0.18 0.007 300);
   --color-surface-raised: oklch(0.25 0.007 300);
   --color-surface-hover: oklch(0.23 0.007 300);
+  --color-surface-sunken: oklch(0.16 0.007 300);
 
   /* Borders — ultra-subtle */
   --color-border: oklch(0.25 0.005 250);

@@ -206,11 +206,11 @@ function SortDropdown({
         type="button"
         onClick={() => setOpen((p) => !p)}
         className={[
-          "w-full h-8 px-3 rounded-md flex items-center gap-1.5",
+          "w-full h-8 px-3 rounded-full flex items-center gap-1.5",
           "text-xs font-medium transition-colors",
           open
             ? "bg-surface-hover text-text-body border border-border"
-            : "bg-[oklch(1_0_0/0.03)] text-text-muted border border-border-subtle hover:bg-surface-hover hover:text-text-body",
+            : "bg-background text-text-muted border border-border-subtle hover:bg-surface-hover hover:text-text-body",
         ].join(" ")}
       >
         <span className="whitespace-nowrap">
@@ -413,9 +413,9 @@ function SelectedModelPane({ model }: { model: Model }) {
 
   return (
     <div
-      className="relative rounded-2xl px-5 py-4 overflow-hidden bg-surface border border-border/80"
+      className="relative rounded-2xl px-5 py-4 overflow-hidden bg-surface-hover border border-border"
       style={{
-        boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
       }}
     >
       {/* Header row */}
@@ -820,7 +820,7 @@ export default function ModelHero({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search models..."
-            className="w-full h-10 pl-10 pr-9 rounded-2xl border border-border text-sm text-foreground placeholder-text-dim focus:outline-none focus:border-primary/25 focus:shadow-[0_0_0_1px_oklch(0.70_0.15_280/0.08)] transition-all duration-150 bg-surface"
+            className="w-full h-10 pl-10 pr-9 rounded-2xl border border-border text-sm text-foreground placeholder-text-dim focus:outline-none focus:border-primary/25 focus:shadow-[0_0_0_1px_oklch(0.70_0.15_280/0.08)] transition-all duration-150 bg-background"
           />
           {search && (
             <button
@@ -860,7 +860,7 @@ export default function ModelHero({
                   "text-xs font-medium transition-all duration-100",
                   active
                     ? "bg-surface-hover text-foreground border border-border"
-                    : "bg-[oklch(1_0_0/0.03)] text-text-muted border border-border-subtle hover:bg-surface-hover hover:text-text-body",
+                    : "bg-background text-text-muted border border-border-subtle hover:bg-surface-hover hover:text-text-body",
                 ].join(" ")}
               >
                 <FilterIcon name={chip.icon} />

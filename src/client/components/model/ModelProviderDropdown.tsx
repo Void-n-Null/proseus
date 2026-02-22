@@ -145,7 +145,7 @@ export default function ModelProviderDropdown({
           isOpen
             ? "z-[51] rounded-t-2xl border border-b-0 border-border"
             : "rounded-2xl border border-border",
-          "bg-surface backdrop-blur-[20px]",
+          "bg-surface-sunken backdrop-blur-[20px]",
         ].join(" ")}
       >
         <span className="text-text-dim whitespace-nowrap text-sm">
@@ -180,7 +180,7 @@ export default function ModelProviderDropdown({
       {/* Popover */}
       {isOpen && (
         <div
-          className="absolute z-50 left-0 top-full -mt-px w-full md:w-80 rounded-b-2xl overflow-hidden border border-t-0 border-border shadow-[0_20px_40px_-8px_rgba(0,0,0,0.7)] bg-surface backdrop-blur-[20px]"
+          className="absolute z-50 left-0 top-full -mt-px w-full md:w-80 rounded-b-2xl overflow-hidden border border-t-0 border-border shadow-[0_20px_40px_-8px_rgba(0,0,0,0.7)] bg-surface-sunken backdrop-blur-[20px]"
         >
           {/* List */}
           <div

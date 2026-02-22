@@ -10,7 +10,7 @@ import { useOAuthCallback } from "./hooks/useOAuthCallback.ts";
 import PromptTemplateModal from "./components/prompt-template/PromptTemplateModal.tsx";
 
 export default function App() {
-  const { data: chatData, isLoading, refetch } = useChatList();
+  const { data: chatData, isLoading, isFetching, refetch } = useChatList();
   const [seeding, setSeeding] = useState(false);
   const { route, navigateToChat, navigateHome, replaceRoute } = useRoute();
   const [sidebarView, setSidebarView] = useState<"characters" | "chats" | "personas">(
@@ -64,10 +64,10 @@ export default function App() {
 
   // If the URL had an invalid chat ID and data has loaded, fix the URL.
   useEffect(() => {
-    if (!isLoading && activeChatId && !resolvedChatId) {
+    if (!isLoading && !isFetching && activeChatId && !resolvedChatId) {
       replaceRoute({ page: "home", chatId: null });
     }
-  }, [isLoading, activeChatId, resolvedChatId, replaceRoute]);
+  }, [isLoading, isFetching, activeChatId, resolvedChatId, replaceRoute]);
 
   return (
     <div className="font-body text-foreground bg-background h-screen flex flex-col">

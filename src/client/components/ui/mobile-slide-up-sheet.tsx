@@ -8,7 +8,7 @@
  * Features:
  * - Slides up from the bottom of the viewport
  * - Drag-to-dismiss from the handle area (velocity + distance threshold)
- * - Backdrop opacity tracks drag progress
+ * - Backdrop opacity dims proportionally during drag
  * - Rounded top corners with visible drag indicator
  * - Escape key and tap-handle to close
  * - Body scroll lock while open
@@ -18,15 +18,21 @@ import React, { useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   AnimatePresence,
+  animate,
   motion,
   useDragControls,
   useMotionValue,
-  useTransform,
+  useMotionValueEvent,
 } from "motion/react";
 
 /** Dismiss if dragged past this many pixels or with enough velocity. */
 const DISMISS_DISTANCE = 120;
 const DISMISS_VELOCITY = 500;
+
+/** Map drag distance to backdrop opacity (0px → 1, 400px → 0). */
+function dragToOpacity(y: number): number {
+  return Math.max(0, Math.min(1, 1 - y / 400));
+}
 
 interface MobileSlideUpSheetProps {
   open: boolean;
@@ -41,9 +47,21 @@ export default function MobileSlideUpSheet({
 }: MobileSlideUpSheetProps) {
   const dragControls = useDragControls();
   const sheetY = useMotionValue(0);
+  const backdropOpacity = useMotionValue(0);
 
-  // Backdrop dims as sheet is dragged down (1 → 0 over 0..400px)
-  const backdropOpacity = useTransform(sheetY, [0, 400], [1, 0]);
+  // Animate backdrop in when opened
+  useEffect(() => {
+    if (open) {
+      animate(backdropOpacity, 1, { duration: 0.2 });
+    }
+  }, [open, backdropOpacity]);
+
+  // Track drag → dim backdrop proportionally
+  useMotionValueEvent(sheetY, "change", (y) => {
+    if (y > 0) {
+      backdropOpacity.set(dragToOpacity(y));
+    }
+  });
 
   // ── Escape key ──────────────────────────────────────────────
   const handleKeyDown = useCallback(
@@ -76,23 +94,26 @@ export default function MobileSlideUpSheet({
         info.offset.y > DISMISS_DISTANCE ||
         info.velocity.y > DISMISS_VELOCITY
       ) {
+        // Animate backdrop out then close
+        animate(backdropOpacity, 0, { duration: 0.15 });
         onClose();
+      } else {
+        // Snap back — restore backdrop to full
+        animate(backdropOpacity, 1, { duration: 0.15 });
       }
     },
-    [onClose],
+    [onClose, backdropOpacity],
   );
 
   return createPortal(
     <AnimatePresence>
       {open && (
         <>
-          {/* Backdrop — opacity tracks drag progress */}
+          {/* Backdrop — opacity driven by motion value (entry + drag tracking) */}
           <motion.div
             key="sheet-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             style={{ opacity: backdropOpacity }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 bg-black/75"
             onClick={onClose}

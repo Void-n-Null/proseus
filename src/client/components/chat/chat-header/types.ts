@@ -5,6 +5,11 @@ export interface ChatHeaderLayoutProps {
   isMobile: boolean;
   onBack?: () => void;
 
+  /* Character info (for templates that show the avatar in the header) */
+  characterName: string | null;
+  characterAvatarUrl: string | null;
+  characterColor: string | null;
+
   /* Export menu */
   isExporting: boolean;
   exportMenuOpen: boolean;

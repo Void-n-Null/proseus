@@ -197,6 +197,9 @@ export default function ChatPage({ chatId, onBack }: ChatPageProps) {
         chatName={chatData.chat.name}
         isMobile={isMobile}
         onBack={onBack}
+        characterName={characterSpeaker?.name ?? null}
+        characterAvatarUrl={characterSpeaker?.avatar_url ?? null}
+        characterColor={characterSpeaker?.color ?? null}
         isExporting={isExporting}
         exportMenuOpen={exportMenuOpen}
         setExportMenuOpen={setExportMenuOpen}

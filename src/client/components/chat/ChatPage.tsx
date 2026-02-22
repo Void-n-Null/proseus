@@ -5,6 +5,7 @@ import { useActivePath } from "../../hooks/useActivePath.ts";
 import { useStreamSocket } from "../../hooks/useStreamSocket.ts";
 import { useModelStore } from "../../stores/model.ts";
 import { usePersona } from "../../hooks/usePersonas.ts";
+import { useIsMobile } from "../../hooks/useMediaQuery.ts";
 import { api } from "../../api/client.ts";
 import type { Speaker } from "../../../shared/types.ts";
 import MessageList from "./MessageList.tsx";
@@ -15,6 +16,8 @@ import { Avatar } from "../ui/avatar.tsx";
 
 interface ChatPageProps {
   chatId: string;
+  /** Called when the mobile back button is tapped to dismiss the chat overlay. */
+  onBack?: () => void;
 }
 
 function getFilenameFromDisposition(
@@ -39,9 +42,10 @@ function triggerDownload(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-export default function ChatPage({ chatId }: ChatPageProps) {
+export default function ChatPage({ chatId, onBack }: ChatPageProps) {
   const { data: chatData } = useChat(chatId);
   const { data: treeData } = useChatTree(chatId);
+  const isMobile = useIsMobile();
 
   const activePath = useActivePath(treeData?.nodes, treeData?.rootNodeId);
 
@@ -186,8 +190,22 @@ export default function ChatPage({ chatId }: ChatPageProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="shrink-0 border-b border-border bg-surface/40 px-3 py-2 flex items-center justify-between gap-3">
-        <div className="text-sm text-text-muted truncate" title={chatData.chat.name}>
-          {chatData.chat.name}
+        <div className="flex items-center gap-2 min-w-0">
+          {isMobile && onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="shrink-0 w-8 h-8 flex items-center justify-center text-text-muted hover:text-text-body transition-colors -ml-1"
+              aria-label="Back to sidebar"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
+          <div className="text-sm text-text-muted truncate" title={chatData.chat.name}>
+            {chatData.chat.name}
+          </div>
         </div>
 
         <div className="relative" ref={exportMenuRef}>

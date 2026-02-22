@@ -157,7 +157,7 @@ export default function CharacterSidebar({
   const isImporting = importMutation.isPending || importUrlMutation.isPending;
 
   return (
-    <div className="w-[280px] min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
+    <div className="w-full sm:w-[280px] sm:min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
       {creating && (
         <CharacterEditor
           character={null}

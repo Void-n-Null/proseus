@@ -40,7 +40,7 @@ export default function PersonaSidebar() {
   }
 
   return (
-    <div className="w-[280px] min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
+    <div className="w-full sm:w-[280px] sm:min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
       {/* Header */}
       <div className="p-3 border-b border-border flex items-center justify-between">
         <span className="text-xs font-normal tracking-[0.15em] text-text-muted uppercase">
@@ -174,7 +174,7 @@ function PersonaCreator({
   }, [name, createMutation, onCreate]);
 
   return (
-    <div className="w-[280px] min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
+    <div className="w-full sm:w-[280px] sm:min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
       <div className="p-3 border-b border-border flex items-center gap-2">
         <button
           onClick={onClose}
@@ -266,7 +266,7 @@ function PersonaEditor({ persona, onClose }: { persona: Persona; onClose: () => 
     : null;
 
   return (
-    <div className="w-[280px] min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
+    <div className="w-full sm:w-[280px] sm:min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
       {/* Header */}
       <div className="p-3 border-b border-border flex items-center gap-2">
         <button

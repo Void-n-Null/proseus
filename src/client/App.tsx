@@ -1,7 +1,9 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { useChatList } from "./hooks/useChat.ts";
 import { api } from "./api/client.ts";
 import { useRoute } from "./hooks/useRoute.ts";
+import { useIsMobile } from "./hooks/useMediaQuery.ts";
 import ChatPage from "./components/chat/ChatPage.tsx";
 import ChatGallery from "./components/chat/ChatGallery.tsx";
 import CharacterSidebar from "./components/characters/CharacterSidebar.tsx";
@@ -33,6 +35,7 @@ export default function App() {
   const designTemplateId = useDesignTemplateId();
   const { oauthState, dismissOAuth } = useOAuthCallback();
   const templateMenuRef = useRef<HTMLDivElement | null>(null);
+  const isMobile = useIsMobile();
 
   const handleSeed = async () => {
     setSeeding(true);
@@ -113,19 +116,21 @@ export default function App() {
 
         {/* Sidebar view toggle */}
         <div className="flex items-center gap-[0.35rem]">
-          <button
-            onClick={() => setSidebarCollapsed((c) => !c)}
-            title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
-            className="px-[0.45rem] py-[0.3rem] bg-surface text-text-dim border-none rounded-md cursor-pointer text-[0.78rem] leading-none transition-colors"
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.color = "var(--color-text-body)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.color = "var(--color-text-dim)")
-            }
-          >
-            {sidebarCollapsed ? "\u25B6" : "\u25C0"}
-          </button>
+          {!isMobile && (
+            <button
+              onClick={() => setSidebarCollapsed((c) => !c)}
+              title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+              className="px-[0.45rem] py-[0.3rem] bg-surface text-text-dim border-none rounded-md cursor-pointer text-[0.78rem] leading-none transition-colors"
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.color = "var(--color-text-body)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.color = "var(--color-text-dim)")
+              }
+            >
+              {sidebarCollapsed ? "\u25B6" : "\u25C0"}
+            </button>
+          )}
           <div className="flex gap-[2px] bg-surface rounded-md p-[2px]">
             <ToggleButton
               active={sidebarView === "characters"}
@@ -275,10 +280,13 @@ export default function App() {
       )}
 
       {/* Main content */}
-      <div className="flex-1 min-h-0 flex">
-        {/* Sidebar */}
-        {!sidebarCollapsed && (
-          sidebarView === "characters" ? (
+      {isMobile ? (
+        /* ── Mobile: stacked navigation ──
+           Sidebar is the base layer (always rendered, full width).
+           Chat slides over it as a full-screen overlay from the right. */
+        <div className="flex-1 min-h-0 relative overflow-hidden">
+          {/* Base layer — sidebar */}
+          {sidebarView === "characters" ? (
             <CharacterSidebar onChatCreated={handleChatCreated} />
           ) : sidebarView === "personas" ? (
             <PersonaSidebar />
@@ -288,30 +296,68 @@ export default function App() {
               onSelectChat={handleSelectChat}
               isLoading={isLoading}
             />
-          )
-        )}
-
-        {/* Chat area */}
-        <div className="flex-1 min-w-0">
-          {isLoading ? (
-            <CenterMessage>Loading...</CenterMessage>
-          ) : resolvedChatId ? (
-            <ChatPage chatId={resolvedChatId} />
-          ) : (
-            <CenterMessage>
-              <p className="text-base">
-                {chats.length > 0
-                  ? "Select a chat or start one from a character"
-                  : "Import a character to get started"}
-              </p>
-              <p className="text-[0.82rem] text-text-dim mt-2">
-                Drag and drop a PNG character card into the sidebar, or use the
-                Import button.
-              </p>
-            </CenterMessage>
           )}
+
+          {/* Chat overlay — slides in from right */}
+          <AnimatePresence>
+            {resolvedChatId && (
+              <motion.div
+                key="chat-overlay"
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "tween", duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+                className="absolute inset-0 bg-background z-10"
+              >
+                {isLoading ? (
+                  <CenterMessage>Loading...</CenterMessage>
+                ) : (
+                  <ChatPage chatId={resolvedChatId} onBack={handleCloseChat} />
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </div>
+      ) : (
+        /* ── Desktop: side-by-side panels (unchanged) ── */
+        <div className="flex-1 min-h-0 flex">
+          {/* Sidebar */}
+          {!sidebarCollapsed && (
+            sidebarView === "characters" ? (
+              <CharacterSidebar onChatCreated={handleChatCreated} />
+            ) : sidebarView === "personas" ? (
+              <PersonaSidebar />
+            ) : (
+              <ChatGallery
+                activeChatId={resolvedChatId}
+                onSelectChat={handleSelectChat}
+                isLoading={isLoading}
+              />
+            )
+          )}
+
+          {/* Chat area */}
+          <div className="flex-1 min-w-0">
+            {isLoading ? (
+              <CenterMessage>Loading...</CenterMessage>
+            ) : resolvedChatId ? (
+              <ChatPage chatId={resolvedChatId} />
+            ) : (
+              <CenterMessage>
+                <p className="text-base">
+                  {chats.length > 0
+                    ? "Select a chat or start one from a character"
+                    : "Import a character to get started"}
+                </p>
+                <p className="text-[0.82rem] text-text-dim mt-2">
+                  Drag and drop a PNG character card into the sidebar, or use the
+                  Import button.
+                </p>
+              </CenterMessage>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

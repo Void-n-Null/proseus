@@ -121,7 +121,7 @@ export default function ChatGallery({
   }, [deleteMutation, duplicateMutation, pinMutation, renameMutation]);
 
   return (
-    <div className="w-[320px] min-w-[320px] h-full flex flex-col bg-surface border-r border-border">
+    <div className="w-full sm:w-[320px] sm:min-w-[320px] h-full flex flex-col bg-surface border-r border-border">
       <div className="p-3 border-b border-border flex flex-col gap-2">
         <span className="text-xs font-normal tracking-[0.15em] text-text-muted uppercase">
           Chats

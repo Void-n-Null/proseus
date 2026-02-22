@@ -99,7 +99,6 @@ body {
   color: var(--color-foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overscroll-behavior: none;
 }
 
 html {
@@ -117,15 +116,6 @@ html.proseus-mobile-scroll-lock body {
   height: 100%;
 }
 
-button,
-a,
-[role="button"],
-input,
-textarea,
-select {
-  touch-action: manipulation;
-}
-
 /* Minimal scrollbar */
 * {
   scrollbar-width: thin;
@@ -137,6 +127,19 @@ select {
 ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.25); }
 
 @media (max-width: 639px) {
+  body {
+    overscroll-behavior: none;
+  }
+
+  button,
+  a,
+  [role="button"],
+  input,
+  textarea,
+  select {
+    touch-action: manipulation;
+  }
+
   * {
     scrollbar-width: none;
   }

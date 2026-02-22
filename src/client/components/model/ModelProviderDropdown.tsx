@@ -7,11 +7,13 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   PROVIDERS,
   getProviderMeta,
   type ProviderName,
 } from "../../../shared/providers.ts";
+import { getProviderBranding } from "../../../shared/brandingData.ts";
 import ProviderIcon from "../ui/provider-icon.tsx";
 
 export interface ProviderDropdownProps {
@@ -32,6 +34,7 @@ export default function ModelProviderDropdown({
   const listRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const meta = getProviderMeta(value);
+  const branding = getProviderBranding(value);
   const isConnected = connectionStatus?.[value] ?? true;
 
   const activeIndex = PROVIDERS.findIndex((p) => p.id === value);
@@ -131,20 +134,26 @@ export default function ModelProviderDropdown({
   return (
     <div ref={ref} className="relative" onKeyDown={handleKeyDown}>
       {/* Trigger */}
-      <button
+      <motion.button
         ref={triggerRef}
         type="button"
         onClick={() => (isOpen ? close() : open())}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-activedescendant={isOpen ? focusedId : undefined}
+        animate={{
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+          borderBottomLeftRadius: isOpen ? 0 : 16,
+          borderBottomRightRadius: isOpen ? 0 : 16,
+        }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
         className={[
           "relative group flex items-center gap-2.5 w-full md:w-80 h-10 px-3.5 text-sm",
-          "duration-100",
           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50",
           isOpen
-            ? "z-[51] rounded-t-2xl border border-b-0 border-border"
-            : "rounded-2xl border border-border",
+            ? "z-[51] border border-b-0 border-border"
+            : "border border-border",
           "bg-surface-sunken backdrop-blur-[20px]",
         ].join(" ")}
       >
@@ -152,7 +161,12 @@ export default function ModelProviderDropdown({
           Provider
         </span>
         <span className="w-px h-4 bg-border mx-1" />
-        <ProviderIcon provider={value} size={14} />
+        <div
+          className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          style={{ backgroundColor: branding.bg }}
+        >
+          <ProviderIcon provider={value} size={13} />
+        </div>
         <span className="text-foreground font-medium whitespace-nowrap">
           {meta.label}
         </span>
@@ -175,11 +189,16 @@ export default function ModelProviderDropdown({
             strokeLinejoin="round"
           />
         </svg>
-      </button>
+      </motion.button>
 
       {/* Popover */}
+      <AnimatePresence>
       {isOpen && (
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
           className="absolute z-50 left-0 top-full -mt-px w-full md:w-80 rounded-b-2xl overflow-hidden border border-t-0 border-border shadow-[0_20px_40px_-8px_rgba(0,0,0,0.7)] bg-surface-sunken backdrop-blur-[20px]"
         >
           {/* List */}
@@ -190,7 +209,7 @@ export default function ModelProviderDropdown({
             className="p-1.5"
           >
             {PROVIDERS.map((p, index) => {
-              const pMeta = getProviderMeta(p.id);
+              const pBranding = getProviderBranding(p.id);
               const pConnected = connectionStatus?.[p.id] ?? false;
               const isActive = p.id === value;
               const isFocused = index === focusedIndex;
@@ -223,14 +242,11 @@ export default function ModelProviderDropdown({
                   <div className="relative flex items-center gap-3 px-3 py-2.5">
                     {/* Provider icon */}
                     <div
-                      className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
-                      // intentionally dynamic: provider brand color mixed at runtime
+                      className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-[background-color] duration-150"
                       style={{
-                        background: isActive
-                          ? `color-mix(in oklch, ${pMeta.color} 12%, transparent)`
-                          : pConnected
-                            ? `color-mix(in oklch, ${pMeta.color} 6%, transparent)`
-                            : "oklch(1 0 0 / 0.03)",
+                        backgroundColor: isActive || pConnected
+                          ? pBranding.bg
+                          : "oklch(1 0 0 / 0.03)",
                       }}
                     >
                       <ProviderIcon
@@ -292,8 +308,9 @@ export default function ModelProviderDropdown({
               close
             </span>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

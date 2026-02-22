@@ -9,11 +9,13 @@
 
 import React from "react";
 import type { ProviderName } from "../../../shared/providers.ts";
-import { getProviderColor } from "../../../shared/providers.ts";
+import { getProviderColor } from "../../../shared/brandingData.ts";
 import { getProviderLogoUrl } from "../../../shared/models.ts";
 
 interface ProviderIconProps {
   provider: ProviderName;
+  /** Direct logo URL — overrides the auto-generated URL from `provider`. */
+  logoUrl?: string;
   size?: number;
   /** Override the brand color (e.g. for dimmed/inactive states). */
   color?: string;
@@ -23,12 +25,13 @@ interface ProviderIconProps {
 
 export default function ProviderIcon({
   provider,
+  logoUrl,
   size = 16,
   color,
   className,
   style,
 }: ProviderIconProps) {
-  const url = getProviderLogoUrl(provider);
+  const url = logoUrl ?? getProviderLogoUrl(provider);
   const brandColor = color ?? getProviderColor(provider);
 
   return (

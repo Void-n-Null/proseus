@@ -11,6 +11,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "motion/react";
 import {
   Dialog,
   DialogContent,
@@ -179,9 +180,35 @@ export default function ModelBrowserModal({
     [models, modelId],
   );
 
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (providerConnected || !contentRef.current) {
+      setMeasuredHeight(null);
+      return;
+    }
+    const el = contentRef.current;
+    const measure = () => {
+      if (el) setMeasuredHeight(el.offsetHeight);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [providerConnected, provider, connectState, isLoading]);
+
+  const connectedHeight = typeof window !== "undefined" ? 895: 800;
+  const targetHeight = providerConnected ? connectedHeight : (measuredHeight ?? connectedHeight);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-6xl max-h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent className="sm:max-w-6xl p-0 gap-0 overflow-visible">
+        <motion.div
+          animate={{ height: targetHeight }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+        <div ref={contentRef} className={["flex flex-col", providerConnected ? "h-[894px]" : ""].join(" ")}>
         <DialogHeader className="px-6 pt-5 pb-0">
           <DialogTitle className="text-foreground text-lg font-semibold">
             Model Browser
@@ -216,11 +243,14 @@ export default function ModelBrowserModal({
             onToggleFilter={handleToggleFilter}
           />
         </div>
+        <div className="border-b border-white/5  mx-auto w-full  max-w-[98%]" />
 
-        {/* Grid: scrollable zone */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4">
-          {!providerConnected ? null : isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20">
+        {/* Grid: scrollable zone — hidden entirely when disconnected */}
+        {providerConnected && (
+        <div className="flex-1 min-h-0 overflow-hidden px-6 ">
+        <div className="h-full overflow-y-auto">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 pt-1">
               <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-3" />
               <span className="text-sm text-text-muted">
                 Loading models...
@@ -230,7 +260,7 @@ export default function ModelBrowserModal({
               </span>
             </div>
           ) : displayModels.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 auto-rows-min pb-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 auto-rows-min pb-2 pt-[5px]">
               {displayModels.map((m) => (
                 <ModelGridCard
                   key={m.id}
@@ -273,6 +303,10 @@ export default function ModelBrowserModal({
             </div>
           )}
         </div>
+        </div>
+        )}
+        </div>
+        </motion.div>
       </DialogContent>
     </Dialog>
   );

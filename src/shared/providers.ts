@@ -4,7 +4,8 @@
  * Adapted from proseus-ai's shared/providers.ts.
  * All provider metadata lives here. When adding a new provider, update:
  *   1. This file (PROVIDER_IDS, PROVIDERS)
- *   2. src/server/lib/llm.ts (add provider factory case)
+ *   2. src/shared/brandingData.ts (PROVIDER_BRANDING)
+ *   3. src/server/lib/llm.ts (add provider factory case)
  */
 
 // ============================================
@@ -31,8 +32,6 @@ export interface ProviderMeta {
   description: string;
   keyPlaceholder: string;
   docsUrl: string;
-  /** Brand color for the provider logo SVG (applied via CSS). */
-  color: string;
 }
 
 /**
@@ -46,7 +45,6 @@ export const PROVIDERS: readonly ProviderMeta[] = [
     description: "Access multiple LLM providers through one API",
     keyPlaceholder: "sk-or-v1-...",
     docsUrl: "https://openrouter.ai/settings/keys",
-    color: "#f5f5f5",
   },
   {
     id: "anthropic",
@@ -54,7 +52,6 @@ export const PROVIDERS: readonly ProviderMeta[] = [
     description: "Direct Claude API access",
     keyPlaceholder: "sk-ant-...",
     docsUrl: "https://platform.claude.com/settings/keys",
-    color: "#d97757",
   },
   {
     id: "openai",
@@ -62,7 +59,6 @@ export const PROVIDERS: readonly ProviderMeta[] = [
     description: "Direct GPT & o-series access",
     keyPlaceholder: "sk-...",
     docsUrl: "https://platform.openai.com/settings/organization/api-keys",
-    color: "#a8a0d2",
   },
   {
     id: "gemini",
@@ -70,7 +66,6 @@ export const PROVIDERS: readonly ProviderMeta[] = [
     description: "Direct Google Gemini API access",
     keyPlaceholder: "AIza...",
     docsUrl: "https://aistudio.google.com/api-keys",
-    color: "#4285f4",
   },
   {
     id: "xai",
@@ -78,7 +73,6 @@ export const PROVIDERS: readonly ProviderMeta[] = [
     description: "Direct Grok API access",
     keyPlaceholder: "xai-...",
     docsUrl: "https://console.x.ai/",
-    color: "#e2e8f0",
   },
 ] as const;
 
@@ -94,10 +88,6 @@ export function getProviderMeta(id: ProviderName): ProviderMeta {
 
 export function getProviderLabel(id: ProviderName): string {
   return getProviderMeta(id).label;
-}
-
-export function getProviderColor(id: ProviderName): string {
-  return getProviderMeta(id).color;
 }
 
 export function isProviderName(value: string): value is ProviderName {

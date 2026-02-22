@@ -13,10 +13,20 @@ const streamManager = new StreamManager(db);
 const server = Bun.serve<WsContext>({
   port: 3000,
   routes: {
-    // SPA routes — all serve the same HTML shell, client-side routing
-    // picks the view based on the URL path.
     "/": index,
     "/chat/:id": index,
+    "/icons/:file": async (req: Request & { params: { file: string } }) => {
+      const file = Bun.file(`icons/${req.params.file}`);
+      if (await file.exists()) {
+        return new Response(file, {
+          headers: {
+            "Content-Type": "image/svg+xml",
+            "Cache-Control": "public, max-age=86400",
+          },
+        });
+      }
+      return new Response("Not found", { status: 404 });
+    },
   },
   fetch(req, server) {
     const url = new URL(req.url);

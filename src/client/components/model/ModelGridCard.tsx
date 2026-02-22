@@ -7,8 +7,7 @@
  */
 
 import React from "react";
-import { type Model, formatContext, formatPrice } from "../../../shared/models.ts";
-import { getProviderMeta, type ProviderName } from "../../../shared/providers.ts";
+import { type Model, formatContext, formatPrice, getModelCreator, getCreatorBranding, getCreatorLogoUrl } from "../../../shared/models.ts";
 import ProviderIcon from "../ui/provider-icon.tsx";
 
 export interface ModelGridCardProps {
@@ -19,37 +18,20 @@ export interface ModelGridCardProps {
   showProviderIcon?: boolean;
 }
 
-/**
- * Extract the creator/org from a model ID.
- * OpenRouter IDs use "creator/model-name" format.
- * For non-OpenRouter providers, returns the provider label.
- */
-function getCreatorLabel(model: Model): string {
-  if (model.provider === "openrouter") {
-    const slashIdx = model.id.indexOf("/");
-    if (slashIdx > 0) return model.id.substring(0, slashIdx);
-  }
-  return getProviderMeta(model.provider).label.toLowerCase();
-}
-
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 export default function ModelGridCard({
   model,
   isSelected,
   onSelect,
   showProviderIcon = true,
 }: ModelGridCardProps) {
-  const { color } = getProviderMeta(model.provider);
+  const creator = getModelCreator(model);
+  const iconProvider = creator.provider ?? model.provider;
+  const branding = getCreatorBranding(creator, model.provider);
+  const logoUrl = branding.logoUrl ?? (!creator.provider ? getCreatorLogoUrl(creator.slug) : undefined);
 
   const isFree = model.inputPrice === 0;
   const noTools = !model.toolCall;
-  const creator = getCreatorLabel(model);
+  const creatorLabel = creator.slug;
   const contextStr = model.contextLength
     ? `${formatContext(model.contextLength)} ctx`
     : null;
@@ -92,11 +74,9 @@ export default function ModelGridCard({
         {showProviderIcon && (
           <div
             className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-[background-color] duration-150"
-            style={{
-              backgroundColor: hexToRgba(color, isSelected ? 0.24 : 0.12),
-            }}
+            style={{ backgroundColor: branding.bg }}
           >
-            <ProviderIcon provider={model.provider} size={20} />
+            <ProviderIcon provider={iconProvider} logoUrl={logoUrl} color={branding.logo} size={20} />
           </div>
         )}
 
@@ -136,7 +116,7 @@ export default function ModelGridCard({
                   : "text-text-dim group-hover:text-text-muted",
               ].join(" ")}
             >
-              {creator}
+              {creatorLabel}
             </span>
             {contextStr && (
               <>

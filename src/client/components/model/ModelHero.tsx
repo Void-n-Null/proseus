@@ -14,7 +14,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import type { RefObject } from "react";
 import type { Model, ModelSortKey, ModelFilters } from "../../../shared/models.ts";
-import { formatContext, formatPrice } from "../../../shared/models.ts";
+import { formatContext, formatPrice, getModelCreator, getCreatorBranding, getCreatorLogoUrl } from "../../../shared/models.ts";
 import { getProviderMeta, type ProviderName } from "../../../shared/providers.ts";
 import ProviderIcon from "../ui/provider-icon.tsx";
 import ModelProviderDropdown from "./ModelProviderDropdown.tsx";
@@ -308,19 +308,20 @@ function NoModelSelectedPane({
 }) {
   return (
     <div
-      className="relative rounded-xl px-5 py-4 overflow-hidden border border-dashed border-border bg-surface"
+      className="relative rounded-2xl px-5 py-4 overflow-hidden border border-dashed border-border bg-surface"
     >
-      <div className="flex items-center justify-between gap-4">
+      {/* Top row — matches SelectedModelPane structure (w-11 icon, text-base title) */}
+      <div className="flex items-start justify-between gap-6">
         <div className="flex items-center gap-3 min-w-0">
           <div
-            className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-[oklch(0.50_0_0/0.06)] border border-[oklch(0.50_0_0/0.1)]"
+            className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-[oklch(0.50_0_0/0.06)] border border-[oklch(0.50_0_0/0.1)]"
           >
             <svg
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
-              className="w-4 h-4 text-text-dim"
+              className="w-5 h-5 text-text-dim"
             >
               <path d="M12.2 2h-.4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z" />
               <path d="M4.7 10H5a2 2 0 0 1 2 2v.4a2 2 0 0 1-2 2h-.3a2 2 0 0 1-2-2V12a2 2 0 0 1 2-2Z" />
@@ -329,10 +330,10 @@ function NoModelSelectedPane({
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-[15px] font-semibold text-text-muted leading-snug">
+            <p className="text-base font-semibold text-text-muted leading-snug">
               No model selected
             </p>
-            <p className="text-xs text-text-dim mt-0.5">
+            <p className="text-xs text-text-dim truncate mt-0.5">
               Pick one below to power your generations.
             </p>
           </div>
@@ -360,7 +361,8 @@ function NoModelSelectedPane({
         </button>
       </div>
 
-      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border">
+      {/* Bottom row — matches SelectedModelPane capabilities row */}
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
         <span className="text-xs text-text-dim">
           No capabilities to display
         </span>
@@ -375,22 +377,19 @@ function NoModelSelectedPane({
 
 const CAPABILITIES = [
   { key: "reasoning", label: "Reasoning", icon: "brain" },
-  { key: "toolCall", label: "Tools", icon: "wrench" },
+  { key: "toolCall", label: "Tool Use", icon: "wrench" },
   { key: "vision", label: "Vision", icon: "eye" },
   { key: "openWeights", label: "Open Weights", icon: "scale" },
 ] as const;
 
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 function SelectedModelPane({ model }: { model: Model }) {
   const isFree = model.inputPrice === 0 && model.outputPrice === 0;
   const hasVision = model.inputModalities?.includes("image") ?? false;
-  const { color } = getProviderMeta(model.provider);
+
+  const creator = getModelCreator(model);
+  const iconProvider = creator.provider ?? model.provider;
+  const branding = getCreatorBranding(creator, model.provider);
+  const logoUrl = branding.logoUrl ?? (!creator.provider ? getCreatorLogoUrl(creator.slug) : undefined);
 
   const capabilityMap: Record<string, boolean> = {
     reasoning: !!model.reasoning,
@@ -399,109 +398,130 @@ function SelectedModelPane({ model }: { model: Model }) {
     openWeights: !!model.openWeights,
   };
 
-  const stats: string[] = [];
-  if (model.contextLength) stats.push(`${formatContext(model.contextLength)} ctx`);
-  if (model.maxOutputTokens)
-    stats.push(`${formatContext(model.maxOutputTokens)} out`);
-  if (model.inputPrice !== undefined && model.outputPrice !== undefined) {
-    stats.push(
-      isFree
-        ? "Free"
-        : `${formatPrice(model.inputPrice)} / ${formatPrice(model.outputPrice)} per M`,
-    );
+  const statBlocks: { label: string; value: React.ReactNode }[] = [];
+  if (model.contextLength) {
+    statBlocks.push({
+      label: "Context Window",
+      value: `${formatContext(model.contextLength)} tokens`,
+    });
+  }
+  if (model.maxOutputTokens) {
+    statBlocks.push({
+      label: "Max Output",
+      value: `${formatContext(model.maxOutputTokens)} tokens`,
+    });
+  }
+  if (model.inputPrice !== undefined) {
+    statBlocks.push({
+      label: "Pricing per M",
+      value: isFree ? (
+        <span className="text-primary font-semibold">Free</span>
+      ) : (
+        <>
+          {formatPrice(model.inputPrice)} <span className="text-text-dim">in</span>
+          {model.outputPrice !== undefined && (
+            <> &middot; {formatPrice(model.outputPrice)} <span className="text-text-dim">out</span></>
+          )}
+        </>
+      ),
+    });
   }
 
   return (
     <div
       className="relative rounded-2xl px-5 py-4 overflow-hidden bg-surface-hover border border-border"
-      style={{
-        boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-      }}
+      // intentionally dynamic: shadow for elevation
+      style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.2)" }}
     >
-      {/* Header row */}
-      <div className="flex items-start justify-between gap-4 min-w-0">
+      {/* Top row: Identity + Stat blocks */}
+      <div className="flex items-start justify-between gap-6">
+        {/* Left: Creator icon + model identity */}
         <div className="flex items-center gap-3 min-w-0">
           <div
-            className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
-            // intentionally dynamic: provider brand color
-            style={{
-              backgroundColor: hexToRgba(color, 0.18),
-            }}
+            className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center"
+            // intentionally dynamic: creator brand color
+            style={{ backgroundColor: branding.bg }}
           >
-            <ProviderIcon provider={model.provider} size={16} />
+            <ProviderIcon provider={iconProvider} logoUrl={logoUrl} color={branding.logo} size={22} />
           </div>
           <div className="min-w-0">
-            <h3 className="text-[15px] font-semibold text-foreground truncate leading-snug">
-              {model.name}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-semibold text-foreground truncate leading-snug">
+                {model.name}
+              </h3>
+              {model.status && (
+                <span className="shrink-0 text-[10px] font-semibold tracking-wide uppercase px-1.5 py-0.5 rounded bg-primary/15 text-primary leading-none">
+                  {model.status}
+                </span>
+              )}
+            </div>
             <p className="text-xs font-mono text-text-dim truncate mt-0.5">
               {model.id}
             </p>
           </div>
         </div>
 
-        {stats.length > 0 && (
-          <p
-            className={`text-xs font-mono shrink-0 text-right leading-relaxed ${isFree ? "text-primary" : "text-text-muted"}`}
-          >
-            {stats.join(" \u00B7 ")}
-          </p>
+        {/* Right: Labeled stat blocks separated by dividers */}
+        {statBlocks.length > 0 && (
+          <div className="shrink-0 flex items-start divide-x divide-border">
+            {statBlocks.map((block) => (
+              <div key={block.label} className="px-4 first:pl-0 last:pr-0">
+                <p className="text-[10px] uppercase tracking-widest text-text-dim font-medium whitespace-nowrap">
+                  {block.label}
+                </p>
+                <p className="text-sm font-mono font-medium text-text-body mt-0.5 whitespace-nowrap">
+                  {block.value}
+                </p>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Capabilities row */}
-      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border">
-        {CAPABILITIES.map(({ key, label, icon }) => {
-          const supported = capabilityMap[key];
-          return (
-            <div
-              key={key}
-              className={[
-                "flex items-center gap-1.5 transition-opacity",
-                supported ? "opacity-100" : "opacity-30",
-              ].join(" ")}
-            >
-              {supported ? (
-                <svg
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  className="w-3 h-3 text-primary"
-                >
-                  <path
-                    d="M2 6L5 9L10 3"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  className="w-3 h-3 text-text-dim"
-                >
-                  <path
-                    d="M3 3L9 9M9 3L3 9"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
-              <FilterIcon
-                name={icon}
-                className={`w-3 h-3 ${supported ? "text-text-body" : "text-text-dim"}`}
-              />
-              <span
-                className={`text-xs ${supported ? "text-text-body" : "text-text-dim"}`}
+      {/* Bottom row: Capabilities + metadata */}
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+        <div className="flex items-center gap-4">
+          {CAPABILITIES.map(({ key, label, icon }) => {
+            const supported = capabilityMap[key];
+            return (
+              <div
+                key={key}
+                className={[
+                  "flex items-center gap-1.5 transition-opacity",
+                  supported ? "opacity-100" : "opacity-30",
+                ].join(" ")}
               >
-                {label}
-              </span>
-            </div>
-          );
-        })}
+                {supported ? (
+                  <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3 text-primary">
+                    <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3 text-text-dim">
+                    <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+                <FilterIcon
+                  name={icon}
+                  className={`w-3 h-3 ${supported ? "text-text-body" : "text-text-dim"}`}
+                />
+                <span className={`text-xs ${supported ? "text-text-body" : "text-text-dim"}`}>
+                  {label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Release date / knowledge cutoff */}
+        {(model.releaseDate || model.knowledgeCutoff) && (
+          <div className="flex items-center gap-2.5 text-[11px] text-text-dim">
+            {model.releaseDate && <span>Released {model.releaseDate}</span>}
+            {model.releaseDate && model.knowledgeCutoff && (
+              <span className="text-text-dim/40">&middot;</span>
+            )}
+            {model.knowledgeCutoff && <span>Knowledge cutoff {model.knowledgeCutoff}</span>}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -820,7 +840,7 @@ export default function ModelHero({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search models..."
-            className="w-full h-10 pl-10 pr-9 rounded-2xl border border-border text-sm text-foreground placeholder-text-dim focus:outline-none focus:border-primary/25 focus:shadow-[0_0_0_1px_oklch(0.70_0.15_280/0.08)] transition-all duration-150 bg-background"
+            className="w-full h-10 pl-10 pr-9 rounded-2xl border border-border text-sm text-foreground placeholder-text-dim focus:outline-none focus:border-primary/25 focus:shadow-[0_0_0_1px_oklch(0.70_0.15_280/0.08)] transition-all duration-150 bg-surface-sunken"
           />
           {search && (
             <button

@@ -1,4 +1,4 @@
-/**
+ /**
  * Model Types & Utilities
  *
  * Unified model catalog sourced from models.dev.
@@ -6,6 +6,7 @@
  */
 
 import type { ProviderName } from "./providers.ts";
+export { getCreatorBranding, type Branding as CreatorBranding } from "./brandingData.ts";
 
 // ============================================
 // Unified Model Interface
@@ -115,6 +116,43 @@ const MODELS_DEV_PROVIDER_MAP: Record<ProviderName, string> = {
 export function toModelsDevProviderId(provider: ProviderName): string {
   return MODELS_DEV_PROVIDER_MAP[provider];
 }
+
+/** Reverse map: models.dev slug → ProviderName (for known providers only). */
+const SLUG_TO_PROVIDER: Record<string, ProviderName> = Object.fromEntries(
+  Object.entries(MODELS_DEV_PROVIDER_MAP)
+    .filter(([k]) => k !== "openrouter")
+    .map(([provider, slug]) => [slug, provider as ProviderName]),
+);
+
+export interface ModelCreator {
+  /** The raw creator slug (e.g. "anthropic", "meta-llama"). */
+  slug: string;
+  /** Non-null when the creator maps to one of our registered providers. */
+  provider: ProviderName | null;
+}
+
+/**
+ * Resolve the original creator of a model.
+ *
+ * For OpenRouter models, extracts the org prefix from the model ID
+ * (e.g. "anthropic/claude-sonnet-4" → slug "anthropic").
+ * For direct-provider models, the creator is the provider itself.
+ */
+export function getModelCreator(model: Model): ModelCreator {
+  if (model.provider === "openrouter") {
+    const slashIdx = model.id.indexOf("/");
+    const slug = slashIdx > 0 ? model.id.substring(0, slashIdx) : "openrouter";
+    return { slug, provider: SLUG_TO_PROVIDER[slug] ?? null };
+  }
+  const slug = toModelsDevProviderId(model.provider);
+  return { slug, provider: model.provider };
+}
+
+/** Get the models.dev logo URL for any creator slug. */
+export function getCreatorLogoUrl(slug: string): string {
+  return `https://models.dev/logos/${slug}.svg`;
+}
+
 
 // ============================================
 // Normalizer

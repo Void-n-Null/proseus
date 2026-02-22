@@ -5,6 +5,7 @@ import { getSiblingInfo } from "../../../shared/tree.ts";
 import { useIsStreaming } from "../../stores/streaming.ts";
 import { subscribeToContent } from "../../lib/streaming-buffer.ts";
 import { useAutoScroll } from "../../hooks/useAutoScroll.ts";
+import { useDesignTemplateId } from "../../hooks/useDesignTemplate.ts";
 import MessageItem from "./MessageItem.tsx";
 
 interface MessageListProps {
@@ -33,6 +34,7 @@ const MessageList = React.memo(function MessageList({
   onRegenerate,
 }: MessageListProps) {
   const isStreaming = useIsStreaming();
+  const templateId = useDesignTemplateId();
   const nodes = activePath?.nodes ?? [];
 
   const { scrollRef, onScroll, scrollToBottom, forceScrollToBottom, onContentGrow } =
@@ -118,7 +120,7 @@ const MessageList = React.memo(function MessageList({
       className="h-full overflow-y-auto [contain:strict]"
     >
       <div
-        className="mx-auto w-[60vw] relative"
+        className={`mx-auto relative ${templateId === "discord" ? "w-full" : "w-[60vw]"}`}
         style={{ height: virtualizer.getTotalSize() /* intentionally dynamic */ }}
       >
         {virtualItems.map((virtualItem) => {

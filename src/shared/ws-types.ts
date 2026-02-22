@@ -27,6 +27,8 @@ export type ClientWsMessage =
       model: string;
       nodeId: string;
       provider?: ProviderName;
+      /** When true, branch from the parent of the leaf (sibling of last message). */
+      regenerate?: boolean;
     }
   | { type: "cancel-stream"; chatId: string };
 

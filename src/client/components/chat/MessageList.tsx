@@ -13,6 +13,7 @@ interface MessageListProps {
   nodeMap: Map<string, ChatNode>;
   chatId: string;
   userName: string;
+  onRegenerate?: () => void;
 }
 
 /**
@@ -29,6 +30,7 @@ const MessageList = React.memo(function MessageList({
   nodeMap,
   chatId,
   userName,
+  onRegenerate,
 }: MessageListProps) {
   const isStreaming = useIsStreaming();
   const nodes = activePath?.nodes ?? [];
@@ -145,6 +147,7 @@ const MessageList = React.memo(function MessageList({
                 isFirstInGroup={isFirstInGroup}
                 isLast={isLast}
                 userName={userName}
+                onRegenerate={onRegenerate}
               />
             </div>
           );

@@ -16,6 +16,10 @@ interface ComposerProps {
   onMessageSent?: () => void;
   /** Cancel the active stream. */
   onCancel?: () => void;
+  /** Trigger AI generation without sending a new message. */
+  onGenerate?: () => void;
+  /** True when the last message in the active path is from the user. */
+  lastMessageIsUser?: boolean;
 }
 
 /**
@@ -37,6 +41,8 @@ const Composer = React.memo(function Composer({
   personaId,
   onMessageSent,
   onCancel,
+  onGenerate,
+  lastMessageIsUser = false,
 }: ComposerProps) {
   const [draft, setDraft] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -69,6 +75,7 @@ const Composer = React.memo(function Composer({
 
   const hasText = draft.trim().length > 0;
   const canSend = hasText && userSpeakerId !== null && isConnected;
+  const canGenerate = lastMessageIsUser && !hasText && !isStreaming && isConnected;
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -142,8 +149,14 @@ const Composer = React.memo(function Composer({
       onCancel?.();
       return;
     }
-    handleSend();
-  }, [isStreaming, handleSend, onCancel]);
+    if (canSend) {
+      handleSend();
+      return;
+    }
+    if (canGenerate) {
+      onGenerate?.();
+    }
+  }, [isStreaming, canSend, canGenerate, handleSend, onCancel, onGenerate]);
 
   // ── Audio visualizer helpers ──────────────────────────────────────
   const startVisualizer = useCallback(async () => {
@@ -485,18 +498,18 @@ const Composer = React.memo(function Composer({
               <button
                 type="button"
                 onClick={handleButtonClick}
-                disabled={!isStreaming && !canSend}
+                disabled={!isStreaming && !canSend && !canGenerate}
                 className={[
                   "shrink-0 p-3 rounded-lg transition-all duration-200",
                   "disabled:cursor-not-allowed",
                   "active:scale-95",
                   isStreaming
                     ? "text-[#ff6b6b] hover:text-[#ff8a8a]"
-                    : canSend
+                    : canSend || canGenerate
                       ? "flame-glow"
                       : "text-[#475569] opacity-50",
                 ].join(" ")}
-                aria-label={isStreaming ? "Stop generation" : "Send message"}
+                aria-label={isStreaming ? "Stop generation" : canGenerate ? "Generate response" : "Send message"}
               >
                 <AnimatePresence mode="wait">
                   {isStreaming ? (
@@ -507,7 +520,6 @@ const Composer = React.memo(function Composer({
                       exit={iconExit}
                       transition={iconTransition}
                     >
-                      {/* Stop — filled square */}
                       <svg
                         width="24"
                         height="24"
@@ -528,7 +540,7 @@ const Composer = React.memo(function Composer({
                         />
                       </svg>
                     </motion.div>
-                  ) : canSend ? (
+                  ) : canSend || canGenerate ? (
                     <motion.div
                       key="flame"
                       initial={{ ...iconInitial, rotate: -30 }}
@@ -536,7 +548,6 @@ const Composer = React.memo(function Composer({
                       exit={{ ...iconExit, rotate: 30 }}
                       transition={iconTransition}
                     >
-                      {/* Flame — gradient stroke, the forge is lit */}
                       <svg
                         width="24"
                         height="24"

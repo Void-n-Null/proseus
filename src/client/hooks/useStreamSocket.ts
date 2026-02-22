@@ -85,7 +85,7 @@ interface UseStreamSocketReturn {
     model: string,
   ) => void;
   /** Trigger generation — server resolves parentId and speakerId from DB. */
-  sendGenerate: (model: string, provider?: ProviderName) => void;
+  sendGenerate: (model: string, provider?: ProviderName, regenerate?: boolean) => void;
   cancelStream: () => void;
 }
 
@@ -462,7 +462,7 @@ export function useStreamSocket(
   );
 
   const sendGenerate = useCallback(
-    (model: string, provider?: ProviderName) => {
+    (model: string, provider?: ProviderName, regenerate?: boolean) => {
       if (!chatId) return;
       const nodeId = generateId();
       wsSend(wsRef.current, {
@@ -471,6 +471,7 @@ export function useStreamSocket(
         model,
         nodeId,
         ...(provider ? { provider } : {}),
+        ...(regenerate ? { regenerate: true } : {}),
       });
     },
     [chatId],

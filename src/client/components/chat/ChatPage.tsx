@@ -64,15 +64,33 @@ export default function ChatPage({ chatId }: ChatPageProps) {
     return speakerMap.get(userSpeakerId)?.name ?? "User";
   }, [userSpeakerId, speakerMap]);
 
+  const lastMessageIsUser = useMemo(() => {
+    if (!activePath || activePath.node_ids.length === 0) return false;
+    const lastNodeId = activePath.node_ids[activePath.node_ids.length - 1];
+    if (!lastNodeId || !treeData) return false;
+    const lastNode = treeData.nodes.get(lastNodeId);
+    if (!lastNode) return false;
+    const speaker = speakerMap.get(lastNode.speaker_id);
+    return speaker?.is_user === true;
+  }, [activePath, treeData, speakerMap]);
+
   const { modelId, provider } = useModelStore();
   const [modelBrowserOpen, setModelBrowserOpen] = useState(false);
 
-  const handleMessageSent = useCallback(() => {
+  const handleGenerate = useCallback(() => {
     if (!modelId) {
       setModelBrowserOpen(true);
       return;
     }
     sendGenerate(modelId, provider);
+  }, [sendGenerate, modelId, provider]);
+
+  const handleRegenerate = useCallback(() => {
+    if (!modelId) {
+      setModelBrowserOpen(true);
+      return;
+    }
+    sendGenerate(modelId, provider, true);
   }, [sendGenerate, modelId, provider]);
 
   if (!chatData || !treeData) {
@@ -92,6 +110,7 @@ export default function ChatPage({ chatId }: ChatPageProps) {
           nodeMap={treeData.nodes}
           chatId={chatId}
           userName={userName}
+          onRegenerate={handleRegenerate}
         />
       </div>
 
@@ -100,8 +119,10 @@ export default function ChatPage({ chatId }: ChatPageProps) {
         lastNodeIdRef={lastNodeIdRef}
         userSpeakerId={userSpeakerId}
         personaId={chatData.chat.persona_id ?? null}
-        onMessageSent={handleMessageSent}
+        onMessageSent={handleGenerate}
         onCancel={cancelStream}
+        onGenerate={handleGenerate}
+        lastMessageIsUser={lastMessageIsUser}
       />
 
       <StreamDebug

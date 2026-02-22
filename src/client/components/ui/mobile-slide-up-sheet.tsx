@@ -125,11 +125,11 @@ export default function MobileSlideUpSheet({
             key="sheet-panel"
             role="dialog"
             aria-modal="true"
-            // Entry / exit animation
+            // Entry / exit animation — tween with iOS-style deceleration
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            transition={{ type: "tween", duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
             // Drag behaviour
             drag="y"
             dragControls={dragControls}

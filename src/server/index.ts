@@ -4,6 +4,7 @@ import db, { initDatabase } from "./db/index.ts";
 import type { WsContext } from "../shared/ws-types.ts";
 import { StreamManager } from "./services/stream-manager.ts";
 import { createWebSocketHandler } from "./ws.ts";
+import { networkInterfaces } from "os";
 
 // Initialize encryption key and migrate any plaintext API keys
 await initDatabase(db);
@@ -12,6 +13,7 @@ const streamManager = new StreamManager(db);
 
 const server = Bun.serve<WsContext>({
   port: 3000,
+  hostname: "0.0.0.0",
   routes: {
     "/": index,
     "/chat/:id": index,
@@ -53,4 +55,9 @@ const server = Bun.serve<WsContext>({
 // Stream manager needs the server instance for pub/sub broadcasting
 streamManager.setServer(server);
 
+const lanAddress = Object.values(networkInterfaces())
+  .flat()
+  .find((i) => i?.family === "IPv4" && !i?.internal)?.address;
+
 console.log(`Proseus running at http://localhost:${server.port}`);
+if (lanAddress) console.log(`  LAN: http://${lanAddress}:${server.port}`);

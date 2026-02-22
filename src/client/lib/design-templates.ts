@@ -24,8 +24,10 @@ function upsertStyleElement(): HTMLStyleElement {
   return style;
 }
 
-function renderTokenOverrides(tokenOverrides: Record<string, string>): string {
-  const entries = Object.entries(tokenOverrides);
+function renderTokenOverrides(tokenOverrides: Partial<Record<string, string>>): string {
+  const entries = Object.entries(tokenOverrides).filter(
+    (pair): pair is [string, string] => pair[1] !== undefined,
+  );
   if (entries.length === 0) return "";
 
   const lines = entries.map(([token, value]) => `  ${token}: ${value};`);

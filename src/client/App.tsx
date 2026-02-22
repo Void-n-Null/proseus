@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useChatList } from "./hooks/useChat.ts";
 import { api } from "./api/client.ts";
 import { useRoute } from "./hooks/useRoute.ts";
@@ -9,6 +9,15 @@ import PersonaSidebar from "./components/personas/PersonaSidebar.tsx";
 import ModelSelector from "./components/model/ModelSelector.tsx";
 import { useOAuthCallback } from "./hooks/useOAuthCallback.ts";
 import PromptTemplateModal from "./components/prompt-template/PromptTemplateModal.tsx";
+import {
+  DESIGN_TEMPLATES,
+  type DesignTemplateId,
+} from "../shared/design-templates.ts";
+import { useDesignTemplateId } from "./hooks/useDesignTemplate.ts";
+import {
+  applyDesignTemplate,
+  setStoredDesignTemplateId,
+} from "./lib/design-templates.ts";
 
 export default function App() {
   const { data: chatData, isLoading, isFetching, refetch } = useChatList();
@@ -20,7 +29,10 @@ export default function App() {
   );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [promptTemplateOpen, setPromptTemplateOpen] = useState(false);
+  const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
+  const designTemplateId = useDesignTemplateId();
   const { oauthState, dismissOAuth } = useOAuthCallback();
+  const templateMenuRef = useRef<HTMLDivElement | null>(null);
 
   const handleSeed = async () => {
     setSeeding(true);
@@ -69,6 +81,27 @@ export default function App() {
       replaceRoute({ page: "home", chatId: null });
     }
   }, [isLoading, isFetching, activeChatId, resolvedChatId, replaceRoute]);
+
+  useEffect(() => {
+    if (!templateMenuOpen) return;
+
+    const onMouseDown = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (!templateMenuRef.current?.contains(target)) {
+        setTemplateMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", onMouseDown);
+    return () => window.removeEventListener("mousedown", onMouseDown);
+  }, [templateMenuOpen]);
+
+  const handleSelectDesignTemplate = useCallback((templateId: DesignTemplateId) => {
+    setStoredDesignTemplateId(templateId);
+    applyDesignTemplate(templateId);
+    setTemplateMenuOpen(false);
+  }, []);
 
   return (
     <div className="font-body text-foreground bg-background h-screen flex flex-col">
@@ -125,6 +158,42 @@ export default function App() {
         <ModelSelector />
 
         <div className="flex gap-2 items-center">
+          <div className="relative" ref={templateMenuRef}>
+            <button
+              type="button"
+              onClick={() => setTemplateMenuOpen((open) => !open)}
+              title="Design Template"
+              className="px-2 py-[0.35rem] bg-surface-raised text-text-muted border border-border rounded-md cursor-pointer text-[0.78rem] leading-none transition-colors hover:text-text-body"
+            >
+              Template: {DESIGN_TEMPLATES[designTemplateId].label}
+            </button>
+
+            {templateMenuOpen && (
+              <div className="absolute right-0 top-[calc(100%+0.35rem)] min-w-[12rem] bg-surface border border-border rounded-md shadow-lg z-30 p-1">
+                {Object.values(DESIGN_TEMPLATES).map((template) => {
+                  const isActive = template.id === designTemplateId;
+                  return (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => handleSelectDesignTemplate(template.id)}
+                      className={`w-full text-left px-2 py-1.5 rounded text-xs border-none cursor-pointer transition-colors ${
+                        isActive
+                          ? "bg-surface-raised text-text-body"
+                          : "bg-transparent text-text-muted hover:text-text-body hover:bg-surface-raised"
+                      }`}
+                    >
+                      <div className="font-medium">{template.label}</div>
+                      <div className="text-[0.68rem] text-text-dim mt-0.5">
+                        {template.description}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => setPromptTemplateOpen(true)}
             title="Prompt Template"

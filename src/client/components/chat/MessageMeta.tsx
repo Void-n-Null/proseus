@@ -34,8 +34,7 @@ const MessageMeta = React.memo(function MessageMeta({
   return (
     <div className="flex items-baseline gap-[0.4rem] mb-[0.15rem]">
       <span
-        className="font-semibold text-[1.1rem]"
-        style={{ color: speaker.color ?? "#e0e0e0" /* intentionally dynamic */ }}
+        className="font-semibold text-[1.1rem] text-white"
       >
         {speaker.name}
       </span>

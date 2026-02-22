@@ -13,12 +13,14 @@ import { useModelStore } from "../../stores/model.ts";
 import { useProviderModels } from "../../hooks/useModels.ts";
 import { useConnections } from "../../hooks/useConnections.ts";
 import ModelBrowserModal from "./ModelBrowserModal.tsx";
+import { getProviderBranding } from "../../../shared/brandingData.ts";
 
 export default function ModelSelector() {
   const { provider, modelId } = useModelStore();
   const { models } = useProviderModels(provider);
   const { connectionStatus } = useConnections();
   const [modalOpen, setModalOpen] = useState(false);
+  const providerBranding = getProviderBranding(provider);
 
   const providerConnected = connectionStatus[provider] ?? false;
   const hasAnyConnection = Object.values(connectionStatus).some(Boolean);
@@ -70,7 +72,12 @@ export default function ModelSelector() {
             <line x1="19" y1="16" x2="22" y2="16" />
           </svg>
         ) : (
-          <ProviderIcon provider={provider} size={14} />
+          <div
+            className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
+            style={{ backgroundColor: providerBranding.bg }}
+          >
+            <ProviderIcon provider={provider} size={12} />
+          </div>
         )}
         <span className="truncate">{displayName}</span>
         <svg

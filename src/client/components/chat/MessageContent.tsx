@@ -21,7 +21,7 @@ function applyUserPlaceholder(content: string, userName: string): string {
 }
 
 const contentClass =
-  "text-base font-body leading-[1.5] text-foreground break-words";
+  "text-base font-body leading-[1.5] text-white break-words";
 
 const MessageContent = React.memo(function MessageContent({
   message,

@@ -190,13 +190,13 @@ export default function ChatPage({ chatId, onBack }: ChatPageProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="shrink-0 border-b border-border bg-surface/40 px-3 py-2 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="shrink-0 border-b border-border bg-surface/40 px-3 py-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           {isMobile && onBack && (
             <button
               type="button"
               onClick={onBack}
-              className="shrink-0 w-8 h-8 flex items-center justify-center text-text-muted hover:text-text-body transition-colors -ml-1"
+              className="shrink-0 w-11 h-11 flex items-center justify-center text-text-muted hover:text-text-body transition-colors -ml-1"
               aria-label="Back to sidebar"
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -210,7 +210,7 @@ export default function ChatPage({ chatId, onBack }: ChatPageProps) {
         </div>
 
         {isMobile ? (
-          <ModelSelector className="max-w-[150px]" />
+          <ModelSelector className="w-[min(42vw,150px)] max-w-[150px] h-11" />
         ) : (
           <div className="relative" ref={exportMenuRef}>
             <button

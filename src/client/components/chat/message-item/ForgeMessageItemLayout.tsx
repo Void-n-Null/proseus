@@ -60,12 +60,12 @@ export default function ForgeMessageItemLayout({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       className={`relative flex flex-row gap-[0.6rem] transition-colors duration-150 ${
-        isFirstInGroup ? "pt-2 pb-[0.15rem] px-4" : "py-[0.15rem] px-4"
+        isFirstInGroup ? "pt-2 pb-[0.15rem] px-2.5 sm:px-4" : "py-[0.15rem] px-2.5 sm:px-4"
       } ${isHovered ? "bg-surface-raised" : "bg-transparent"}`}
     >
       {/* Avatar column */}
       <div
-        className={`w-[50px] min-w-[50px] flex justify-center self-start ${
+        className={`w-9 min-w-9 sm:w-[50px] sm:min-w-[50px] flex justify-center self-start ${
           isFirstInGroup ? "pt-[2px]" : "pt-0"
         }`}
       >

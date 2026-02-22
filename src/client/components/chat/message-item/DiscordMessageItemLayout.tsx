@@ -68,19 +68,19 @@ export default function DiscordMessageItemLayout({
     <div
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className={[
-        "relative flex flex-row gap-4 transition-colors duration-100",
-        isFirstInGroup
-          ? "mt-[1.0625rem] pt-[0.125rem] pb-[0.125rem] pl-[4.5rem] pr-12"
-          : "py-[0.125rem] pl-[4.5rem] pr-12",
-        isHovered
-          ? "bg-[hsl(228_6%_13%_/_0.35)]"
-          : "bg-transparent",
-      ].join(" ")}
-    >
+        className={[
+          "relative flex flex-row gap-4 transition-colors duration-100",
+          isFirstInGroup
+            ? "mt-[1.0625rem] pt-[0.125rem] pb-[0.125rem] pl-14 pr-3 sm:pl-[4.5rem] sm:pr-12"
+            : "py-[0.125rem] pl-14 pr-3 sm:pl-[4.5rem] sm:pr-12",
+          isHovered
+            ? "bg-[hsl(228_6%_13%_/_0.35)]"
+            : "bg-transparent",
+        ].join(" ")}
+      >
       {/* Avatar — only on first message in group, positioned absolutely to left gutter */}
       {isFirstInGroup && speaker && (
-        <div className="absolute left-4 top-[0.125rem]">
+        <div className="absolute left-2 sm:left-4 top-[0.125rem]">
           {speaker.avatar_url ? (
             <Avatar
               src={speaker.avatar_url}
@@ -102,7 +102,7 @@ export default function DiscordMessageItemLayout({
 
       {/* Compact timestamp gutter for continuation messages */}
       {!isFirstInGroup && isHovered && (
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 w-10 text-center text-[0.625rem] text-[hsl(214_8%_46%)] select-none">
+        <span className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-8 sm:w-10 text-center text-[0.625rem] text-[hsl(214_8%_46%)] select-none">
           {formatDiscordTime(node.created_at)}
         </span>
       )}

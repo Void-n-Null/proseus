@@ -91,7 +91,7 @@ export default function ForgeComposerLayout({
               </button>
 
               {menuOpen && (
-                <div className="absolute bottom-[calc(100%+6px)] left-0 min-w-[200px] bg-surface border border-border rounded-lg shadow-[0_-4px_20px_rgba(0,0,0,0.45)] z-50 overflow-hidden p-1">
+                <div className="absolute bottom-[calc(100%+6px)] left-0 min-w-[200px] max-w-[calc(100vw-1rem)] bg-surface border border-border rounded-lg shadow-[0_-4px_20px_rgba(0,0,0,0.45)] z-50 overflow-hidden p-1">
                   <div className="px-2 pt-[0.35rem] pb-1 text-[0.65rem] font-semibold text-text-dim uppercase tracking-[0.05em]">
                     Persona
                   </div>

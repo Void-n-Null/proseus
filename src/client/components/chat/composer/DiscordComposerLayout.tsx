@@ -29,7 +29,7 @@ export default function DiscordComposerLayout({
   return (
     <div className="shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-2">
       <div className="max-w-none mx-auto">
-        <div className="relative pb-1.2">
+        <div className="relative pb-[0.3rem]">
           <div className="relative min-h-[3.5rem] max-h-[30rem] flex items-end gap-2 rounded-[10px] border border-[#34343a]/5 bg-[#232327] px-3 py-2">
             <div ref={menuRef} className="relative self-start">
               <button
@@ -54,7 +54,7 @@ export default function DiscordComposerLayout({
               </button>
 
               {menuOpen && (
-                <div className="absolute bottom-[calc(100%+6px)] left-0 min-w-[200px] bg-surface border border-border rounded-lg shadow-[0_-4px_20px_rgba(0,0,0,0.45)] z-50 overflow-hidden p-1">
+                <div className="absolute bottom-[calc(100%+6px)] left-0 min-w-[200px] max-w-[calc(100vw-1rem)] bg-surface border border-border rounded-lg shadow-[0_-4px_20px_rgba(0,0,0,0.45)] z-50 overflow-hidden p-1">
                   <div className="px-2 pt-[0.35rem] pb-1 text-[0.65rem] font-semibold text-text-dim uppercase tracking-[0.05em]">
                     Persona
                   </div>

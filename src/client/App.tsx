@@ -3,6 +3,7 @@ import { useChatList } from "./hooks/useChat.ts";
 import { api } from "./api/client.ts";
 import { useRoute } from "./hooks/useRoute.ts";
 import ChatPage from "./components/chat/ChatPage.tsx";
+import ChatGallery from "./components/chat/ChatGallery.tsx";
 import CharacterSidebar from "./components/characters/CharacterSidebar.tsx";
 import PersonaSidebar from "./components/personas/PersonaSidebar.tsx";
 import ModelSelector from "./components/model/ModelSelector.tsx";
@@ -213,8 +214,7 @@ export default function App() {
           ) : sidebarView === "personas" ? (
             <PersonaSidebar />
           ) : (
-            <ChatListSidebar
-              chats={chats}
+            <ChatGallery
               activeChatId={resolvedChatId}
               onSelectChat={handleSelectChat}
               isLoading={isLoading}
@@ -267,100 +267,6 @@ function ToggleButton({
     >
       {label}
     </button>
-  );
-}
-
-function ChatListSidebar({
-  chats,
-  activeChatId,
-  onSelectChat,
-  isLoading,
-}: {
-  chats: Array<{
-    id: string;
-    name: string;
-    message_count: number;
-    last_message_preview: string;
-    updated_at: number;
-  }>;
-  activeChatId: string | null;
-  onSelectChat: (id: string) => void;
-  isLoading: boolean;
-}) {
-  return (
-    <div className="w-[280px] min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
-      <div className="p-3 border-b border-border">
-        <span className="text-xs font-normal tracking-[0.15em] text-text-muted uppercase">
-          Chats
-        </span>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-[0.35rem]">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-full text-text-dim text-[0.8rem]">
-            Loading...
-          </div>
-        ) : chats.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-text-dim text-[0.82rem]">
-            No chats yet
-          </div>
-        ) : (
-          <div className="flex flex-col gap-[2px]">
-            {chats.map((chat) => (
-              <ChatListItem
-                key={chat.id}
-                chat={chat}
-                isActive={chat.id === activeChatId}
-                onClick={() => onSelectChat(chat.id)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ChatListItem({
-  chat,
-  isActive,
-  onClick,
-}: {
-  chat: {
-    id: string;
-    name: string;
-    message_count: number;
-    last_message_preview: string;
-    updated_at: number;
-  };
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <div
-      onClick={onClick}
-      className={`px-2 py-[0.6rem] rounded-md cursor-pointer transition-colors ${
-        isActive
-          ? "bg-surface-hover border-l-2 border-l-primary"
-          : "bg-transparent border-l-2 border-l-transparent"
-      }`}
-    >
-      <div
-        className={`text-[0.8rem] font-normal whitespace-nowrap overflow-hidden text-ellipsis ${
-          isActive ? "text-text-body" : "text-text-muted"
-        }`}
-      >
-        {chat.name}
-      </div>
-      {chat.last_message_preview && (
-        <div className="text-[0.7rem] text-text-dim whitespace-nowrap overflow-hidden text-ellipsis mt-[0.15rem]">
-          {chat.last_message_preview.slice(0, 60)}
-        </div>
-      )}
-      <div className="text-[0.65rem] text-text-dim mt-[0.2rem]">
-        {chat.message_count} messages
-      </div>
-    </div>
   );
 }
 

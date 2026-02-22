@@ -59,7 +59,16 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   chats: {
-    list: () => fetchJson<ListChatsResponse>("/chats"),
+    list: (opts?: {
+      q?: string;
+      sort?: "updated_at" | "created_at" | "message_count" | "name" | "pinned_first";
+    }) => {
+      const params = new URLSearchParams();
+      if (opts?.q?.trim()) params.set("q", opts.q.trim());
+      if (opts?.sort) params.set("sort", opts.sort);
+      const query = params.toString();
+      return fetchJson<ListChatsResponse>(`/chats${query ? `?${query}` : ""}`);
+    },
     get: (id: string) => fetchJson<GetChatResponse>(`/chats/${id}`),
     create: (body: CreateChatRequest) =>
       fetchJson<CreateChatResponse>("/chats", {
@@ -73,6 +82,13 @@ export const api = {
       }),
     delete: (id: string) =>
       fetchJson<{ ok: true }>(`/chats/${id}`, { method: "DELETE" }),
+    duplicate: (id: string) =>
+      fetchJson<{ chat: Chat }>(`/chats/${id}/duplicate`, { method: "POST" }),
+    pin: (id: string, isPinned: boolean) =>
+      fetchJson<{ ok: true }>(`/chats/${id}/pin`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_pinned: isPinned }),
+      }),
   },
   messages: {
     getTree: (chatId: string) =>

@@ -104,7 +104,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="font-body text-foreground bg-background h-screen flex flex-col">
+    <div className="font-body text-foreground bg-background h-dvh flex flex-col">
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.06_0.01_250)] border-b border-border shrink-0 gap-3">
         <span className="text-[1.1rem] font-light tracking-[0.25em] text-text-muted font-display">

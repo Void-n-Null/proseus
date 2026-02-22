@@ -13,7 +13,40 @@ import {
 import { addMessage, getChatTree } from "../db/messages.ts";
 import { getSpeaker } from "../db/speakers.ts";
 import { getGlobalPersona } from "../db/personas.ts";
+import { getCharacter, getCharacterAvatar } from "../db/characters.ts";
 import { createMessagesRouter } from "./messages.ts";
+import { getActivePath } from "../../shared/tree.ts";
+
+function dateStamp(ts: number): string {
+  return new Date(ts).toISOString().slice(0, 10);
+}
+
+function safeFilenameBase(input: string): string {
+  const trimmed = input.trim();
+  const normalized = trimmed.length > 0 ? trimmed : "chat";
+  return normalized
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80) || "chat";
+}
+
+const CHAT_MAGIC = new Uint8Array([0x50, 0x52, 0x53, 0x43, 0x48, 0x41, 0x54, 0x01]);
+
+function encodeChatArchive(payload: unknown): ArrayBuffer {
+  const body = new TextEncoder().encode(JSON.stringify(payload));
+  const bytes = new Uint8Array(CHAT_MAGIC.length + body.length);
+  bytes.set(CHAT_MAGIC, 0);
+  bytes.set(body, CHAT_MAGIC.length);
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+}
+
+function getCharacterIdForChat(db: Database, chatId: string): string | null {
+  const row = db
+    .query("SELECT character_id FROM chats WHERE id = $id")
+    .get({ $id: chatId }) as { character_id: string | null } | null;
+  return row?.character_id ?? null;
+}
 
 export function createChatsRouter(db: Database): Hono {
   const app = new Hono();
@@ -111,6 +144,127 @@ export function createChatsRouter(db: Database): Hono {
       .filter((s): s is NonNullable<typeof s> => s !== null);
 
     return c.json({ chat, speakers });
+  });
+
+  app.get("/:chatId/export/chat", (c) => {
+    const chatId = c.req.param("chatId");
+    const chat = getChat(db, chatId);
+    if (!chat) {
+      return c.json({ error: "Chat not found" }, 404);
+    }
+
+    const speakers = chat.speaker_ids
+      .map((sid) => getSpeaker(db, sid))
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+    const nodes = getChatTree(db, chatId);
+    const characterId = getCharacterIdForChat(db, chatId);
+    const character = characterId ? getCharacter(db, characterId) : null;
+    const characterAvatar = characterId ? getCharacterAvatar(db, characterId) : null;
+    const linkedCharacter = character
+      ? {
+          character,
+          avatar: characterAvatar
+            ? {
+                mime: "image/png",
+                base64: Buffer.from(characterAvatar.avatar).toString("base64"),
+                hash: characterAvatar.avatar_hash,
+              }
+            : null,
+        }
+      : null;
+
+    const payload = {
+      format: "proseus.chat",
+      version: 1,
+      exported_at: Date.now(),
+      chat,
+      speakers,
+      nodes,
+      linked_character: linkedCharacter,
+    };
+
+    const filename = `${safeFilenameBase(chat.name)}-${dateStamp(payload.exported_at)}.chat`;
+    return new Response(encodeChatArchive(payload), {
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      },
+    });
+  });
+
+  app.get("/:chatId/export/jsonl", (c) => {
+    const chatId = c.req.param("chatId");
+    const chat = getChat(db, chatId);
+    if (!chat) {
+      return c.json({ error: "Chat not found" }, 404);
+    }
+
+    const speakers = chat.speaker_ids
+      .map((sid) => getSpeaker(db, sid))
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+    const speakerById = new Map(speakers.map((s) => [s.id, s]));
+    const userName = speakers.find((s) => s.is_user)?.name ?? "User";
+    const characterName = speakers.find((s) => !s.is_user)?.name ?? chat.name;
+    const nodesRecord = getChatTree(db, chatId);
+    const nodesMap = new Map(Object.entries(nodesRecord));
+    const nodeIds = chat.root_node_id ? getActivePath(chat.root_node_id, nodesMap) : [];
+
+    const lines = [
+      JSON.stringify({
+        chat_metadata: {},
+        user_name: userName,
+        character_name: characterName,
+      }),
+      ...nodeIds.map((id) => {
+        const node = nodesMap.get(id)!;
+        const speaker = speakerById.get(node.speaker_id);
+        return JSON.stringify({
+          name: speaker?.name ?? "Unknown",
+          is_user: !node.is_bot,
+          is_name: true,
+          is_system: false,
+          mes: node.message,
+          send_date: new Date(node.created_at).toISOString(),
+          extra: {},
+        });
+      }),
+    ];
+
+    const exportedAt = Date.now();
+    const filename = `${safeFilenameBase(chat.name)}-${dateStamp(exportedAt)}.jsonl`;
+    c.header("Content-Type", "application/x-ndjson; charset=utf-8");
+    c.header("Content-Disposition", `attachment; filename="${filename}"`);
+    return c.body(lines.join("\n"));
+  });
+
+  app.get("/:chatId/export/txt", (c) => {
+    const chatId = c.req.param("chatId");
+    const chat = getChat(db, chatId);
+    if (!chat) {
+      return c.json({ error: "Chat not found" }, 404);
+    }
+
+    const speakers = chat.speaker_ids
+      .map((sid) => getSpeaker(db, sid))
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+    const speakerById = new Map(speakers.map((s) => [s.id, s]));
+    const nodesRecord = getChatTree(db, chatId);
+    const nodesMap = new Map(Object.entries(nodesRecord));
+    const nodeIds = chat.root_node_id ? getActivePath(chat.root_node_id, nodesMap) : [];
+
+    const transcript = nodeIds
+      .map((id) => {
+        const node = nodesMap.get(id)!;
+        const speaker = speakerById.get(node.speaker_id);
+        return `${speaker?.name ?? "Unknown"}: ${node.message}`;
+      })
+      .join("\n\n");
+
+    const exportedAt = Date.now();
+    const filename = `${safeFilenameBase(chat.name)}-${dateStamp(exportedAt)}.txt`;
+    c.header("Content-Type", "text/plain; charset=utf-8");
+    c.header("Content-Disposition", `attachment; filename="${filename}"`);
+    return c.body(transcript);
   });
 
   // PATCH /:chatId — update chat name/tags/persona_id

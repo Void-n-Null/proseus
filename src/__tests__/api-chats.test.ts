@@ -390,4 +390,171 @@ describe("Chat API routes", () => {
     });
     expect(res.status).toBe(404);
   });
+
+  test("GET /api/chats/:id/export/chat — returns binary archive with full tree + linked character", async () => {
+    const createRes = await app.request(
+      "/api/chats",
+      json({
+        name: "Export Archive",
+        speaker_ids: [userId, botId],
+        greeting: "Greetings",
+      }),
+    );
+    const { chat, root_node } = await createRes.json();
+
+    const now = Date.now();
+    const avatarBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    db.query(
+      `INSERT INTO characters (
+        id, name, description, personality, scenario, first_mes, mes_example,
+        creator_notes, system_prompt, post_history_instructions, alternate_greetings, tags,
+        creator, character_version, avatar, avatar_hash, source_spec, extensions, character_book,
+        content_hash, created_at, updated_at
+      ) VALUES (
+        $id, $name, '', '', '', '', '',
+        '', '', '', '[]', '[]',
+        '', '', $avatar, $avatar_hash, 'v2', '{}', NULL,
+        $content_hash, $created_at, $updated_at
+      )`,
+    ).run({
+      $id: "character-export",
+      $name: "Export Character",
+      $avatar: avatarBytes,
+      $avatar_hash: "avatar-hash-export",
+      $content_hash: "character-content-hash-export",
+      $created_at: now,
+      $updated_at: now,
+    });
+
+    db.query("UPDATE chats SET character_id = $character_id WHERE id = $id").run({
+      $id: chat.id,
+      $character_id: "character-export",
+    });
+
+    addMessage(db, {
+      chat_id: chat.id,
+      parent_id: root_node.id,
+      message: "Hello back",
+      speaker_id: userId,
+      is_bot: false,
+    });
+
+    const res = await app.request(`/api/chats/${chat.id}/export/chat`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("application/octet-stream");
+    expect(res.headers.get("content-disposition")).toContain(".chat");
+
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    expect(Array.from(bytes.slice(0, 8))).toEqual([
+      0x50,
+      0x52,
+      0x53,
+      0x43,
+      0x48,
+      0x41,
+      0x54,
+      0x01,
+    ]);
+    const jsonText = new TextDecoder().decode(bytes.slice(8));
+    const data = JSON.parse(jsonText) as {
+      format: string;
+      version: number;
+      chat: { id: string };
+      nodes: Record<string, unknown>;
+      speakers: unknown[];
+      linked_character: {
+        character: { id: string };
+        avatar: { mime: string; base64: string; hash: string } | null;
+      } | null;
+    };
+
+    expect(data.format).toBe("proseus.chat");
+    expect(data.version).toBe(1);
+    expect(data.chat.id).toBe(chat.id);
+    expect(Object.keys(data.nodes).length).toBe(2);
+    expect(data.speakers).toHaveLength(2);
+    expect(data.linked_character?.character.id).toBe("character-export");
+    expect(data.linked_character?.avatar).toEqual({
+      mime: "image/png",
+      base64: Buffer.from(avatarBytes).toString("base64"),
+      hash: "avatar-hash-export",
+    });
+  });
+
+  test("GET /api/chats/:id/export/jsonl — returns ndjson active path", async () => {
+    const createRes = await app.request(
+      "/api/chats",
+      json({
+        name: "Export JSONL",
+        speaker_ids: [userId, botId],
+        greeting: "Bot opener",
+      }),
+    );
+    const { chat, root_node } = await createRes.json();
+
+    addMessage(db, {
+      chat_id: chat.id,
+      parent_id: root_node.id,
+      message: "User reply",
+      speaker_id: userId,
+      is_bot: false,
+    });
+
+    const res = await app.request(`/api/chats/${chat.id}/export/jsonl`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("application/x-ndjson");
+    expect(res.headers.get("content-disposition")).toContain(".jsonl");
+
+    const raw = await res.text();
+    expect(raw.endsWith("\n")).toBe(false);
+    const lines = raw.split("\n");
+    expect(lines.length).toBe(3);
+
+    const header = JSON.parse(lines[0]!);
+    expect(header).toEqual({
+      chat_metadata: {},
+      user_name: "User",
+      character_name: "Bot",
+    });
+
+    const first = JSON.parse(lines[1]!);
+    expect(first).toEqual({
+      name: "Bot",
+      is_user: false,
+      is_name: true,
+      is_system: false,
+      mes: "Bot opener",
+      send_date: expect.any(String),
+      extra: {},
+    });
+  });
+
+  test("GET /api/chats/:id/export/txt — returns plain text transcript", async () => {
+    const createRes = await app.request(
+      "/api/chats",
+      json({
+        name: "Export TXT",
+        speaker_ids: [userId, botId],
+        greeting: "Intro line",
+      }),
+    );
+    const { chat, root_node } = await createRes.json();
+
+    addMessage(db, {
+      chat_id: chat.id,
+      parent_id: root_node.id,
+      message: "Response line",
+      speaker_id: userId,
+      is_bot: false,
+    });
+
+    const res = await app.request(`/api/chats/${chat.id}/export/txt`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/plain");
+    expect(res.headers.get("content-disposition")).toContain(".txt");
+
+    const text = await res.text();
+    expect(text).toContain("Bot: Intro line");
+    expect(text).toContain("User: Response line");
+  });
 });

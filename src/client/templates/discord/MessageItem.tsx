@@ -5,6 +5,8 @@ import MessageBranch from "../../components/chat/MessageBranch.tsx";
 import MessageActions from "../../components/chat/MessageActions.tsx";
 import type { MessageItemLayoutProps } from "../../components/chat/message-item/types.ts";
 import { useIsStreaming } from "../../stores/streaming.ts";
+import DateDivider from "./DateDivider.tsx";
+import ChatBeginningBlock from "./ChatBeginningBlock.tsx";
 
 function formatDiscordTime(epochMs: number): string {
   const date = new Date(epochMs);
@@ -63,8 +65,26 @@ export default function DiscordMessageItem({
   handleEditSubmit,
   handleEditCancel,
   handleStartEdit,
+  dateDividerDate,
+  isFirstMessage,
+  characterName,
+  characterAvatarUrl,
 }: MessageItemLayoutProps) {
   return (
+    <>
+      {/* Beginning-of-conversation block — only on the very first message */}
+      {isFirstMessage && (
+        <ChatBeginningBlock
+          characterName={characterName ?? null}
+          characterAvatarUrl={characterAvatarUrl ?? null}
+        />
+      )}
+
+      {/* Date divider — shown when the day changes between messages */}
+      {dateDividerDate != null && (
+        <DateDivider date={dateDividerDate} />
+      )}
+
     <div
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -74,9 +94,10 @@ export default function DiscordMessageItem({
             ? "mt-[1.0625rem] pt-[0.125rem] pb-[0.125rem] pl-14 pr-3 sm:pl-[4.5rem] sm:pr-12"
             : "py-[0.125rem] pl-14 pr-3 sm:pl-[4.5rem] sm:pr-12",
           isHovered
-            ? "bg-[hsl(228_6%_13%_/_0.35)]"
+            ? "bg-[#2a2a2e]"
             : "bg-transparent",
         ].join(" ")}
+        style={{ fontFamily: "var(--discord-font)" }}
       >
       {/* Avatar — only on first message in group, positioned absolutely to left gutter */}
       {isFirstInGroup && speaker && (
@@ -102,22 +123,20 @@ export default function DiscordMessageItem({
 
       {/* Compact timestamp gutter for continuation messages */}
       {!isFirstInGroup && isHovered && (
-        <span className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-8 sm:w-10 text-center text-[0.625rem] text-[hsl(214_8%_46%)] select-none">
+        <span className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-8 sm:w-10 text-center text-[0.625rem] text-[#b9bbbe] select-none">
           {formatDiscordTime(node.created_at)}
         </span>
       )}
 
       {/* Content column */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 [&_.message-content]:text-[#dcddde] [&_.message-content]:leading-[22px]">
         {/* Header: name + timestamp on first in group */}
         {isFirstInGroup && speaker && (
           <div className="flex items-baseline gap-2 mb-[0.125rem]">
-            <span
-              className="font-medium text-[1rem] leading-[1.375rem]"
-            >
+            <span className="font-medium text-[1rem] leading-[1.375rem] text-white">
               {speaker.name}
             </span>
-            <span className="text-[0.75rem] text-[hsl(214_8%_46%)] leading-[1.375rem]">
+            <span className="text-[0.75rem] text-[#b9bbbe] leading-[1.375rem]">
               {formatDiscordTime(node.created_at)}
             </span>
           </div>
@@ -159,5 +178,6 @@ export default function DiscordMessageItem({
         />
       )}
     </div>
+    </>
   );
 }

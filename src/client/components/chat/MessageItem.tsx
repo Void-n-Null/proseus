@@ -14,6 +14,10 @@ interface MessageItemProps {
   isLast: boolean;
   userName: string;
   onRegenerate?: () => void;
+  dateDividerDate?: number;
+  isFirstMessage?: boolean;
+  characterName?: string | null;
+  characterAvatarUrl?: string | null;
 }
 
 const MessageItem = React.memo(
@@ -26,6 +30,10 @@ const MessageItem = React.memo(
     isLast,
     userName,
     onRegenerate,
+    dateDividerDate,
+    isFirstMessage,
+    characterName,
+    characterAvatarUrl,
   }: MessageItemProps) {
     const [isHovered, setIsHovered] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -70,6 +78,10 @@ const MessageItem = React.memo(
       handleEditSubmit,
       handleEditCancel,
       handleStartEdit,
+      dateDividerDate,
+      isFirstMessage,
+      characterName,
+      characterAvatarUrl,
     };
 
     return <template.MessageItem {...sharedProps} />;
@@ -86,7 +98,11 @@ const MessageItem = React.memo(
     prev.speaker?.avatar_url === next.speaker?.avatar_url &&
     prev.speaker?.name === next.speaker?.name &&
     prev.userName === next.userName &&
-    prev.onRegenerate === next.onRegenerate,
+    prev.onRegenerate === next.onRegenerate &&
+    prev.dateDividerDate === next.dateDividerDate &&
+    prev.isFirstMessage === next.isFirstMessage &&
+    prev.characterName === next.characterName &&
+    prev.characterAvatarUrl === next.characterAvatarUrl,
 );
 
 export default MessageItem;

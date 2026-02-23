@@ -22,10 +22,6 @@ interface ChatPageProps {
   chatId: string;
   /** Called when the mobile back button is tapped to dismiss the chat overlay. */
   onBack?: () => void;
-  /** Desktop app shell header visibility state. */
-  showAppShellHeader?: boolean;
-  /** Toggle the desktop app shell header. */
-  onToggleAppShellHeader?: () => void;
 }
 
 function getFilenameFromDisposition(
@@ -53,8 +49,6 @@ function triggerDownload(blob: Blob, filename: string): void {
 export default function ChatPage({
   chatId,
   onBack,
-  showAppShellHeader,
-  onToggleAppShellHeader,
 }: ChatPageProps) {
   const { data: chatData } = useChat(chatId);
   const { data: treeData } = useChatTree(chatId);
@@ -195,8 +189,6 @@ export default function ChatPage({
         chatName={chatData.chat.name}
         isMobile={isMobile}
         onBack={onBack}
-        showAppShellHeader={showAppShellHeader}
-        onToggleAppShellHeader={onToggleAppShellHeader}
         characterName={characterSpeaker?.name ?? null}
         characterAvatarUrl={characterSpeaker?.avatar_url ?? null}
         characterColor={characterSpeaker?.color ?? null}
@@ -249,6 +241,8 @@ export default function ChatPage({
             chatId={chatId}
             userName={userName}
             onRegenerate={handleRegenerate}
+            characterName={characterSpeaker?.name ?? null}
+            characterAvatarUrl={characterSpeaker?.avatar_url ?? null}
           />
         )}
       </div>

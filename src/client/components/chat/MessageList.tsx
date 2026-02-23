@@ -16,6 +16,10 @@ interface MessageListProps {
   chatId: string;
   userName: string;
   onRegenerate?: () => void;
+  /** Character (non-user speaker) name — forwarded to template for beginning blocks. */
+  characterName?: string | null;
+  /** Character avatar URL — forwarded to template for beginning blocks. */
+  characterAvatarUrl?: string | null;
 }
 
 /**
@@ -33,6 +37,8 @@ const MessageList = React.memo(function MessageList({
   chatId,
   userName,
   onRegenerate,
+  characterName,
+  characterAvatarUrl,
 }: MessageListProps) {
   const isStreaming = useIsStreaming();
   const templateId = useDesignTemplateId();
@@ -135,6 +141,17 @@ const MessageList = React.memo(function MessageList({
             !prevNode || prevNode.speaker_id !== node.speaker_id;
           const isLast = virtualItem.index === nodes.length - 1;
 
+          // Date divider: show when this message's day differs from the
+          // previous message's day (or always on the first message).
+          const currentDay = new Date(node.created_at).toDateString();
+          const prevDay = prevNode
+            ? new Date(prevNode.created_at).toDateString()
+            : null;
+          const dateDividerDate =
+            virtualItem.index === 0 || (prevDay != null && currentDay !== prevDay)
+              ? node.created_at
+              : undefined;
+
           return (
             <div
               key={node.id}
@@ -152,6 +169,10 @@ const MessageList = React.memo(function MessageList({
                 isLast={isLast}
                 userName={userName}
                 onRegenerate={onRegenerate}
+                dateDividerDate={dateDividerDate}
+                isFirstMessage={virtualItem.index === 0}
+                characterName={characterName}
+                characterAvatarUrl={characterAvatarUrl}
               />
             </div>
           );

@@ -411,7 +411,7 @@ function ProviderUsageBar({ cost, requests, tokens, providerLabel }: ProviderUsa
 
   return (
     <div
-      className="flex items-center gap-0 rounded-xl border border-border bg-[oklch(0.15_0.005_300)] px-1"
+      className="flex-1 h-10 flex items-center rounded-2xl border border-border bg-[oklch(0.15_0.005_300)]"
       title={`Usage stats for ${providerLabel}`}
     >
       {stats.map((stat, i) => (
@@ -419,7 +419,7 @@ function ProviderUsageBar({ cost, requests, tokens, providerLabel }: ProviderUsa
           {i > 0 && (
             <div className="w-px h-5 bg-border shrink-0" />
           )}
-          <div className="flex items-center gap-1.5 px-3 py-1.5">
+          <div className="flex-1 flex items-center justify-center gap-1.5 px-2">
             <span className="text-[10px] uppercase tracking-widest text-text-dim font-medium whitespace-nowrap">
               {stat.label}
             </span>

@@ -24,7 +24,9 @@ export const DESIGN_TEMPLATES: Record<DesignTemplateId, DesignTemplate> = {
     label: "Discord",
     description: "Discord-inspired dark theme.",
     tokenOverrides: {
-      "--color-background": "oklch(0.215 0.009 280)",
+      "--color-background": "#1a1a1e",
+      "--discord-font": "'Noto Sans', sans-serif",
+      "--chat-message-font-family": "'Noto Sans', sans-serif",
     },
   },
   chub: {
@@ -44,6 +46,7 @@ export const DESIGN_TEMPLATES: Record<DesignTemplateId, DesignTemplate> = {
       "--color-text-body": "rgb(229, 224, 216)",
       /* MessageItem layout overrides */
       "--chat-message-max-width": "59vw",
+      "--chat-message-max-width-mobile": "100%",
       "--chat-message-row-gap": "0.7rem",
       "--chat-message-bg": "rgb(38 38 38 / 0.5)",
       "--chat-message-bg-hover": "rgb(38 38 38 / 0.5)",

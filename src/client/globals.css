@@ -19,6 +19,8 @@
   --color-surface-raised: oklch(0.25 0.007 300);
   --color-surface-hover: oklch(0.23 0.007 300);
   --color-surface-sunken: oklch(0.16 0.007 300);
+  --color-surface-sunken-hover: oklch(0.20 0.007 300);
+  --color-surface-deep: oklch(0.12 0.007 300);
 
   /* Borders — ultra-subtle */
   --color-border: oklch(0.25 0.005 250);
@@ -35,7 +37,7 @@
   --color-primary-hover: oklch(0.75 0.15 280);
 
   /* Destructive */
-  --color-destructive: oklch(0.55 0.20 25);
+  --color-destructive: oklch(0.55 0.40 25);
 
   /* Font families */
   --font-display: 'Instrument Serif', Georgia, serif;

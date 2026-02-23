@@ -169,7 +169,7 @@ export default function ModelProviderDropdown({
           isOpen
             ? "z-[51] border border-b-0 border-border"
             : "border border-border",
-          "bg-surface-sunken backdrop-blur-[20px]",
+          "bg-surface-deep backdrop-blur-[20px]",
         ].join(" ")}
       >
         <span className="text-text-dim whitespace-nowrap text-sm">
@@ -214,7 +214,7 @@ export default function ModelProviderDropdown({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -4 }}
           transition={{ duration: 0.15, ease: "easeOut" }}
-          className="absolute z-50 left-0 top-full -mt-px w-full md:w-80 rounded-b-2xl overflow-hidden border border-t-0 border-border shadow-[0_20px_40px_-8px_rgba(0,0,0,0.7)] bg-surface-sunken backdrop-blur-[20px]"
+          className="absolute z-50 left-0 top-full -mt-px w-full md:w-80 rounded-b-2xl overflow-hidden border border-t-0 border-border shadow-[0_20px_40px_-8px_rgba(0,0,0,0.7)] bg-surface-deep backdrop-blur-[20px]"
         >
           {/* List */}
           <div

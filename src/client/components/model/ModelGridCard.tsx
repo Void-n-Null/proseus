@@ -63,7 +63,7 @@ export default function ModelGridCard({
         isSelected
           ? ""
           : [
-              "bg-surface border border-border",
+              "bg-[oklch(0.18_0.007_300)] border border-border",
               "hover:bg-surface-raised hover:border-[oklch(1_0_0/0.14)] hover:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.2)]",
               "active:scale-[0.985]",
             ].join(" "),

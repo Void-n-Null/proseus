@@ -30,7 +30,7 @@ export default function DiscordComposer({
     <div className="shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-2">
       <div className="max-w-none mx-auto">
         <div className="relative pb-[0.3rem]">
-          <div className="relative min-h-[3.5rem] max-h-[30rem] flex items-end gap-2 rounded-[10px] border border-[#34343a]/5 bg-[#232327] px-3 py-2">
+          <div className="relative min-h-[3.5rem] max-h-[30rem] flex items-end gap-2 rounded-[10px] border border-[#34343a]/50 bg-[#232327] px-3 py-2">
             <div ref={menuRef} className="relative self-start">
               <button
                 type="button"

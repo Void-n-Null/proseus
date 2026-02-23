@@ -21,7 +21,7 @@ function applyUserPlaceholder(content: string, userName: string): string {
 }
 
 const contentClass =
-  "text-[var(--chat-message-text-size-mobile)] sm:text-[var(--chat-message-text-size)] [font-family:var(--chat-message-font-family,var(--font-body))] leading-[1.5] text-white break-words";
+  "text-[var(--chat-message-text-size-mobile)] sm:text-[var(--chat-message-text-size)] [font-family:var(--chat-message-font-family,var(--font-body))] leading-[1.5] text-text-body break-words";
 
 const MessageContent = React.memo(function MessageContent({
   message,
@@ -109,7 +109,14 @@ const MessageContent = React.memo(function MessageContent({
 
   if (isStreaming) {
     return (
-      <div className={`message-content ${contentClass}`}>
+      <div
+        className={`message-content ${contentClass}`}
+        /* intentionally dynamic: padding & line-height from design-template CSS vars */
+        style={{
+          padding: 'var(--chat-streaming-padding)',
+          lineHeight: 'var(--chat-streaming-line-height)',
+        }}
+      >
         <div ref={streamContentRef} />
         <span
           className="streaming-cursor inline-block w-[2px] h-[1em] ml-px align-text-bottom animate-[etherealCursor_1s_step-end_infinite]"

@@ -63,6 +63,20 @@
   --chat-avatar-username-size: 1.1rem;
   --chat-message-text-size: 1rem;
   --chat-message-text-size-mobile: 0.95rem;
+
+  /* MessageItem layout tokens — forge defaults */
+  --chat-message-max-width: none;
+  --chat-message-row-gap: 0.6rem;
+  --chat-message-bg: transparent;
+  --chat-message-bg-hover: var(--color-surface-raised);
+  --chat-message-margin-y: 0;
+  --chat-message-border-radius: 0;
+  --chat-message-group-start-pt: 0.5rem;
+  --chat-message-px: 0.625rem;
+  --chat-message-content-pr: 0;
+  --chat-avatar-border-radius: var(--radius-md);
+  --chat-streaming-padding: 0;
+  --chat-streaming-line-height: inherit;
 }
 
 /* shadcn animation keyframes for Radix state transitions */

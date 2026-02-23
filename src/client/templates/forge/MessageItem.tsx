@@ -50,9 +50,22 @@ export default function ForgeMessageItem({
     <div
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className={`relative flex flex-row gap-[0.6rem] transition-colors duration-150 ${
-        isFirstInGroup ? "pt-2 pb-[0.15rem] px-2.5 sm:px-4" : "py-[0.15rem] px-2.5 sm:px-4"
-      } ${isHovered ? "bg-surface-raised" : "bg-transparent"}`}
+      className={`relative flex flex-row gap-[var(--chat-message-row-gap)] transition-colors duration-150 ${
+        isFirstInGroup
+          ? "pt-[var(--chat-message-group-start-pt)] pb-[0.15rem] px-2.5 sm:px-4"
+          : "py-[0.15rem] px-[var(--chat-message-px)] sm:px-4"
+      }`}
+      /* intentionally dynamic: max-width, margin, border-radius, background from design-template CSS vars */
+      style={{
+        maxWidth: 'var(--chat-message-max-width)',
+        margin: '0 auto',
+        marginTop: 'var(--chat-message-margin-y)',
+        marginBottom: 'var(--chat-message-margin-y)',
+        borderRadius: 'var(--chat-message-border-radius)',
+        background: isHovered
+          ? 'var(--chat-message-bg-hover)'
+          : 'var(--chat-message-bg)',
+      }}
     >
       {/* Avatar column */}
       <div
@@ -65,6 +78,7 @@ export default function ForgeMessageItem({
             <Avatar
               src={speaker.avatar_url}
               alt={speaker.name}
+              borderRadius="var(--chat-avatar-border-radius)"
               width={'var(--chat-avatar-column-width-active)'}
               fit="natural"
             />
@@ -80,7 +94,7 @@ export default function ForgeMessageItem({
       </div>
 
       {/* Content column */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 pr-[var(--chat-message-content-pr)]">
         {isFirstInGroup && speaker && (
           <MessageMeta
             speaker={speaker}

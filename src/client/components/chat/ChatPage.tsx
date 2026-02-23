@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useCallback, useState, useEffect } from "react";
+import React, { useMemo, useRef, useCallback, useState } from "react";
 import { useChat } from "../../hooks/useChat.ts";
 import { useChatTree } from "../../hooks/useChatTree.ts";
 import { useActivePath } from "../../hooks/useActivePath.ts";
@@ -8,6 +8,8 @@ import { usePersona } from "../../hooks/usePersonas.ts";
 import { useIsMobile } from "../../hooks/useMediaQuery.ts";
 import { useDesignTemplateId } from "../../hooks/useDesignTemplate.ts";
 import { getTemplate } from "../../templates/index.ts";
+import { setStoredDesignTemplateId, applyDesignTemplate } from "../../lib/design-templates.ts";
+import type { DesignTemplateId } from "../../../shared/design-templates.ts";
 import { api } from "../../api/client.ts";
 import type { Speaker } from "../../../shared/types.ts";
 import MessageList from "./MessageList.tsx";
@@ -126,24 +128,12 @@ export default function ChatPage({
 
   const { modelId, provider } = useModelStore();
   const [modelBrowserOpen, setModelBrowserOpen] = useState(false);
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const exportMenuRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (!exportMenuOpen) return;
-
-    const onDown = (event: MouseEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (!exportMenuRef.current?.contains(target)) {
-        setExportMenuOpen(false);
-      }
-    };
-
-    window.addEventListener("mousedown", onDown);
-    return () => window.removeEventListener("mousedown", onDown);
-  }, [exportMenuOpen]);
+  const handleSelectDesignTemplate = useCallback((templateId: DesignTemplateId) => {
+    setStoredDesignTemplateId(templateId);
+    applyDesignTemplate(templateId);
+  }, []);
 
   const handleGenerate = useCallback(() => {
     if (!modelId) {
@@ -171,7 +161,6 @@ export default function ChatPage({
       const date = new Date().toISOString().slice(0, 10);
       const fallbackName = `${fallbackBase}-${date}.${format}`;
 
-      setExportMenuOpen(false);
       setIsExporting(true);
       try {
         const result =
@@ -212,10 +201,10 @@ export default function ChatPage({
         characterAvatarUrl={characterSpeaker?.avatar_url ?? null}
         characterColor={characterSpeaker?.color ?? null}
         isExporting={isExporting}
-        exportMenuOpen={exportMenuOpen}
-        setExportMenuOpen={setExportMenuOpen}
-        exportMenuRef={exportMenuRef}
         onExport={(format) => void handleExport(format)}
+        onOpenModelDashboard={() => setModelBrowserOpen(true)}
+        designTemplateId={designTemplateId}
+        onSelectDesignTemplate={handleSelectDesignTemplate}
       />
 
       <div className="flex-1 min-h-0 overflow-hidden">

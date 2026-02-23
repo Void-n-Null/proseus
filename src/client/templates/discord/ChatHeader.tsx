@@ -2,14 +2,20 @@ import React, { useEffect, useRef, useState } from "react";
 import type { ChatHeaderLayoutProps } from "../../components/chat/chat-header/types.ts";
 import { DESIGN_TEMPLATES, type DesignTemplateId } from "../../../shared/design-templates.ts";
 import { Avatar } from "../../components/ui/avatar.tsx";
-import { ChevronLeft } from "lucide-react";
 
-export default function ChubHeader({
+/**
+ * Discord-style chat header.
+ *
+ * Emulates the DM / channel header bar: avatar with online indicator on the
+ * left, character name in bold, toolbar icons + search on the right.
+ */
+export default function DiscordChatHeader({
   chatName,
   isMobile,
   onBack,
   characterName,
   characterAvatarUrl,
+  characterColor,
   isExporting,
   onExport,
   onOpenModelDashboard,
@@ -25,17 +31,14 @@ export default function ChubHeader({
 
   useEffect(() => {
     if (!menuOpen) return;
-
-    const onMouseDown = (event: MouseEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (!menuRef.current?.contains(target)) {
+    const onMouseDown = (e: MouseEvent) => {
+      if (!(e.target instanceof Node)) return;
+      if (!menuRef.current?.contains(e.target)) {
         setMenuOpen(false);
         setThemeSubmenuOpen(false);
         setExportSubmenuOpen(false);
       }
     };
-
     window.addEventListener("mousedown", onMouseDown);
     return () => window.removeEventListener("mousedown", onMouseDown);
   }, [menuOpen]);
@@ -46,52 +49,67 @@ export default function ChubHeader({
     setExportSubmenuOpen(false);
   };
 
+  /* ---- shared icon-button style ---- */
+  const iconBtn =
+    "shrink-0 w-8 h-8 flex items-center justify-center rounded text-[#b5bac1] hover:text-[#dbdee1] transition-colors";
+
   return (
-    <div className="shrink-0 h-[42px] px-3 flex items-center md:w-[60vw] w-full mx-auto">
-      {/* Left: back button */}
-      <div className="w-14 flex items-center justify-start">
+    <div className="shrink-0 h-12 border-b-[1.5px] border-neutral-800  px-3 flex items-center gap-2">
+      {/* -- Left: back (mobile) + avatar + name -- */}
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        {isMobile && onBack && (
           <button
             type="button"
             onClick={onBack}
-            className="!min-h-0 !min-w-0 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors px-3 py-2"
-            aria-label="Back"
+            className={`${iconBtn} -ml-1`}
+            aria-label="Back to sidebar"
           >
-            <div className="w-[16px] h-[16px] flex items-center justify-center bg-[rgb(242,228,214)]/85 text-text-muted hover:text-text-body rounded-full">
-            <ChevronLeft width="12" height="12" className="text-[var(--color-background)]" />
-            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
           </button>
-      </div>
-
-      {/* Center: avatar + character name */}
-      <div className="flex-1 flex items-center justify-center gap-2">
-        {characterAvatarUrl ? (
-          <Avatar
-            src={characterAvatarUrl}
-            alt={displayName}
-            size={32}
-            fit="natural"
-            borderRadius="40%"
-          />
-        ) : (
-          <div
-            className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[1rem] font-medium shrink-0"
-            style={{
-              fontFamily: "var(--chub-font)",
-            }}
-          >
-            {displayName.charAt(0).toUpperCase()}
-          </div>
         )}
-        <span
-          className="text-[1rem] text-text-body truncate"
-          style={{ fontFamily: "var(--chub-font)" }}
-        >
+
+        {/* Avatar with online dot */}
+        <div className="relative shrink-0">
+          {characterAvatarUrl ? (
+            <Avatar
+              src={characterAvatarUrl}
+              alt={displayName}
+              size={24}
+              borderRadius="50%"
+            />
+          ) : (
+            <div
+              className="w-6 h-6 rounded-full flex items-center justify-center text-[0.65rem] font-semibold text-white"
+              style={{ background: characterColor ?? "#5865F2" }}
+            >
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
+          {/* Online indicator */}
+          <span className="absolute -bottom-[1px] -right-[1px] w-[10px] h-[10px] rounded-full bg-[#23a559] border-[2.5px] border-[#2b2d31]" />
+        </div>
+
+        <span className="text-[0.94rem] font-semibold text-[#f2f3f5] truncate leading-none">
           {displayName}
         </span>
       </div>
 
-      {/* Right: hamburger menu */}
-      <div className="w-14 flex items-center justify-end">
+      {/* -- Right: toolbar icons -- */}
+      <div className="flex items-center gap-0.5">
+        {/* Search -- decorative input matching Discord's recessed style */}
+        {!isMobile && (
+          <div className="ml-1 flex items-center h-[26px] w-[240px] rounded bg-[oklch(0.18_0.007_300)] px-1.5 text-[0.7rem] text-[#949ba4] select-none cursor-text">
+            <span className="flex-1 truncate">Search</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 ml-1 text-[#949ba4]">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </div>
+        )}
+
+        {/* Hamburger menu */}
         <div className="relative" ref={menuRef}>
           <button
             type="button"
@@ -102,16 +120,17 @@ export default function ChubHeader({
                 setExportSubmenuOpen(false);
               }
             }}
-            className="w-9 h-9 !min-h-0 !min-w-0 flex items-center justify-center rounded-full text-text-muted hover:text-text-body hover:bg-surface-hover transition-colors"
+            className={iconBtn}
             aria-label="Menu"
+            title="Menu"
           >
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-              <path d="M4 6h12M4 10h12M4 14h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-[calc(100%)] min-w-[13rem] bg-surface border border-border rounded-md shadow-lg z-20 p-1">
+            <div className="absolute right-0 top-[calc(100%+4px)] min-w-[13rem] bg-[#111214] border border-[#1f2023] rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.6)] z-20 p-1">
               {/* Switch Theme */}
               <div className="relative">
                 <button
@@ -120,7 +139,7 @@ export default function ChubHeader({
                     setThemeSubmenuOpen((o) => !o);
                     setExportSubmenuOpen(false);
                   }}
-                  className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded flex items-center justify-between"
+                  className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors flex items-center justify-between"
                 >
                   <span className="flex items-center gap-2">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -138,7 +157,7 @@ export default function ChubHeader({
                 </button>
 
                 {themeSubmenuOpen && (
-                  <div className="absolute right-full top-0 mr-1 min-w-[10rem] bg-surface border border-border rounded-md shadow-lg z-30 p-1">
+                  <div className="absolute right-full top-0 mr-1 min-w-[10rem] bg-[#111214] border border-[#1f2023] rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.6)] z-30 p-1">
                     {Object.values(DESIGN_TEMPLATES).map((t) => (
                       <button
                         key={t.id}
@@ -147,10 +166,10 @@ export default function ChubHeader({
                           onSelectDesignTemplate(t.id as DesignTemplateId);
                           closeAll();
                         }}
-                        className={`w-full text-left px-2 py-1.5 text-xs rounded flex items-center gap-2 ${
+                        className={`w-full text-left px-2 py-1.5 text-xs rounded-sm transition-colors flex items-center gap-2 ${
                           t.id === designTemplateId
-                            ? "text-text-body bg-surface-raised"
-                            : "text-text-muted hover:text-text-body hover:bg-surface-raised"
+                            ? "text-white bg-[#5865F2]"
+                            : "text-[#b5bac1] hover:text-white hover:bg-[#5865F2]"
                         }`}
                       >
                         {t.id === designTemplateId && (
@@ -172,7 +191,7 @@ export default function ChubHeader({
                   onOpenModelDashboard();
                   closeAll();
                 }}
-                className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded flex items-center gap-2"
+                className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors flex items-center gap-2"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
@@ -183,7 +202,7 @@ export default function ChubHeader({
               </button>
 
               {/* Divider */}
-              <div className="my-1 border-t border-border" />
+              <div className="my-1 border-t border-[#1f2023]" />
 
               {/* Export Chat */}
               <div className="relative">
@@ -194,7 +213,7 @@ export default function ChubHeader({
                     setExportSubmenuOpen((o) => !o);
                     setThemeSubmenuOpen(false);
                   }}
-                  className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded flex items-center justify-between disabled:opacity-50 disabled:cursor-wait"
+                  className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors flex items-center justify-between disabled:opacity-40 disabled:cursor-wait"
                 >
                   <span className="flex items-center gap-2">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -210,14 +229,14 @@ export default function ChubHeader({
                 </button>
 
                 {exportSubmenuOpen && (
-                  <div className="absolute right-full top-0 mr-1 min-w-[11rem] bg-surface border border-border rounded-md shadow-lg z-30 p-1">
-                    <button type="button" onClick={() => { onExport("chat"); closeAll(); }} className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded">
+                  <div className="absolute right-full top-0 mr-1 min-w-[11rem] bg-[#111214] border border-[#1f2023] rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.6)] z-30 p-1">
+                    <button type="button" onClick={() => { onExport("chat"); closeAll(); }} className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors">
                       Proseus archive (.chat)
                     </button>
-                    <button type="button" onClick={() => { onExport("jsonl"); closeAll(); }} className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded">
+                    <button type="button" onClick={() => { onExport("jsonl"); closeAll(); }} className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors">
                       JSONL (SillyTavern)
                     </button>
-                    <button type="button" onClick={() => { onExport("txt"); closeAll(); }} className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded">
+                    <button type="button" onClick={() => { onExport("txt"); closeAll(); }} className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors">
                       Text transcript (.txt)
                     </button>
                   </div>

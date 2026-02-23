@@ -719,6 +719,7 @@ export default function ModelHero({
           value={provider}
           onChange={onProviderChange}
           connectionStatus={connectionStatus}
+          selectedModel={selectedModel}
         />
 
         {providerConnected && (

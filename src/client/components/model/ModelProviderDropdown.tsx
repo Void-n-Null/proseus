@@ -9,6 +9,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
+  getCreatorBranding,
+  getCreatorLogoUrl,
+  getModelCreator,
+  type Model,
+} from "../../../shared/models.ts";
+import {
   PROVIDERS,
   getProviderMeta,
   type ProviderName,
@@ -21,12 +27,14 @@ export interface ProviderDropdownProps {
   onChange: (provider: ProviderName) => void;
   /** Map of provider -> connected boolean. Undefined = assume connected. */
   connectionStatus?: Partial<Record<ProviderName, boolean>>;
+  selectedModel?: Model | null;
 }
 
 export default function ModelProviderDropdown({
   value,
   onChange,
   connectionStatus,
+  selectedModel,
 }: ProviderDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -34,7 +42,14 @@ export default function ModelProviderDropdown({
   const listRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const meta = getProviderMeta(value);
-  const branding = getProviderBranding(value);
+  const creator = selectedModel ? getModelCreator(selectedModel) : null;
+  const branding = creator && selectedModel
+    ? getCreatorBranding(creator, selectedModel.provider)
+    : getProviderBranding(value);
+  const iconProvider = creator?.provider ?? selectedModel?.provider ?? value;
+  const iconLogoUrl = creator
+    ? branding.logoUrl ?? (!creator.provider ? getCreatorLogoUrl(creator.slug) : undefined)
+    : undefined;
   const isConnected = connectionStatus?.[value] ?? true;
 
   const activeIndex = PROVIDERS.findIndex((p) => p.id === value);
@@ -165,7 +180,7 @@ export default function ModelProviderDropdown({
           className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
           style={{ backgroundColor: branding.bg }}
         >
-          <ProviderIcon provider={value} size={13} />
+          <ProviderIcon provider={iconProvider} logoUrl={iconLogoUrl} color={branding.logo} size={13} />
         </div>
         <span className="text-foreground font-medium whitespace-nowrap">
           {meta.label}

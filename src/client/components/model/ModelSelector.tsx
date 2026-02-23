@@ -4,7 +4,7 @@
  * Three display states:
  * 1. No provider connected → "Connect Provider" (dimmed, dashed border)
  * 2. Provider connected, no model → "Select model…" (dimmed)
- * 3. Fully configured → provider icon + model name
+ * 3. Fully configured → selected-model icon + model name
  */
 
 import React, { useState } from "react";
@@ -14,6 +14,11 @@ import { useProviderModels } from "../../hooks/useModels.ts";
 import { useConnections } from "../../hooks/useConnections.ts";
 import ModelBrowserModal from "./ModelBrowserModal.tsx";
 import { getProviderBranding } from "../../../shared/brandingData.ts";
+import {
+  getCreatorBranding,
+  getCreatorLogoUrl,
+  getModelCreator,
+} from "../../../shared/models.ts";
 
 interface ModelSelectorProps {
   className?: string;
@@ -29,6 +34,15 @@ export default function ModelSelector({ className }: ModelSelectorProps) {
   const providerConnected = connectionStatus[provider] ?? false;
   const hasAnyConnection = Object.values(connectionStatus).some(Boolean);
   const selectedModel = models.find((m) => m.id === modelId);
+  const selectedModelCreator = selectedModel ? getModelCreator(selectedModel) : null;
+
+  const iconBranding = selectedModel && selectedModelCreator
+    ? getCreatorBranding(selectedModelCreator, selectedModel.provider)
+    : providerBranding;
+  const iconProvider = selectedModelCreator?.provider ?? selectedModel?.provider ?? provider;
+  const iconLogoUrl = selectedModelCreator
+    ? iconBranding.logoUrl ?? (!selectedModelCreator.provider ? getCreatorLogoUrl(selectedModelCreator.slug) : undefined)
+    : undefined;
 
   // Determine display state
   const needsProvider = !providerConnected && !hasAnyConnection;
@@ -79,9 +93,14 @@ export default function ModelSelector({ className }: ModelSelectorProps) {
         ) : (
           <div
             className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
-            style={{ backgroundColor: providerBranding.bg }}
+            style={{ backgroundColor: iconBranding.bg }}
           >
-            <ProviderIcon provider={provider} size={12} />
+            <ProviderIcon
+              provider={iconProvider}
+              logoUrl={iconLogoUrl}
+              color={iconBranding.logo}
+              size={12}
+            />
           </div>
         )}
         <span className="truncate">{displayName}</span>

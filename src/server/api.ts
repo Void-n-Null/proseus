@@ -6,6 +6,7 @@ import { createCharactersRouter } from "./routes/characters.ts";
 import { createConnectionsRouter } from "./routes/connections.ts";
 import { createSettingsRouter } from "./routes/settings.ts";
 import { createPersonasRouter } from "./routes/personas.ts";
+import { createUsageRouter } from "./routes/usage.ts";
 
 const api = new Hono().basePath("/api");
 
@@ -15,6 +16,7 @@ api.route("/characters", createCharactersRouter(db));
 api.route("/connections", createConnectionsRouter(db));
 api.route("/settings", createSettingsRouter(db));
 api.route("/personas", createPersonasRouter(db));
+api.route("/usage", createUsageRouter(db));
 
 // Dev-only routes
 api.post("/dev/seed", async (c) => {

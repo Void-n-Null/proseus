@@ -401,9 +401,11 @@ interface ProviderUsageBarProps {
 }
 
 function ProviderUsageBar({ cost, requests, tokens, providerLabel }: ProviderUsageBarProps) {
+  const avgCost = requests > 0 ? cost / requests : 0;
   const stats: { label: string; value: string }[] = [
     { label: "Spent", value: formatCost(cost) },
     { label: "Requests", value: requests.toLocaleString() },
+    { label: "Avg/Req", value: formatCost(avgCost) },
     { label: "Tokens", value: formatTokenCount(tokens) },
   ];
 

@@ -13,7 +13,7 @@ import type { Speaker } from "../../../shared/types.ts";
 import MessageList from "./MessageList.tsx";
 import Composer from "./Composer.tsx";
 import StreamDebug from "../debug/StreamDebug.tsx";
-import ModelBrowserModal from "../model/ModelBrowserModal.tsx";
+import ModelDashboard from "../model/ModelDashboard.tsx";
 import { Avatar } from "../ui/avatar.tsx";
 
 interface ChatPageProps {
@@ -280,8 +280,8 @@ export default function ChatPage({
         onCancel={cancelStream}
       />
 
-      {/* Model browser — opened when user tries to send without a model */}
-      <ModelBrowserModal
+      {/* Model dashboard — opened when user tries to send without a model */}
+      <ModelDashboard
         open={modelBrowserOpen}
         onOpenChange={setModelBrowserOpen}
       />

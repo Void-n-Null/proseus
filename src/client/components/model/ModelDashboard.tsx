@@ -1,12 +1,13 @@
 /**
- * ModelBrowserModal - Full model browsing experience in a Dialog.
+ * ModelDashboard - Provider connections, model selection, and usage stats.
  *
- * The single gateway for provider connections AND model selection.
- * When a provider is disconnected, shows inline API key input.
- * When connected, shows the full browsing grid with search/filter/sort.
+ * The single gateway for provider connections, model browsing, and cost
+ * tracking. When a provider is disconnected, shows inline API key input.
+ * When connected, shows the full browsing grid with search/filter/sort
+ * and per-provider usage statistics.
  *
  * Orchestrator component that owns state, data fetching, and composes:
- * - ModelHero (toolbar + connection gateway + search + sort/filter)
+ * - ModelHero (toolbar + connection gateway + usage bar + search + sort/filter)
  * - ModelGridCard (individual model cards in the browsing grid)
  */
 
@@ -39,15 +40,15 @@ import ModelGridCard from "./ModelGridCard.tsx";
 
 const DEFAULT_FILTERS: ModelFilters = { toolCall: true };
 
-export interface ModelBrowserModalProps {
+export interface ModelDashboardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export default function ModelBrowserModal({
+export default function ModelDashboard({
   open,
   onOpenChange,
-}: ModelBrowserModalProps) {
+}: ModelDashboardProps) {
   const isMobile = useIsMobile();
   const { provider, modelId, setProviderAndModel, setProvider } =
     useModelStore();
@@ -208,26 +209,26 @@ export default function ModelBrowserModal({
     <div
       ref={contentRef}
       className={[
-        "flex flex-col min-h-0",
+        "flex flex-col min-h-0 bg-surface-sunken",
         providerConnected && !isMobile ? "h-[894px]" : "",
       ].join(" ")}
     >
       {isMobile ? (
         <div className="flex flex-col space-y-1.5 px-4 pt-4 pb-0">
           <h2 className="text-foreground text-lg font-semibold leading-none tracking-tight">
-            Model Browser
+            Model Dashboard
           </h2>
           <p className="text-text-muted text-sm">
-            Connect providers and select an AI model for your generations.
+            Manage providers, select models, and track usage.
           </p>
         </div>
       ) : (
         <DialogHeader className="px-6 pr-12 pt-5 pb-0">
           <DialogTitle className="text-foreground text-lg font-semibold">
-            Model Browser
+            Model Dashboard
           </DialogTitle>
           <DialogDescription className="text-text-muted text-sm">
-            Connect providers and select an AI model for your generations.
+            Manage providers, select models, and track usage.
           </DialogDescription>
         </DialogHeader>
       )}

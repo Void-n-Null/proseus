@@ -12,7 +12,7 @@ import ProviderIcon from "../ui/provider-icon.tsx";
 import { useModelStore } from "../../stores/model.ts";
 import { useProviderModels } from "../../hooks/useModels.ts";
 import { useConnections } from "../../hooks/useConnections.ts";
-import ModelBrowserModal from "./ModelBrowserModal.tsx";
+import ModelDashboard from "./ModelDashboard.tsx";
 import { getProviderBranding } from "../../../shared/brandingData.ts";
 import {
   getCreatorBranding,
@@ -121,7 +121,7 @@ export default function ModelSelector({ className }: ModelSelectorProps) {
         </svg>
       </button>
 
-      <ModelBrowserModal open={modalOpen} onOpenChange={setModalOpen} />
+      <ModelDashboard open={modalOpen} onOpenChange={setModalOpen} />
     </>
   );
 }

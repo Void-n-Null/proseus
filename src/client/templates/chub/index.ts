@@ -1,7 +1,7 @@
 import type { TemplateModule } from "../types.ts";
-import ForgeMessageItem from "../forge/MessageItem.tsx";
-import ForgeComposer from "../forge/Composer.tsx";
+import ChubComposer from "./Composer.tsx";
 import ChubHeader from "./ChubHeader.tsx";
+import ChubMessageItem from "./MessageItem.tsx";
 
 /**
  * Chub template — shares Forge's layout structure.
@@ -12,8 +12,8 @@ import ChubHeader from "./ChubHeader.tsx";
  * composer, swap in local components here — nothing else changes.
  */
 export const chubTemplate: TemplateModule = {
-  MessageItem: ForgeMessageItem,
-  Composer: ForgeComposer,
+  MessageItem: ChubMessageItem,
+  Composer: ChubComposer,
   ChatHeader: ChubHeader,
   messageListClassName: "w-full sm:w-[60vw]",
   placeholder: (_personaName, { isDisconnected, isStreaming }) => {

@@ -1,6 +1,6 @@
 import React from "react";
 import { Avatar } from "../../components/ui/avatar.tsx";
-import MessageContent from "../../components/chat/MessageContent.tsx";
+import MessageContent from "../forge/MessageContent.tsx";
 import MessageBranch from "../../components/chat/MessageBranch.tsx";
 import MessageActions from "../../components/chat/MessageActions.tsx";
 import type { MessageItemLayoutProps } from "../../components/chat/message-item/types.ts";

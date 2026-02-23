@@ -28,7 +28,7 @@ function RegenerateButton({ onRegenerate }: { onRegenerate: () => void }) {
   );
 }
 
-export default function ForgeMessageItem({
+export default function ChubMessageItem({
   node,
   speaker,
   siblingInfo,
@@ -50,9 +50,9 @@ export default function ForgeMessageItem({
     <div
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className={`relative flex flex-row gap-[0.6rem] transition-colors duration-150 ${
-        isFirstInGroup ? "pt-2 pb-[0.15rem] px-2.5 sm:px-4" : "py-[0.15rem] px-2.5 sm:px-4"
-      } ${isHovered ? "bg-surface-raised" : "bg-transparent"}`}
+      className={`w-full sm:max-w-[59vw] mx-auto relative flex flex-row gap-[0.7rem] transition-colors duration-150 bg-neutral-800/50 my-[0.1rem] rounded-sm ${
+        isFirstInGroup ? "pt-[0.8rem] pb-[0.15rem] px-2.5 sm:px-4" : "py-[0.15rem] px-2 sm:px-4"
+      }`}
     >
       {/* Avatar column */}
       <div
@@ -65,6 +65,7 @@ export default function ForgeMessageItem({
             <Avatar
               src={speaker.avatar_url}
               alt={speaker.name}
+              borderRadius="0.5rem"
               width={'var(--chat-avatar-column-width-active)'}
               fit="natural"
             />
@@ -80,7 +81,7 @@ export default function ForgeMessageItem({
       </div>
 
       {/* Content column */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 pr-[0.5rem]">
         {isFirstInGroup && speaker && (
           <MessageMeta
             speaker={speaker}

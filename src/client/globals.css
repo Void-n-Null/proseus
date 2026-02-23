@@ -11,11 +11,6 @@
   font-display: swap;
 }
 
-/* ============================================
-   PROSEUS THEME — Forge-lineage dark UI
-   Sister project: proseus-ai
-   Same DNA, unique voice.
-   ============================================ */
 
 @theme {
   /* Surface layers — blue-tinted near-blacks, hue 250 */
@@ -55,6 +50,17 @@
   /* shadcn animation keyframes */
   --animate-in: enter 0.2s ease-out;
   --animate-out: exit 0.2s ease-in;
+   
+  --chat-italic-color: oklch(0.6 0.03 250);
+  --chat-italic-font-style: italic; /* Use "normal" to disable italics */
+  --chub-font: var(--font-body);
+  --chat-message-font-family: var(--chub-font, var(--font-body));
+  --chat-avatar-column-width: 50px;
+  --chat-avatar-column-width-mobile: 30px;
+  --chat-avatar-column-width-active: var(--chat-avatar-column-width);
+  --chat-avatar-username-size: 1.1rem;
+  --chat-message-text-size: 1rem;
+  --chat-message-text-size-mobile: 0.95rem;
 }
 
 /* shadcn animation keyframes for Radix state transitions */
@@ -127,6 +133,10 @@ html.proseus-mobile-scroll-lock body {
 ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.25); }
 
 @media (max-width: 639px) {
+  :root {
+    --chat-avatar-column-width-active: var(--chat-avatar-column-width-mobile);
+  }
+
   body {
     overscroll-behavior: none;
   }
@@ -263,6 +273,7 @@ html.proseus-mobile-scroll-lock body {
    for tighter message spacing, add small gaps between blocks. */
 .message-content p {
   margin: 0 0 0.5em;
+  color: var(--color-text-body);
 }
 .message-content p:last-child {
   margin-bottom: 0;
@@ -271,8 +282,8 @@ html.proseus-mobile-scroll-lock body {
 /* Roleplay action italics — the *action* convention.
    marked renders *text* as <em> per CommonMark. */
 .message-content em {
-  color: oklch(0.6 0.03 250);
-  font-style: italic;
+  color: var(--chat-italic-color);
+  font-style: var(--chat-italic-font-style);
 }
 
 /* Bold */
@@ -339,6 +350,17 @@ html.proseus-mobile-scroll-lock body {
 .message-content a:hover {
   color: oklch(0.78 0.15 280);
   text-decoration-color: oklch(0.78 0.15 280 / 0.7);
+}
+
+/* Markdown images */
+.message-content img {
+  display: block;
+  max-width: min(100%, 32rem);
+  height: auto;
+  margin: 0.45em 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  background: oklch(0.10 0.01 250);
 }
 
 /* YouTube embed cards */

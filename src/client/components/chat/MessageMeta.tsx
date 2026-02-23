@@ -34,7 +34,7 @@ const MessageMeta = React.memo(function MessageMeta({
   return (
     <div className="flex items-baseline gap-[0.4rem] mb-[0.15rem]">
       <span
-        className="font-semibold text-[1.1rem] text-white"
+        className="font-semibold text-[var(--chat-avatar-username-size)] text-white"
       >
         {speaker.name}
       </span>

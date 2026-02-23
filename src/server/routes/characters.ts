@@ -13,7 +13,9 @@ import {
   extractCardFromPNG,
   extractCardFromJSON,
   CardParseError,
+  type NormalizedCard,
 } from "../lib/character-card-parser.ts";
+import type { CharacterBook } from "../../shared/types.ts";
 import { createSpeaker } from "../db/speakers.ts";
 import { createChat, updateChat } from "../db/chats.ts";
 import { addMessage, getChatTree } from "../db/messages.ts";
@@ -36,12 +38,18 @@ function isPNG(data: Uint8Array): boolean {
 }
 
 /**
- * Parse Chub URL to extract creator/slug.
+ * Parse Chub URL to extract either a creator/slug pair or a numeric ID.
  * Supports: chub.ai, venus.chub.ai, characterhub.org
+ *
+ * URL patterns:
+ *   /characters/{creator}/{slug}  → { creator, slug }
+ *   /characters/{numericId}       → { numericId }
  */
-function parseChubUrl(
-  urlStr: string,
-): { creator: string; slug: string } | null {
+type ChubRef =
+  | { kind: "path"; creator: string; slug: string }
+  | { kind: "id"; numericId: string };
+
+function parseChubUrl(urlStr: string): ChubRef | null {
   try {
     const url = new URL(urlStr);
     const validHosts = [
@@ -54,14 +62,178 @@ function parseChubUrl(
 
     if (!validHosts.includes(url.hostname)) return null;
 
-    // Path pattern: /characters/{creator}/{slug}
-    const match = url.pathname.match(/^\/characters\/([^/]+)\/([^/]+)\/?$/);
-    if (!match?.[1] || !match[2]) return null;
+    // /characters/{creator}/{slug}
+    const pathMatch = url.pathname.match(
+      /^\/characters\/([^/]+)\/([^/]+)\/?$/,
+    );
+    if (pathMatch?.[1] && pathMatch[2]) {
+      return { kind: "path", creator: pathMatch[1], slug: pathMatch[2] };
+    }
 
-    return { creator: match[1], slug: match[2] };
+    // /characters/{numericId}
+    const idMatch = url.pathname.match(/^\/characters\/(\d+)\/?$/);
+    if (idMatch?.[1]) {
+      return { kind: "id", numericId: idMatch[1] };
+    }
+
+    return null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Resolve a Chub reference to the creator/slug path required for avatar URLs.
+ * Numeric IDs need a lookup via the Chub API to get the fullPath.
+ */
+async function resolveChubPath(
+  ref: ChubRef,
+): Promise<{ creator: string; slug: string; apiPath: string }> {
+  if (ref.kind === "path") {
+    return {
+      creator: ref.creator,
+      slug: ref.slug,
+      apiPath: `${ref.creator}/${ref.slug}`,
+    };
+  }
+
+  // Numeric ID — ask the API for the fullPath
+  const res = await fetch(
+    `https://api.chub.ai/api/characters/${ref.numericId}`,
+    {
+      headers: { "User-Agent": "Proseus/1.0" },
+      signal: AbortSignal.timeout(10000),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`Chub API returned HTTP ${res.status} for ID ${ref.numericId}`);
+  }
+  const json = (await res.json()) as { node?: { fullPath?: string } };
+  const fullPath = json.node?.fullPath;
+  if (!fullPath || !fullPath.includes("/")) {
+    throw new Error(`Could not resolve Chub character ID ${ref.numericId}`);
+  }
+  const parts = fullPath.split("/", 2);
+  if (!parts[0] || !parts[1]) {
+    throw new Error(`Could not resolve Chub character ID ${ref.numericId}`);
+  }
+  return { creator: parts[0], slug: parts[1], apiPath: fullPath };
+}
+
+// ── Chub API → NormalizedCard mapping ──
+
+interface ChubApiDefinition {
+  name?: string;
+  description?: string;
+  personality?: string;
+  scenario?: string;
+  first_message?: string;
+  example_dialogs?: string;
+  system_prompt?: string;
+  post_history_instructions?: string;
+  tavern_personality?: string;
+  alternate_greetings?: string[];
+  embedded_lorebook?: Record<string, unknown>;
+  extensions?: Record<string, unknown>;
+}
+
+/**
+ * Normalize Chub's API definition object to our internal NormalizedCard.
+ *
+ * The Chub API uses different field names than the V2 card spec:
+ *   first_message  → first_mes
+ *   example_dialogs → mes_example
+ *   personality     (may be in tavern_personality)
+ */
+function normalizeChubApiCard(
+  def: ChubApiDefinition,
+  nodeName?: string,
+): NormalizedCard {
+  const s = (v: unknown): string => (typeof v === "string" ? v : "");
+  const sa = (v: unknown): string[] => {
+    if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string");
+    return [];
+  };
+
+  const ext = (def.extensions ?? {}) as Record<string, unknown>;
+  const chubExt = (ext.chub ?? {}) as Record<string, unknown>;
+
+  return {
+    name: s(def.name) || s(nodeName) || "Unnamed",
+    description: s(def.description),
+    personality: s(def.personality || def.tavern_personality),
+    scenario: s(def.scenario),
+    first_mes: s(def.first_message),
+    mes_example: s(def.example_dialogs),
+
+    creator_notes: "",
+    system_prompt: s(def.system_prompt),
+    post_history_instructions: s(def.post_history_instructions),
+    alternate_greetings: sa(def.alternate_greetings),
+    tags: [],
+    creator: s(chubExt.full_path).split("/")[0] || "",
+    character_version: "",
+
+    extensions: def.extensions && typeof def.extensions === "object"
+      ? (def.extensions as Record<string, unknown>)
+      : {},
+    character_book: normalizeChubLorebook(def.embedded_lorebook),
+    source_spec: "v2",
+  };
+}
+
+function normalizeChubLorebook(
+  book: unknown,
+): CharacterBook | null {
+  if (!book || typeof book !== "object") return null;
+  const b = book as Record<string, unknown>;
+
+  const entries = Array.isArray(b.entries)
+    ? b.entries
+        .filter((e): e is Record<string, unknown> => e && typeof e === "object")
+        .map((e) => ({
+          keys: Array.isArray(e.keys)
+            ? e.keys.filter((k): k is string => typeof k === "string")
+            : [],
+          content: typeof e.content === "string" ? e.content : "",
+          extensions:
+            e.extensions && typeof e.extensions === "object"
+              ? (e.extensions as Record<string, unknown>)
+              : {},
+          enabled: typeof e.enabled === "boolean" ? e.enabled : true,
+          insertion_order:
+            typeof e.insertion_order === "number" ? e.insertion_order : 0,
+          case_sensitive:
+            typeof e.case_sensitive === "boolean" ? e.case_sensitive : undefined,
+          name: typeof e.name === "string" ? e.name : undefined,
+          priority: typeof e.priority === "number" ? e.priority : undefined,
+          id: typeof e.id === "number" ? e.id : undefined,
+          comment: typeof e.comment === "string" ? e.comment : undefined,
+          selective: typeof e.selective === "boolean" ? e.selective : undefined,
+          secondary_keys: Array.isArray(e.secondary_keys)
+            ? e.secondary_keys.filter((k): k is string => typeof k === "string")
+            : [],
+          constant: typeof e.constant === "boolean" ? e.constant : undefined,
+          position:
+            e.position === "before_char" || e.position === "after_char"
+              ? (e.position as "before_char" | "after_char")
+              : undefined,
+        }))
+    : [];
+
+  return {
+    name: typeof b.name === "string" ? b.name : undefined,
+    description: typeof b.description === "string" ? b.description : undefined,
+    scan_depth: typeof b.scan_depth === "number" ? b.scan_depth : undefined,
+    token_budget: typeof b.token_budget === "number" ? b.token_budget : undefined,
+    recursive_scanning:
+      typeof b.recursive_scanning === "boolean" ? b.recursive_scanning : undefined,
+    extensions:
+      b.extensions && typeof b.extensions === "object"
+        ? (b.extensions as Record<string, unknown>)
+        : {},
+    entries,
+  };
 }
 
 export function createCharactersRouter(db: Database): Hono {
@@ -200,6 +372,12 @@ export function createCharactersRouter(db: Database): Hono {
   });
 
   // POST /import-url — Chub URL import
+  //
+  // Strategy: fetch card data from the Chub JSON API (which preserves raw
+  // HTML like <img> tags in first_mes / alternate_greetings), and fetch the
+  // PNG separately just for the avatar image. Chub's PNG avatar endpoint
+  // sanitizes text fields, stripping HTML — so we never parse card data
+  // from it.
   app.post("/import-url", async (c) => {
     const body = await c.req.json<{ url?: string }>();
 
@@ -207,50 +385,80 @@ export function createCharactersRouter(db: Database): Hono {
       return c.json({ error: "url is required" }, 400);
     }
 
-    const parsed = parseChubUrl(body.url);
-    if (!parsed) {
+    const ref = parseChubUrl(body.url);
+    if (!ref) {
       return c.json(
         {
           error:
-            "Invalid URL. Expected a Chub character URL like https://chub.ai/characters/{creator}/{slug}",
+            "Invalid URL. Expected a Chub character URL like https://chub.ai/characters/{creator}/{slug} or https://chub.ai/characters/{id}",
         },
         400,
       );
     }
 
-    const avatarUrl = `https://avatars.charhub.io/avatars/${parsed.creator}/${parsed.slug}/chara_card_v2.png`;
-
-    let response: Response;
+    // Step 1: Resolve numeric IDs to creator/slug and fetch card data from API
+    let resolved: { creator: string; slug: string; apiPath: string };
+    let card: NormalizedCard;
     try {
-      response = await fetch(avatarUrl, {
-        headers: {
-          "User-Agent": "Proseus/1.0",
-        },
+      resolved = await resolveChubPath(ref);
+
+      const apiUrl = `https://api.chub.ai/api/characters/${resolved.apiPath}?full=true`;
+      const apiRes = await fetch(apiUrl, {
+        headers: { "User-Agent": "Proseus/1.0" },
         signal: AbortSignal.timeout(15000),
       });
+
+      if (!apiRes.ok) {
+        return c.json(
+          {
+            error: `Chub API returned HTTP ${apiRes.status}. Try downloading the PNG manually and importing the file.`,
+          },
+          502,
+        );
+      }
+
+      const apiJson = (await apiRes.json()) as {
+        node?: { name?: string; definition?: ChubApiDefinition };
+      };
+      const def = apiJson.node?.definition;
+      if (!def || typeof def !== "object") {
+        return c.json(
+          { error: "Chub API returned no character definition. The character may have been deleted." },
+          404,
+        );
+      }
+
+      card = normalizeChubApiCard(def, apiJson.node?.name);
     } catch (err) {
       return c.json(
         {
-          error: `Could not download from Chub. Try downloading the PNG manually and importing the file. (${err instanceof Error ? err.message : "Network error"})`,
+          error: `Could not fetch from Chub API. Try downloading the PNG manually and importing the file. (${err instanceof Error ? err.message : "Network error"})`,
         },
         502,
       );
     }
 
-    if (!response.ok) {
-      return c.json(
-        {
-          error: `Chub download failed (HTTP ${response.status}). Try downloading the PNG manually and importing the file.`,
-        },
-        502,
-      );
+    // Step 2: Fetch the avatar PNG (just for the image — we ignore its tEXt card data)
+    let avatarBuffer: Uint8Array | undefined;
+    try {
+      const avatarUrl = `https://avatars.charhub.io/avatars/${resolved.creator}/${resolved.slug}/chara_card_v2.png`;
+      const avatarRes = await fetch(avatarUrl, {
+        headers: { "User-Agent": "Proseus/1.0" },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (avatarRes.ok) {
+        avatarBuffer = new Uint8Array(await avatarRes.arrayBuffer());
+      }
+    } catch {
+      // Avatar fetch failed — non-fatal, character imports without an avatar
     }
-
-    const buffer = new Uint8Array(await response.arrayBuffer());
 
     try {
-      const card = extractCardFromPNG(buffer);
-      const { character, duplicate } = await createCharacter(db, card, buffer);
+      const { character, duplicate } = await createCharacter(
+        db,
+        card,
+        avatarBuffer,
+      );
       return c.json({ character, duplicate });
     } catch (err) {
       if (err instanceof CardParseError) {

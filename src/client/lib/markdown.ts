@@ -147,17 +147,64 @@ function extractYouTubeId(url: string): string | null {
 function youtubeCard(videoId: string, href: string, text: string): string {
   const thumb = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
   const escaped = href.replace(/"/g, '&quot;');
-  const label = text || 'YouTube video';
+  const label = escapeHtml(text || 'YouTube video');
   return (
     `<a class="yt-embed" href="${escaped}" target="_blank" rel="noopener noreferrer" title="${label}">` +
       `<span class="yt-embed-thumb" style="background-image:url('${thumb}')">` +
         `<span class="yt-embed-play">&#9654;</span>` +
       `</span>` +
       (text && text !== href
-        ? `<span class="yt-embed-title">${text}</span>`
+        ? `<span class="yt-embed-title">${escapeHtml(text)}</span>`
         : '') +
     `</a>`
   );
+}
+
+/** Escape text before inserting into an HTML attribute/body. */
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+/** Direct image URL extensions that should be embeddable. */
+const IMAGE_EXTENSIONS = /\.(?:png|jpe?g|gif|webp|avif|bmp)(?:$|\?)/i;
+
+/** Best-effort HTTPS upgrade for known hosts that support it. */
+function normalizeImageUrl(rawUrl: string): string {
+  try {
+    const url = new URL(rawUrl);
+    if (url.protocol === 'http:' && url.hostname === 'files.catbox.moe') {
+      url.protocol = 'https:';
+      return url.toString();
+    }
+  } catch {
+    // Keep original URL if parsing fails.
+  }
+  return rawUrl;
+}
+
+/** Return true for links that should be rendered as inline images. */
+function isEmbeddableImageUrl(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    if (url.hostname === 'files.catbox.moe') return true;
+    return IMAGE_EXTENSIONS.test(url.pathname + url.search);
+  } catch {
+    return false;
+  }
+}
+
+/** Render a standard markdown image with safe defaults. */
+function imageTag(href: string, altText: string, title?: string | null): string {
+  const src = normalizeImageUrl(href).replace(/"/g, '&quot;');
+  const alt = escapeHtml(altText || 'Image');
+  const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
+  return `<img src="${src}" alt="${alt}" loading="lazy" decoding="async" referrerpolicy="no-referrer"${titleAttr}>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -165,19 +212,29 @@ function youtubeCard(videoId: string, href: string, text: string): string {
 // ---------------------------------------------------------------------------
 
 const renderer = {
-  link({ href, text }: { href: string; text: string }): string | false {
+  link({ href, text }: { href?: string; text?: string }): string | false {
     if (!href) return false;
+    const label = text ?? '';
     const videoId = extractYouTubeId(href);
-    if (videoId) return youtubeCard(videoId, href, text);
+    if (videoId) return youtubeCard(videoId, href, label);
+    const shouldAutoEmbedImage = isEmbeddableImageUrl(href) && (!label || label === href);
+    if (shouldAutoEmbedImage) return imageTag(href, 'Image');
     // Fall through to default renderer
     return false;
   },
-  image({ href, text }: { href: string; text: string }): string | false {
+  image({
+    href,
+    text,
+    title,
+  }: {
+    href?: string;
+    text?: string;
+    title?: string | null;
+  }): string | false {
     if (!href) return false;
     const videoId = extractYouTubeId(href);
-    if (videoId) return youtubeCard(videoId, href, text || '');
-    // Fall through to default renderer
-    return false;
+    if (videoId) return youtubeCard(videoId, href, text ?? '');
+    return imageTag(href, text ?? 'Image', title);
   },
 };
 
@@ -220,10 +277,10 @@ const PURIFY_CONFIG: PurifyConfig = {
   // Allow all standard HTML elements that marked produces,
   // plus span (used by highlight.js for syntax tokens).
   USE_PROFILES: { html: true },
-  // Allow class attributes (needed for hljs-* classes on spans)
-  ADD_ATTR: ['class', 'target', 'rel'],
-  // Links should open in new tab
-  ADD_TAGS: [],
+  // Explicitly permit image tags/attrs used by markdown output.
+  ADD_TAGS: ['img'],
+  // Allow classes, links, and safe image attributes.
+  ADD_ATTR: ['class', 'target', 'rel', 'src', 'alt', 'title', 'loading', 'decoding', 'referrerpolicy'],
   // Ensure we get a plain string, not TrustedHTML
   RETURN_TRUSTED_TYPE: false,
 };

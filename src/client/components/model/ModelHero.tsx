@@ -374,6 +374,64 @@ function NoModelSelectedPane({
 }
 
 // ============================================
+// Provider Usage Bar — compact cost/request/token stats
+// ============================================
+
+/** Format a token count into a compact human string (e.g., "1.2M", "845k", "320"). */
+function formatTokenCount(tokens: number): string {
+  if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`;
+  if (tokens >= 1_000) return `${(tokens / 1_000).toFixed(tokens >= 10_000 ? 0 : 1)}k`;
+  return tokens.toLocaleString();
+}
+
+/** Format a USD cost with appropriate precision. */
+function formatCost(cost: number): string {
+  if (cost === 0) return "$0.00";
+  if (cost < 0.001) return "<$0.001";
+  if (cost < 0.01) return `$${cost.toFixed(3)}`;
+  if (cost < 1) return `$${cost.toFixed(3)}`;
+  return `$${cost.toFixed(2)}`;
+}
+
+interface ProviderUsageBarProps {
+  cost: number;
+  requests: number;
+  tokens: number;
+  providerLabel: string;
+}
+
+function ProviderUsageBar({ cost, requests, tokens, providerLabel }: ProviderUsageBarProps) {
+  const stats: { label: string; value: string }[] = [
+    { label: "Spent", value: formatCost(cost) },
+    { label: "Requests", value: requests.toLocaleString() },
+    { label: "Tokens", value: formatTokenCount(tokens) },
+  ];
+
+  return (
+    <div
+      className="flex items-center gap-0 rounded-xl border border-border bg-[oklch(0.15_0.005_300)] px-1"
+      title={`Usage stats for ${providerLabel}`}
+    >
+      {stats.map((stat, i) => (
+        <React.Fragment key={stat.label}>
+          {i > 0 && (
+            <div className="w-px h-5 bg-border shrink-0" />
+          )}
+          <div className="flex items-center gap-1.5 px-3 py-1.5">
+            <span className="text-[10px] uppercase tracking-widest text-text-dim font-medium whitespace-nowrap">
+              {stat.label}
+            </span>
+            <span className="text-xs font-mono font-medium text-text-body whitespace-nowrap">
+              {stat.value}
+            </span>
+          </div>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+// ============================================
 // Selected Model Detail Pane
 // ============================================
 
@@ -685,7 +743,6 @@ export default function ModelHero({
     staleTime: 30_000, // 30s — usage changes infrequently
   });
   const providerCost = costData?.providers.find((p) => p.provider === provider);
-  const lifetimeCost = providerCost?.total_cost ?? 0;
 
   // Inline API key state (for disconnected providers)
   const [inlineKey, setInlineKey] = useState("");
@@ -745,11 +802,14 @@ export default function ModelHero({
               {isValidating ? "Disconnecting..." : "Disconnect Provider"}
             </button>
 
-            {/* Lifetime cost for this provider */}
-            {lifetimeCost > 0 && (
-              <span className="text-xs text-text-dim whitespace-nowrap" title={`Total spent on ${providerMeta.label}`}>
-                Lifetime: ${lifetimeCost < 0.01 ? "<0.01" : lifetimeCost.toFixed(2)}
-              </span>
+            {/* Provider usage stats */}
+            {providerCost && providerCost.request_count > 0 && (
+              <ProviderUsageBar
+                cost={providerCost.total_cost}
+                requests={providerCost.request_count}
+                tokens={providerCost.total_tokens}
+                providerLabel={providerMeta.label}
+              />
             )}
           </>
         )}

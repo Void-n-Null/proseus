@@ -143,6 +143,51 @@ const Composer = React.memo(function Composer({
     }
   }, [isStreaming, canSend, canGenerate, handleSend, onCancel, onGenerate]);
 
+  /** Default bar-chart equalizer with Forge's orange→rose→purple gradient. */
+  const defaultDrawVisualizer = useCallback(
+    (canvas: HTMLCanvasElement, canvasCtx: CanvasRenderingContext2D, dataArray: Uint8Array) => {
+      const { width, height } = canvas;
+      canvasCtx.clearRect(0, 0, width, height);
+
+      const barCount = Math.min(dataArray.length, 64);
+      const totalBarWidth = width * 0.85;
+      const barWidth = totalBarWidth / barCount;
+      const gap = 1;
+      const startX = (width - totalBarWidth) / 2;
+
+      for (let i = 0; i < barCount; i++) {
+        const value = (dataArray[i] ?? 0) / 255;
+        const barHeight = Math.max(2, value * height * 0.85);
+
+        const t = i / barCount;
+        let r: number, g: number, b: number;
+        if (t < 0.5) {
+          const p = t * 2;
+          r = 249 + (244 - 249) * p;
+          g = 115 + (63 - 115) * p;
+          b = 22 + (94 - 22) * p;
+        } else {
+          const p = (t - 0.5) * 2;
+          r = 244 + (139 - 244) * p;
+          g = 63 + (92 - 63) * p;
+          b = 94 + (246 - 94) * p;
+        }
+
+        const alpha = 0.6 + value * 0.4;
+        canvasCtx.fillStyle = `rgba(${r | 0}, ${g | 0}, ${b | 0}, ${alpha})`;
+
+        const x = startX + i * barWidth;
+        const y = (height - barHeight) / 2;
+        canvasCtx.beginPath();
+        canvasCtx.roundRect(x, y, barWidth - gap, barHeight, 1.5);
+        canvasCtx.fill();
+      }
+    },
+    [],
+  );
+
+  const drawFn = template.drawVisualizer ?? defaultDrawVisualizer;
+
   const startVisualizer = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -169,50 +214,14 @@ const Composer = React.memo(function Composer({
 
         animFrameRef.current = requestAnimationFrame(draw);
         analyser.getByteFrequencyData(dataArray);
-
-        const { width, height } = canvas;
-        canvasCtx.clearRect(0, 0, width, height);
-
-        const barCount = Math.min(bufferLength, 64);
-        const totalBarWidth = width * 0.85;
-        const barWidth = totalBarWidth / barCount;
-        const gap = 1;
-        const startX = (width - totalBarWidth) / 2;
-
-        for (let i = 0; i < barCount; i++) {
-          const value = (dataArray[i] ?? 0) / 255;
-          const barHeight = Math.max(2, value * height * 0.85);
-
-          const t = i / barCount;
-          let r: number, g: number, b: number;
-          if (t < 0.5) {
-            const p = t * 2;
-            r = 249 + (244 - 249) * p;
-            g = 115 + (63 - 115) * p;
-            b = 22 + (94 - 22) * p;
-          } else {
-            const p = (t - 0.5) * 2;
-            r = 244 + (139 - 244) * p;
-            g = 63 + (92 - 63) * p;
-            b = 94 + (246 - 94) * p;
-          }
-
-          const alpha = 0.6 + value * 0.4;
-          canvasCtx.fillStyle = `rgba(${r | 0}, ${g | 0}, ${b | 0}, ${alpha})`;
-
-          const x = startX + i * barWidth;
-          const y = (height - barHeight) / 2;
-          canvasCtx.beginPath();
-          canvasCtx.roundRect(x, y, barWidth - gap, barHeight, 1.5);
-          canvasCtx.fill();
-        }
+        drawFn(canvas, canvasCtx, dataArray);
       };
 
       draw();
     } catch (err) {
       console.error("Failed to start audio visualizer:", err);
     }
-  }, []);
+  }, [drawFn]);
 
   const stopVisualizer = useCallback(() => {
     if (animFrameRef.current) {

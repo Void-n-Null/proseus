@@ -114,7 +114,6 @@ export default function DiscordMessageItem({
           <div className="flex items-baseline gap-2 mb-[0.125rem]">
             <span
               className="font-medium text-[1rem] leading-[1.375rem]"
-              style={{ color: speaker.color ?? "#f2f3f5" /* intentionally dynamic */ }}
             >
               {speaker.name}
             </span>

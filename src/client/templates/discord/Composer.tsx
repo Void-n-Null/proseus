@@ -225,16 +225,16 @@ export default function DiscordComposer({
             {isListening && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 40, opacity: 1 }}
+                animate={{ height: 24, opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
-                className="overflow-hidden px-1"
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                className="overflow-hidden"
               >
                 <canvas
                   ref={canvasRef}
                   width={600}
-                  height={40}
-                  className="w-full h-[40px] block"
+                  height={24}
+                  className="w-full h-[24px] block"
                 />
               </motion.div>
             )}

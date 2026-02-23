@@ -13,11 +13,13 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import type { RefObject } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { Model, ModelSortKey, ModelFilters } from "../../../shared/models.ts";
 import { formatContext, formatPrice, getModelCreator, getCreatorBranding, getCreatorLogoUrl } from "../../../shared/models.ts";
 import { getProviderMeta, type ProviderName } from "../../../shared/providers.ts";
 import ProviderIcon from "../ui/provider-icon.tsx";
 import ModelProviderDropdown from "./ModelProviderDropdown.tsx";
+import { api } from "../../api/client.ts";
 
 // ============================================
 // Sort config
@@ -676,6 +678,15 @@ export default function ModelHero({
   const isValidating = connectState === "validating";
   const isFailed = connectState === "failed";
 
+  // Fetch lifetime cost for all providers
+  const { data: costData } = useQuery({
+    queryKey: ["usage", "providers"],
+    queryFn: () => api.usage.providers(),
+    staleTime: 30_000, // 30s — usage changes infrequently
+  });
+  const providerCost = costData?.providers.find((p) => p.provider === provider);
+  const lifetimeCost = providerCost?.total_cost ?? 0;
+
   // Inline API key state (for disconnected providers)
   const [inlineKey, setInlineKey] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -723,15 +734,24 @@ export default function ModelHero({
         />
 
         {providerConnected && (
-          <button
-            type="button"
-            onClick={onDisconnect}
-            disabled={isValidating}
-            className="group self-start flex items-center gap-1.5 text-xs text-text-dim hover:text-destructive transition-colors disabled:opacity-40 disabled:pointer-events-none"
-          >
-            <FilterIcon name="unlink" className="w-3 h-3" />
-            {isValidating ? "Disconnecting..." : "Disconnect"}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={onDisconnect}
+              disabled={isValidating}
+              className="group border-surface-deep border rounded-2xl bg-[oklch(0.20_0.007_300)] hover:bg-destructive/30 max-w-[200px] w-full justify-center flex items-center gap-1.5 text-xs text-text-dim hover:text-neutral-400 hover:font-bold transition-colors disabled:opacity-40 disabled:pointer-events-none h-full"
+            >
+              <FilterIcon name="unlink" className="w-3 h-3" />
+              {isValidating ? "Disconnecting..." : "Disconnect Provider"}
+            </button>
+
+            {/* Lifetime cost for this provider */}
+            {lifetimeCost > 0 && (
+              <span className="text-xs text-text-dim whitespace-nowrap" title={`Total spent on ${providerMeta.label}`}>
+                Lifetime: ${lifetimeCost < 0.01 ? "<0.01" : lifetimeCost.toFixed(2)}
+              </span>
+            )}
+          </>
         )}
       </div>
 
@@ -841,7 +861,7 @@ export default function ModelHero({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search models..."
-            className="w-full h-10 pl-10 pr-9 rounded-2xl border border-border text-sm text-foreground placeholder-text-dim focus:outline-none focus:border-primary/25 focus:shadow-[0_0_0_1px_oklch(0.70_0.15_280/0.08)] transition-all duration-150 bg-surface-sunken"
+            className="w-full h-10 pl-10 pr-9 rounded-2xl border border-border text-sm text-foreground placeholder-text-dim focus:outline-none focus:border-primary/25 focus:shadow-[0_0_0_1px_oklch(0.70_0.15_280/0.08)] transition-all duration-150 bg-surface-deep"
           />
           {search && (
             <button

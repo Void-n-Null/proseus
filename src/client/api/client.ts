@@ -38,6 +38,8 @@ import type {
   SetChatPersonaResponse,
   GetPromptTemplateResponse,
   UpdatePromptTemplateResponse,
+  ListProviderCostsResponse,
+  ListUsageResponse,
 } from "../../shared/api-types.ts";
 import type { PromptTemplate } from "../../shared/prompt-template.ts";
 import type { Chat, Speaker } from "../../shared/types.ts";
@@ -279,6 +281,32 @@ export const api = {
         method: "PUT",
         body: JSON.stringify({ persona_id: personaId }),
       }),
+  },
+  usage: {
+    providers: (provider?: string) => {
+      const params = new URLSearchParams();
+      if (provider) params.set("provider", provider);
+      const query = params.toString();
+      return fetchJson<ListProviderCostsResponse>(
+        `/usage/providers${query ? `?${query}` : ""}`,
+      );
+    },
+    list: (opts?: {
+      provider?: string;
+      model?: string;
+      chat_id?: string;
+      start_date?: string;
+      end_date?: string;
+    }) => {
+      const params = new URLSearchParams();
+      if (opts?.provider) params.set("provider", opts.provider);
+      if (opts?.model) params.set("model", opts.model);
+      if (opts?.chat_id) params.set("chat_id", opts.chat_id);
+      if (opts?.start_date) params.set("start_date", opts.start_date);
+      if (opts?.end_date) params.set("end_date", opts.end_date);
+      const query = params.toString();
+      return fetchJson<ListUsageResponse>(`/usage${query ? `?${query}` : ""}`);
+    },
   },
   dev: {
     seed: () => fetchJson<{ ok: true }>("/dev/seed", { method: "POST" }),

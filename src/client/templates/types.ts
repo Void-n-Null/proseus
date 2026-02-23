@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import type { MessageItemLayoutProps } from "../components/chat/message-item/types.ts";
-import type { ComposerLayoutProps } from "../components/chat/composer/types.ts";
+import type { ComposerLayoutProps, VisualizerDrawFn } from "../components/chat/composer/types.ts";
 import type { ChatHeaderLayoutProps } from "../components/chat/chat-header/types.ts";
 
 /**
@@ -34,4 +34,10 @@ export interface TemplateModule {
     personaName: string | undefined,
     state: { isDisconnected: boolean; isStreaming: boolean },
   ) => string;
+
+  /**
+   * Optional custom draw function for the audio visualizer canvas.
+   * When omitted the default bar-chart equalizer is used.
+   */
+  drawVisualizer?: VisualizerDrawFn;
 }

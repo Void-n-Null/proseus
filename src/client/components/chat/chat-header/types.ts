@@ -1,4 +1,5 @@
 import type React from "react";
+import type { DesignTemplateId } from "../../../../shared/design-templates.ts";
 
 export interface ChatHeaderLayoutProps {
   chatName: string;
@@ -12,10 +13,14 @@ export interface ChatHeaderLayoutProps {
   characterAvatarUrl: string | null;
   characterColor: string | null;
 
-  /* Export menu */
+  /* Export */
   isExporting: boolean;
-  exportMenuOpen: boolean;
-  setExportMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  exportMenuRef: React.RefObject<HTMLDivElement | null>;
   onExport: (format: "chat" | "jsonl" | "txt") => void;
+
+  /* Model dashboard */
+  onOpenModelDashboard: () => void;
+
+  /* Design template / theme switching */
+  designTemplateId: DesignTemplateId;
+  onSelectDesignTemplate: (id: DesignTemplateId) => void;
 }

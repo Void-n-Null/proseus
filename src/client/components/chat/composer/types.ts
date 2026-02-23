@@ -1,6 +1,19 @@
 import type React from "react";
 import type { Persona } from "../../../../shared/types.ts";
 
+/**
+ * Signature for a custom audio-visualizer draw function.
+ *
+ * Templates can supply their own renderer to replace the default bar-chart
+ * equalizer. The function receives the canvas, its 2D context, and the
+ * current frequency data snapshot and is called once per animation frame.
+ */
+export type VisualizerDrawFn = (
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  dataArray: Uint8Array,
+) => void;
+
 export interface ComposerLayoutProps {
   draft: string;
   isFocused: boolean;

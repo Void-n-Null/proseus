@@ -23,4 +23,5 @@ export const chubTemplate: TemplateModule = {
     if (isStreaming) return "Generating...";
     return "Send a message...";
   },
+  sidebarMode: "toggle",
 };

@@ -13,4 +13,5 @@ export const forgeTemplate: TemplateModule = {
     if (isStreaming) return "Generating...";
     return "Send a message...";
   },
+  sidebarMode: "toggle",
 };

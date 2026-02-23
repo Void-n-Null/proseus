@@ -110,4 +110,5 @@ export const discordTemplate: TemplateModule = {
     return personaName ? `Message @${personaName}` : "Message ...";
   },
   drawVisualizer: drawDiscordVisualizer,
+  sidebarMode: "always",
 };

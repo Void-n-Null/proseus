@@ -5,8 +5,6 @@ export interface ChatHeaderLayoutProps {
   chatName: string;
   isMobile: boolean;
   onBack?: () => void;
-  showAppShellHeader?: boolean;
-  onToggleAppShellHeader?: () => void;
 
   /* Character info (for templates that show the avatar in the header) */
   characterName: string | null;

@@ -40,4 +40,16 @@ export interface TemplateModule {
    * When omitted the default bar-chart equalizer is used.
    */
   drawVisualizer?: VisualizerDrawFn;
+
+  /**
+   * Controls how the sidebar behaves on desktop when this template is active.
+   *
+   * - `"always"` — sidebar is always visible alongside the chat (e.g. Discord).
+   * - `"toggle"` — sidebar is collapsible; the chat header's back button
+   *   toggles it (e.g. Forge, Chub).
+   *
+   * On mobile the sidebar behaviour is the same regardless of this setting
+   * (full-screen overlay with slide-in chat).
+   */
+  sidebarMode: "always" | "toggle";
 }

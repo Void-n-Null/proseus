@@ -27,16 +27,16 @@ export default function DiscordComposer({
   draft,
 }: ComposerLayoutProps) {
   return (
-    <div className="shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-2">
+    <div className="shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-2" style={{ fontFamily: "var(--discord-font)" }}>
       <div className="max-w-none mx-auto">
         <div className="relative pb-[0.3rem]">
-          <div className="relative min-h-[3.5rem] max-h-[30rem] flex items-end gap-2 rounded-[10px] border border-[#34343a]/50 bg-[#232327] px-3 py-2">
+            <div className="relative min-h-[3.5rem] max-h-[30rem] flex items-end gap-2 rounded-[10px] border border-[#404040]/20 bg-[#222327] px-3 py-2">
             <div ref={menuRef} className="relative self-start">
               <button
                 type="button"
                 onClick={() => setMenuOpen(!menuOpen)}
                 title="Composer actions"
-                className="shrink-0 p-1 ml-[-0.5px] pt-1.5 rounded-lg transition-all duration-200 bg-transparent border-none cursor-pointer text-[hsl(214_8%_74%_/_0.85)] hover:text-[hsl(214_10%_90%_/_0.96)]"
+                className="shrink-0 p-1 ml-[-0.5px] pt-1.5 rounded-lg transition-all duration-200 bg-transparent border-none cursor-pointer text-[#b9bbbe] hover:text-white"
               >
                 <svg
                   width="25"
@@ -113,7 +113,7 @@ export default function DiscordComposer({
               className={[
                 "flex-1 pl-[0.75rem]",
                 "resize-none bg-transparent",
-                "text-[hsl(210_8%_93%_/_0.95)] placeholder-[hsl(214_7%_62%_/_0.6)]",
+                "text-white placeholder-[#72767d]",
                 "focus:outline-none",
                 "text-[1rem] font-sans font-[360]",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -131,7 +131,7 @@ export default function DiscordComposer({
                   "disabled:cursor-not-allowed disabled:opacity-30",
                   isListening
                     ? "text-[#f43f5e]"
-                    : "text-[hsl(214_8%_72%_/_0.9)] hover:text-[hsl(214_10%_89%_/_0.96)]",
+                    : "text-[#b9bbbe] hover:text-white",
                 ].join(" ")}
                 animate={
                   isListening
@@ -178,8 +178,8 @@ export default function DiscordComposer({
                   isStreaming
                     ? "text-[#ff6b6b]"
                     : canSend || canGenerate
-                      ? "text-[hsl(214_12%_92%_/_0.98)]"
-                      : "text-[hsl(214_8%_62%_/_0.8)]",
+                      ? "text-white"
+                      : "text-[#72767d]",
                 ].join(" ")}
                 aria-label={
                   isStreaming

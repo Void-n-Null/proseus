@@ -54,7 +54,7 @@ export default function DiscordChatHeader({
     "shrink-0 w-8 h-8 flex items-center justify-center rounded text-[#b5bac1] hover:text-[#dbdee1] transition-colors";
 
   return (
-    <div className="shrink-0 h-12 border-b-[1.5px] border-neutral-800  px-3 flex items-center gap-2">
+    <div className="shrink-0 h-12 border-b border-[#404040] bg-[#1a1a1e] px-3 flex items-center gap-2" style={{ fontFamily: "var(--discord-font)" }}>
       {/* -- Left: back (mobile) + avatar + name -- */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
         {isMobile && onBack && (

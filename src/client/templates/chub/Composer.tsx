@@ -47,7 +47,7 @@ export default function ChubComposer({
         >
           <div
             className={[
-              "relative flex items-stretch gap-2 md:rounded-[6px] md:px-2 py-2 bg-neutral-800/50",
+              "relative flex items-stretch gap-2 md:rounded-[6px] md:px-2 pb-1 bg-neutral-800/50",
             ].join(" ")}
           >
             <div ref={menuRef} className="relative flex items-center pl-2">
@@ -70,7 +70,7 @@ export default function ChubComposer({
 
               {menuOpen && (
                 <div className="absolute bottom-[calc(100%+6px)] left-0 min-w-[220px] max-w-[calc(100vw-1rem)] rounded-md border border-white/10 bg-[#1e1f22] shadow-[0_-8px_22px_rgba(0,0,0,0.5)] z-50 overflow-hidden p-1">
-                  <div className="px-2 pt-[0.35rem] pb-1 text-[0.64rem] text-[#78859a] uppercase tracking-[0.06em]">
+                  <div className="px-2 pt-[0.35rem] pb-1 text-[0.6rem] text-[#78859a] uppercase tracking-[0.06em]">
                     Persona
                   </div>
                   <PersonaPickerItem
@@ -126,11 +126,11 @@ export default function ChubComposer({
               placeholder={composerPlaceholder}
               rows={3}
               className={[
-                "flex-1 min-h-[84px] pt-3 pr-2 pl-1 pt-5",
+                "flex-1 min-h-[84px] pt-3 pr-2 pl-0 pt-5",
                 "resize-none bg-transparent",
                 "text-[#c8d3e6] placeholder-neutral-600",
                 "focus:outline-none",
-                "leading-6 text-[1.05rem]",
+                "leading-6 text-[1rem]",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
               ].join(" ")}
               style={{ fontFamily: "var(--chub-font)" }}

@@ -139,6 +139,35 @@ export function runMigrations(db: Database): void {
     CREATE INDEX IF NOT EXISTS idx_personas_is_global ON personas(is_global);
   `);
 
+  // ── Usage logs table (cost tracking) ──
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS usage_logs (
+      id                TEXT PRIMARY KEY,
+      date              TEXT NOT NULL,
+      provider          TEXT NOT NULL,
+      model             TEXT NOT NULL,
+      chat_id           TEXT REFERENCES chats(id) ON DELETE SET NULL,
+      speaker_id        TEXT REFERENCES speakers(id) ON DELETE SET NULL,
+      request_count     INTEGER NOT NULL DEFAULT 0,
+      prompt_tokens     INTEGER NOT NULL DEFAULT 0,
+      completion_tokens INTEGER NOT NULL DEFAULT 0,
+      total_tokens      INTEGER NOT NULL DEFAULT 0,
+      cost_usd          REAL NOT NULL DEFAULT 0.0,
+      input_price       REAL,
+      output_price      REAL,
+      created_at        INTEGER NOT NULL,
+      updated_at        INTEGER NOT NULL
+    );
+  `);
+
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_usage_date ON usage_logs(date);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_usage_provider ON usage_logs(provider);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_usage_model ON usage_logs(model);`);
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_usage_aggregate_key
+    ON usage_logs(date, provider, model, chat_id, speaker_id);
+  `);
+
   // ── Migrations for existing tables ──
   // These ALTER TABLEs add columns introduced in Phase 3+.
   // Each is wrapped in try/catch because ALTER TABLE ADD COLUMN

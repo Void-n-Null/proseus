@@ -248,3 +248,35 @@ export interface GetPromptTemplateResponse {
 export interface UpdatePromptTemplateResponse {
   template: PromptTemplate;
 }
+
+// ── Usage endpoints ──
+
+export interface ProviderCostItem {
+  provider: string;
+  total_cost: number;
+  total_tokens: number;
+  request_count: number;
+}
+
+export interface ListProviderCostsResponse {
+  providers: ProviderCostItem[];
+}
+
+export interface UsageSummaryItem {
+  date: string;
+  provider: string;
+  model: string;
+  chat_id: string | null;
+  speaker_id: string | null;
+  request_count: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cost_usd: number;
+  input_price: number | null;
+  output_price: number | null;
+}
+
+export interface ListUsageResponse {
+  usage: UsageSummaryItem[];
+}

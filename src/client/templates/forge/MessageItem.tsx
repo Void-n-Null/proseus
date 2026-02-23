@@ -7,6 +7,7 @@ import MessageActions from "../../components/chat/MessageActions.tsx";
 import type { MessageItemLayoutProps } from "../../components/chat/message-item/types.ts";
 import { useIsStreaming } from "../../stores/streaming.ts";
 import { RefreshCcw } from "lucide-react";
+import { useIsMobile } from "../../hooks/useMediaQuery.ts";
 
 function RegenerateButton({ onRegenerate }: { onRegenerate: () => void }) {
   const isStreamingGlobal = useIsStreaming();
@@ -46,6 +47,7 @@ export default function ForgeMessageItem({
   handleEditCancel,
   handleStartEdit,
 }: MessageItemLayoutProps) {
+  const isMobile = useIsMobile();
   return (
     <div
       onMouseEnter={onMouseEnter}
@@ -57,7 +59,7 @@ export default function ForgeMessageItem({
       }`}
       /* intentionally dynamic: max-width, margin, border-radius, background from design-template CSS vars */
       style={{
-        maxWidth: 'var(--chat-message-max-width)',
+        maxWidth: isMobile ? 'var(--chat-message-max-width-mobile)' : 'var(--chat-message-max-width)',
         margin: '0 auto',
         marginTop: 'var(--chat-message-margin-y)',
         marginBottom: 'var(--chat-message-margin-y)',

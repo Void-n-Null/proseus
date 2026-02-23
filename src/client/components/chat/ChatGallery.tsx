@@ -13,6 +13,7 @@ interface ChatGalleryProps {
   activeChatId: string | null;
   onSelectChat: (id: string) => void;
   isLoading: boolean;
+  tabs?: React.ReactNode;
 }
 
 const SORT_OPTIONS: Array<{ value: ChatListSort; label: string }> = [
@@ -42,6 +43,7 @@ export default function ChatGallery({
   activeChatId,
   onSelectChat,
   isLoading,
+  tabs,
 }: ChatGalleryProps) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -122,6 +124,12 @@ export default function ChatGallery({
 
   return (
     <div className="w-full sm:w-[320px] sm:min-w-[320px] h-full flex flex-col bg-surface border-r border-border">
+      {tabs && (
+        <div className="px-2 py-2 border-b border-border bg-surface">
+          {tabs}
+        </div>
+      )}
+
       <div className="p-3 border-b border-border flex flex-col gap-2">
         <span className="text-xs font-normal tracking-[0.15em] text-text-muted uppercase">
           Chats

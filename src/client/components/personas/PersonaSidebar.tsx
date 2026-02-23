@@ -10,7 +10,7 @@ import {
   useDeletePersona,
 } from "../../hooks/usePersonas.ts";
 
-export default function PersonaSidebar() {
+export default function PersonaSidebar({ tabs }: { tabs?: React.ReactNode }) {
   const { data, isLoading } = usePersonas();
   const createMutation = useCreatePersona();
   const personas = data?.personas ?? [];
@@ -41,6 +41,12 @@ export default function PersonaSidebar() {
 
   return (
     <div className="w-full sm:w-[280px] sm:min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
+      {tabs && (
+        <div className="px-2 py-2 border-b border-border bg-surface">
+          {tabs}
+        </div>
+      )}
+
       {/* Header */}
       <div className="p-3 border-b border-border flex items-center justify-between">
         <span className="text-xs font-normal tracking-[0.15em] text-text-muted uppercase">

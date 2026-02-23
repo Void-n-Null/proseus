@@ -14,10 +14,12 @@ import CharacterEditor from "./CharacterEditor.tsx";
 
 interface CharacterSidebarProps {
   onChatCreated: (chatId: string) => void;
+  tabs?: React.ReactNode;
 }
 
 export default function CharacterSidebar({
   onChatCreated,
+  tabs,
 }: CharacterSidebarProps) {
   const { data, isLoading } = useCharacters();
   const importMutation = useImportCharacter();
@@ -158,6 +160,12 @@ export default function CharacterSidebar({
 
   return (
     <div className="w-full sm:w-[280px] sm:min-w-[280px] h-full flex flex-col bg-surface border-r border-border">
+      {tabs && (
+        <div className="px-2 py-2 border-b border-border bg-surface">
+          {tabs}
+        </div>
+      )}
+
       {creating && (
         <CharacterEditor
           character={null}

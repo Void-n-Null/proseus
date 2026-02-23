@@ -1,7 +1,6 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useChatList } from "./hooks/useChat.ts";
-import { api } from "./api/client.ts";
 import { useRoute } from "./hooks/useRoute.ts";
 import { useIsMobile } from "./hooks/useMediaQuery.ts";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight.ts";
@@ -9,34 +8,21 @@ import ChatPage from "./components/chat/ChatPage.tsx";
 import ChatGallery from "./components/chat/ChatGallery.tsx";
 import CharacterSidebar from "./components/characters/CharacterSidebar.tsx";
 import PersonaSidebar from "./components/personas/PersonaSidebar.tsx";
-import ModelSelector from "./components/model/ModelSelector.tsx";
 import { useOAuthCallback } from "./hooks/useOAuthCallback.ts";
-import PromptTemplateModal from "./components/prompt-template/PromptTemplateModal.tsx";
-import {
-  DESIGN_TEMPLATES,
-  type DesignTemplateId,
-} from "../shared/design-templates.ts";
 import { useDesignTemplateId } from "./hooks/useDesignTemplate.ts";
-import {
-  applyDesignTemplate,
-  setStoredDesignTemplateId,
-} from "./lib/design-templates.ts";
+import { getTemplate } from "./templates/index.ts";
 
 export default function App() {
   const { data: chatData, isLoading, isFetching, refetch } = useChatList();
-  const [seeding, setSeeding] = useState(false);
   const { route, navigateToChat, navigateHome, replaceRoute } = useRoute();
   const [sidebarView, setSidebarView] = useState<"characters" | "chats" | "personas">(
     // Default to "chats" if we loaded with a chat URL, otherwise "characters"
     route.chatId ? "chats" : "characters",
   );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [showDesktopShellHeader, setShowDesktopShellHeader] = useState(true);
-  const [promptTemplateOpen, setPromptTemplateOpen] = useState(false);
-  const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
   const designTemplateId = useDesignTemplateId();
+  const template = getTemplate(designTemplateId);
   const { oauthState, dismissOAuth } = useOAuthCallback();
-  const templateMenuRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useIsMobile();
   useVisualViewportHeight(isMobile);
 
@@ -47,38 +33,36 @@ export default function App() {
       }
     : undefined;
 
-  const handleSeed = async () => {
-    setSeeding(true);
-    try {
-      await api.dev.seed();
-      await refetch();
-    } finally {
-      setSeeding(false);
-    }
-  };
-
   const handleChatCreated = useCallback(
     (chatId: string) => {
       navigateToChat(chatId);
       setSidebarView("chats");
+      if (template.sidebarMode === "toggle") {
+        setSidebarCollapsed(true);
+      }
       refetch();
     },
-    [navigateToChat, refetch],
+    [navigateToChat, refetch, template.sidebarMode],
   );
 
   const handleSelectChat = useCallback(
     (chatId: string) => {
       navigateToChat(chatId);
+      // In toggle-mode templates, auto-collapse sidebar when a chat is opened
+      if (template.sidebarMode === "toggle") {
+        setSidebarCollapsed(true);
+      }
     },
-    [navigateToChat],
+    [navigateToChat, template.sidebarMode],
   );
 
   const handleCloseChat = useCallback(() => {
     navigateHome();
   }, [navigateHome]);
 
-  const toggleDesktopShellHeader = useCallback(() => {
-    setShowDesktopShellHeader((show) => !show);
+  /** Desktop toggle-mode: show/hide the sidebar without closing the chat. */
+  const handleDesktopToggleSidebar = useCallback(() => {
+    setSidebarCollapsed((c) => !c);
   }, []);
 
   const chats = chatData?.chats ?? [];
@@ -99,152 +83,37 @@ export default function App() {
     }
   }, [isLoading, isFetching, activeChatId, resolvedChatId, replaceRoute]);
 
-  useEffect(() => {
-    if (!templateMenuOpen) return;
-
-    const onMouseDown = (event: MouseEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (!templateMenuRef.current?.contains(target)) {
-        setTemplateMenuOpen(false);
-      }
-    };
-
-    window.addEventListener("mousedown", onMouseDown);
-    return () => window.removeEventListener("mousedown", onMouseDown);
-  }, [templateMenuOpen]);
-
-  const handleSelectDesignTemplate = useCallback((templateId: DesignTemplateId) => {
-    setStoredDesignTemplateId(templateId);
-    applyDesignTemplate(templateId);
-    setTemplateMenuOpen(false);
-  }, []);
+  const sidebarTabs = (
+    <div className="flex gap-[2px] bg-surface-raised rounded-md p-[2px]">
+      <ToggleButton
+        active={sidebarView === "characters"}
+        onClick={() => {
+          setSidebarView("characters");
+          setSidebarCollapsed(false);
+        }}
+        label="Characters"
+      />
+      <ToggleButton
+        active={sidebarView === "personas"}
+        onClick={() => {
+          setSidebarView("personas");
+          setSidebarCollapsed(false);
+        }}
+        label="Personas"
+      />
+      <ToggleButton
+        active={sidebarView === "chats"}
+        onClick={() => {
+          setSidebarView("chats");
+          setSidebarCollapsed(false);
+        }}
+        label={`Chats${chats.length > 0 ? ` (${chats.length})` : ""}`}
+      />
+    </div>
+  );
 
   return (
     <div className="font-body text-foreground bg-background h-dvh flex flex-col" style={appViewportStyle}>
-      {/* Top bar (desktop only) */}
-      {!isMobile && showDesktopShellHeader && (
-        /* ── Desktop top bar (unchanged) ── */
-        <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.06_0.01_250)] border-b border-border shrink-0 gap-3">
-          <span className="text-[1.1rem] font-light tracking-[0.25em] text-text-muted font-display">
-            PROSEUS
-          </span>
-
-          {/* Sidebar view toggle */}
-          <div className="flex items-center gap-[0.35rem]">
-            <button
-              onClick={() => setSidebarCollapsed((c) => !c)}
-              title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
-              className="px-[0.45rem] py-[0.3rem] bg-surface text-text-dim border-none rounded-md cursor-pointer text-[0.78rem] leading-none transition-colors"
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.color = "var(--color-text-body)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.color = "var(--color-text-dim)")
-              }
-            >
-              {sidebarCollapsed ? "\u25B6" : "\u25C0"}
-            </button>
-            <div className="flex gap-[2px] bg-surface rounded-md p-[2px]">
-              <ToggleButton
-                active={sidebarView === "characters"}
-                onClick={() => {
-                  setSidebarView("characters");
-                  setSidebarCollapsed(false);
-                }}
-                label="Characters"
-              />
-              <ToggleButton
-                active={sidebarView === "personas"}
-                onClick={() => {
-                  setSidebarView("personas");
-                  setSidebarCollapsed(false);
-                }}
-                label="Personas"
-              />
-              <ToggleButton
-                active={sidebarView === "chats"}
-                onClick={() => {
-                  setSidebarView("chats");
-                  setSidebarCollapsed(false);
-                }}
-                label={`Chats${chats.length > 0 ? ` (${chats.length})` : ""}`}
-              />
-            </div>
-          </div>
-
-          {/* Model selector */}
-          <ModelSelector />
-
-          <div className="flex gap-2 items-center">
-            <div className="relative" ref={templateMenuRef}>
-              <button
-                type="button"
-                onClick={() => setTemplateMenuOpen((open) => !open)}
-                title="Design Template"
-                className="px-2 py-[0.35rem] bg-surface-raised text-text-muted border border-border rounded-md cursor-pointer text-[0.78rem] leading-none transition-colors hover:text-text-body"
-              >
-                Template: {DESIGN_TEMPLATES[designTemplateId].label}
-              </button>
-
-              {templateMenuOpen && (
-                <div className="absolute right-0 top-[calc(100%+0.35rem)] min-w-[12rem] bg-surface border border-border rounded-md shadow-lg z-30 p-1">
-                  {Object.values(DESIGN_TEMPLATES).map((template) => {
-                    const isActive = template.id === designTemplateId;
-                    return (
-                      <button
-                        key={template.id}
-                        type="button"
-                        onClick={() => handleSelectDesignTemplate(template.id)}
-                        className={`w-full text-left px-2 py-1.5 rounded text-xs border-none cursor-pointer transition-colors ${
-                          isActive
-                            ? "bg-surface-raised text-text-body"
-                            : "bg-transparent text-text-muted hover:text-text-body hover:bg-surface-raised"
-                        }`}
-                      >
-                        <div className="font-medium">{template.label}</div>
-                        <div className="text-[0.68rem] text-text-dim mt-0.5">
-                          {template.description}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={() => setPromptTemplateOpen(true)}
-              title="Prompt Template"
-              className="px-2 py-[0.35rem] bg-surface-raised text-text-muted border border-border rounded-md cursor-pointer text-[0.85rem] leading-none transition-colors"
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-text-body)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}
-            >
-              ⚙
-            </button>
-            {resolvedChatId && (
-              <button
-                onClick={handleCloseChat}
-                className="px-3 py-[0.35rem] bg-surface-raised text-text-muted border border-border rounded-md cursor-pointer text-[0.78rem] transition-colors"
-              >
-                Close Chat
-              </button>
-            )}
-            <button
-              onClick={handleSeed}
-              disabled={seeding}
-              className="px-3 py-[0.35rem] bg-surface-raised text-text-muted border border-border rounded-md text-[0.78rem]"
-              style={{
-                cursor: seeding ? "wait" : "pointer",
-                opacity: seeding ? 0.5 : 1,
-              }} /* intentionally dynamic */
-            >
-              {seeding ? "Seeding..." : "Seed Demo"}
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* OAuth callback feedback */}
       {oauthState.status === "exchanging" && (
         <div className="flex items-center gap-3 px-4 py-2.5 bg-surface border-b border-border text-sm text-text-body shrink-0">
@@ -276,21 +145,6 @@ export default function App() {
           <button type="button" onClick={dismissOAuth} className="text-text-dim hover:text-text-muted transition-colors text-xs">
             Dismiss
           </button>
-        </div>
-      )}
-
-      {/* Prompt Template Modal */}
-      {promptTemplateOpen && (
-        <div
-          onClick={() => setPromptTemplateOpen(false)}
-          className="fixed inset-0 bg-[oklch(0_0_0_/_0.6)] flex items-center justify-center z-50"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-surface border border-border rounded-md w-[min(920px,95vw)] h-[min(700px,88vh)] flex flex-col overflow-hidden"
-          >
-            <PromptTemplateModal onClose={() => setPromptTemplateOpen(false)} />
-          </div>
         </div>
       )}
 
@@ -357,8 +211,6 @@ export default function App() {
                   <ChatPage
                     chatId={resolvedChatId}
                     onBack={handleCloseChat}
-                    showAppShellHeader={showDesktopShellHeader}
-                    onToggleAppShellHeader={toggleDesktopShellHeader}
                   />
                 )}
               </motion.div>
@@ -366,19 +218,20 @@ export default function App() {
           </AnimatePresence>
         </div>
       ) : (
-        /* ── Desktop: side-by-side panels (unchanged) ── */
+        /* ── Desktop: side-by-side panels ── */
         <div className="flex-1 min-h-0 flex">
-          {/* Sidebar */}
-          {!sidebarCollapsed && (
+          {/* Sidebar — always visible in "always" mode, toggleable in "toggle" mode */}
+          {(template.sidebarMode === "always" || !resolvedChatId || !sidebarCollapsed) && (
             sidebarView === "characters" ? (
-              <CharacterSidebar onChatCreated={handleChatCreated} />
+              <CharacterSidebar onChatCreated={handleChatCreated} tabs={sidebarTabs} />
             ) : sidebarView === "personas" ? (
-              <PersonaSidebar />
+              <PersonaSidebar tabs={sidebarTabs} />
             ) : (
               <ChatGallery
                 activeChatId={resolvedChatId}
                 onSelectChat={handleSelectChat}
                 isLoading={isLoading}
+                tabs={sidebarTabs}
               />
             )
           )}
@@ -390,8 +243,7 @@ export default function App() {
             ) : resolvedChatId ? (
               <ChatPage
                 chatId={resolvedChatId}
-                showAppShellHeader={showDesktopShellHeader}
-                onToggleAppShellHeader={toggleDesktopShellHeader}
+                onBack={template.sidebarMode === "toggle" ? handleDesktopToggleSidebar : undefined}
               />
             ) : (
               <CenterMessage>

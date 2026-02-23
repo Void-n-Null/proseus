@@ -31,6 +31,7 @@ export default function App() {
     route.chatId ? "chats" : "characters",
   );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showDesktopShellHeader, setShowDesktopShellHeader] = useState(true);
   const [promptTemplateOpen, setPromptTemplateOpen] = useState(false);
   const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
   const designTemplateId = useDesignTemplateId();
@@ -76,6 +77,10 @@ export default function App() {
     navigateHome();
   }, [navigateHome]);
 
+  const toggleDesktopShellHeader = useCallback(() => {
+    setShowDesktopShellHeader((show) => !show);
+  }, []);
+
   const chats = chatData?.chats ?? [];
 
   // Validate the chat ID from the URL against the actual chat list.
@@ -118,7 +123,7 @@ export default function App() {
   return (
     <div className="font-body text-foreground bg-background h-dvh flex flex-col" style={appViewportStyle}>
       {/* Top bar (desktop only) */}
-      {!isMobile && (
+      {!isMobile && showDesktopShellHeader && (
         /* ── Desktop top bar (unchanged) ── */
         <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.06_0.01_250)] border-b border-border shrink-0 gap-3">
           <span className="text-[1.1rem] font-light tracking-[0.25em] text-text-muted font-display">
@@ -349,7 +354,12 @@ export default function App() {
                 {isLoading ? (
                   <CenterMessage>Loading...</CenterMessage>
                 ) : (
-                  <ChatPage chatId={resolvedChatId} onBack={handleCloseChat} />
+                  <ChatPage
+                    chatId={resolvedChatId}
+                    onBack={handleCloseChat}
+                    showAppShellHeader={showDesktopShellHeader}
+                    onToggleAppShellHeader={toggleDesktopShellHeader}
+                  />
                 )}
               </motion.div>
             )}
@@ -378,7 +388,11 @@ export default function App() {
             {isLoading ? (
               <CenterMessage>Loading...</CenterMessage>
             ) : resolvedChatId ? (
-              <ChatPage chatId={resolvedChatId} />
+              <ChatPage
+                chatId={resolvedChatId}
+                showAppShellHeader={showDesktopShellHeader}
+                onToggleAppShellHeader={toggleDesktopShellHeader}
+              />
             ) : (
               <CenterMessage>
                 <p className="text-base">

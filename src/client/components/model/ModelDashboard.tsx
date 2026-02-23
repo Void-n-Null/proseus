@@ -209,7 +209,7 @@ export default function ModelDashboard({
     <div
       ref={contentRef}
       className={[
-        "flex flex-col min-h-0 bg-surface-sunken",
+        "flex flex-col min-h-0 bg-surface-sunken rounded-2xl",
         providerConnected && !isMobile ? "h-[894px]" : "",
       ].join(" ")}
     >

@@ -20,6 +20,7 @@ import { getProviderMeta, type ProviderName } from "../../../shared/providers.ts
 import ProviderIcon from "../ui/provider-icon.tsx";
 import ModelProviderDropdown from "./ModelProviderDropdown.tsx";
 import { api } from "../../api/client.ts";
+import { useIsMobile } from "../../hooks/useMediaQuery.ts";
 
 // ============================================
 // Sort config
@@ -447,7 +448,7 @@ const CAPABILITIES = [
 function SelectedModelPane({ model }: { model: Model }) {
   const isFree = model.inputPrice === 0 && model.outputPrice === 0;
   const hasVision = model.inputModalities?.includes("image") ?? false;
-
+  const isMobile = useIsMobile();
   const creator = getModelCreator(model);
   const iconProvider = creator.provider ?? model.provider;
   const branding = getCreatorBranding(creator, model.provider);
@@ -525,9 +526,9 @@ function SelectedModelPane({ model }: { model: Model }) {
 
         {/* Right: Labeled stat blocks separated by dividers */}
         {statBlocks.length > 0 && (
-          <div className="w-full sm:w-auto shrink-0 grid grid-cols-1 gap-1 sm:flex sm:flex-wrap sm:items-start sm:divide-x sm:divide-border sm:gap-0 sm:flex-nowrap">
+          <div className="w-full sm:w-auto shrink-0 flex flex-row gap-1 sm:flex sm:flex-wrap sm:items-start sm:divide-x sm:divide-border sm:gap-0 sm:flex-nowrap">
             {statBlocks.map((block) => (
-              <div key={block.label} className="rounded-md bg-surface px-2 py-1 sm:rounded-none sm:bg-transparent sm:px-4 sm:py-0 first:sm:pl-0 last:sm:pr-0">
+              <div key={block.label} className="rounded-md px-2 py-1 sm:rounded-none sm:bg-transparent sm:px-4 sm:py-0 first:sm:pl-0 last:sm:pr-0">
                 <p className="text-[8px] sm:text-[10px] uppercase tracking-widest text-text-dim font-medium whitespace-nowrap">
                   {block.label}
                 </p>
@@ -539,8 +540,11 @@ function SelectedModelPane({ model }: { model: Model }) {
           </div>
         )}
       </div>
-
+      
       {/* Bottom row: Capabilities + metadata */}
+      {!isMobile && (
+
+
       <div className="flex flex-col items-start gap-1.5 mt-2.5 pt-2.5 border-t border-border sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           {CAPABILITIES.map(({ key, label, icon }) => {
@@ -585,7 +589,9 @@ function SelectedModelPane({ model }: { model: Model }) {
           </div>
         )}
       </div>
+    )}
     </div>
+
   );
 }
 
@@ -734,7 +740,7 @@ export default function ModelHero({
 }: ModelHeroProps) {
   const hasActiveFilters = Object.values(filters).some(Boolean);
   const providerMeta = getProviderMeta(provider);
-
+  const isMobile = useIsMobile();
   const isValidating = connectState === "validating";
   const isFailed = connectState === "failed";
 
@@ -784,36 +790,36 @@ export default function ModelHero({
       ) : null}
 
       {/* Provider dropdown row */}
-      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
-        <ModelProviderDropdown
-          value={provider}
-          onChange={onProviderChange}
-          connectionStatus={connectionStatus}
-          selectedModel={selectedModel}
-        />
+      <div className="flex flex-row items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <ModelProviderDropdown
+            value={provider}
+            onChange={onProviderChange}
+            connectionStatus={connectionStatus}
+            selectedModel={selectedModel}
+          />
 
-        {providerConnected && (
-          <>
+          {providerConnected && (
             <button
               type="button"
               onClick={onDisconnect}
               disabled={isValidating}
-              className="group border-surface-deep border rounded-2xl bg-[oklch(0.20_0.007_300)] hover:bg-destructive/30 max-w-[200px] w-full justify-center flex items-center gap-1.5 text-xs text-text-dim hover:text-neutral-400 hover:font-bold transition-colors disabled:opacity-40 disabled:pointer-events-none h-full"
+              className="group shrink max-w-[30%] w-full min-w-fit sm:w-auto border-surface-deep border rounded-2xl bg-[oklch(0.20_0.007_300)] hover:bg-destructive/30 justify-center flex items-center gap-1.5 px-2 sm:px-3 h-9 sm:h-10 text-[0.65rem] sm:text-xs text-text-dim hover:text-neutral-400 font-bold transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
             >
-              <FilterIcon name="unlink" className="w-3 h-3" />
-              {isValidating ? "Disconnecting..." : "Disconnect Provider"}
+              <FilterIcon name="unlink" className="w-3 h-3 shrink-0" />
+              <span>{isValidating ? "Disconnecting..." : "Disconnect"}</span>
             </button>
+          )}
+        </div>
 
-            {/* Provider usage stats */}
-            {providerCost && providerCost.request_count > 0 && (
-              <ProviderUsageBar
-                cost={providerCost.total_cost}
-                requests={providerCost.request_count}
-                tokens={providerCost.total_tokens}
-                providerLabel={providerMeta.label}
-              />
-            )}
-          </>
+        {/* Provider usage stats */}
+        {providerConnected && providerCost && providerCost.request_count > 0 && (
+          <ProviderUsageBar
+            cost={providerCost.total_cost}
+            requests={providerCost.request_count}
+            tokens={providerCost.total_tokens}
+            providerLabel={providerMeta.label}
+          />
         )}
       </div>
 
@@ -950,53 +956,59 @@ export default function ModelHero({
 
       {/* Filter chips + Sort — hidden when disconnected */}
       {providerConnected && !loading && totalCount > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {FILTER_CHIPS.map((chip) => {
-            const active = !!filters[chip.key];
-            return (
-              <button
-                key={chip.key}
-                type="button"
-                onClick={() => onToggleFilter(chip.key)}
-                className={[
-                  "h-7 px-2.5 rounded-full flex items-center gap-1.5",
-                  "text-xs font-medium transition-all duration-100",
-                  active
-                    ? "bg-surface-hover text-foreground border border-border"
-                    : "bg-background text-text-muted border border-border-subtle hover:bg-surface-hover hover:text-text-body",
-                ].join(" ")}
-              >
-                <FilterIcon name={chip.icon} />
-                <span>{chip.label}</span>
-              </button>
-            );
-          })}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
+          {/* Chips row — fills width evenly on mobile */}
+          <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+            {FILTER_CHIPS.map((chip) => {
+              const active = !!filters[chip.key];
+              return (
+                <button
+                  key={chip.key}
+                  type="button"
+                  onClick={() => onToggleFilter(chip.key)}
+                  className={[
+                    "flex-1 sm:flex-initial px-2 justify-center sm:px-2.5 sm:rounded-full rounded-2xl flex items-center sm:gap-1.5",
+                    "text-[0.65rem] font-medium transition-all duration-100",
+                    active
+                      ? "bg-surface-hover text-foreground border border-border"
+                      : "bg-background text-text-muted border border-border-subtle hover:bg-surface-hover hover:text-text-body",
+                  ].join(" ")}
+                >
+                  {!isMobile && (
+                    <FilterIcon name={chip.icon} />
+                  )}
 
-          {/* Clear filters */}
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={() => {
-                for (const chip of FILTER_CHIPS) {
-                  if (filters[chip.key]) onToggleFilter(chip.key);
-                }
-              }}
-              className="h-7 px-1.5 rounded-lg text-text-dim hover:text-text-muted transition-colors"
-            >
-              <svg
-                viewBox="0 0 14 14"
-                fill="none"
-                className="w-3.5 h-3.5"
+                  <span>{chip.label}</span>
+                </button>
+              );
+            })}
+
+            {/* Clear filters */}
+            {hasActiveFilters && !isMobile && (
+              <button
+                type="button"
+                onClick={() => {
+                  for (const chip of FILTER_CHIPS) {
+                    if (filters[chip.key]) onToggleFilter(chip.key);
+                  }
+                }}
+                className="h-7 px-1.5 rounded-lg text-text-dim hover:text-text-muted transition-colors"
               >
-                <path
-                  d="M3 3L11 11M11 3L3 11"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          )}
+                <svg
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  className="w-3.5 h-3.5"
+                >
+                  <path
+                    d="M3 3L11 11M11 3L3 11"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
 
           {/* Spacer */}
           <div className="hidden sm:block flex-1" />

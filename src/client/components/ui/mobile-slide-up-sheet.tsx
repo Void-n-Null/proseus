@@ -143,7 +143,7 @@ export default function MobileSlideUpSheet({
             <div className="h-full min-h-0 flex flex-col">
               {/* Drag handle — press-and-drag or tap to dismiss */}
               <div
-                className="shrink-0 flex justify-center pt-2 pb-1.5 border-b border-white/5 bg-surface/95 cursor-grab active:cursor-grabbing touch-none"
+                className="shrink-0 flex justify-center pt-2 pb-1.5 border-b border-white/5 bg-surface-sunken cursor-grab active:cursor-grabbing touch-none"
                 onPointerDown={(e) => dragControls.start(e)}
               >
                 <button

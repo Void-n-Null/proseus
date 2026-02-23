@@ -147,7 +147,7 @@ export default function ModelProviderDropdown({
     : undefined;
 
   return (
-    <div ref={ref} className="relative" onKeyDown={handleKeyDown}>
+    <div ref={ref} className="relative flex-1 min-w-0 sm:max-w-none sm:flex-initial sm:w-auto" onKeyDown={handleKeyDown}>
       {/* Trigger */}
       <motion.button
         ref={triggerRef}
@@ -164,7 +164,7 @@ export default function ModelProviderDropdown({
         }}
         transition={{ duration: 0.15, ease: "easeOut" }}
         className={[
-          "relative group flex items-center gap-2.5 w-full md:w-80 h-10 px-3.5 text-sm",
+          "relative group flex items-center gap-1.5 sm:gap-2.5 w-full sm:w-80 h-9 sm:h-10 px-2.5 sm:px-3.5 text-xs sm:text-sm min-w-0",
           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50",
           isOpen
             ? "z-[51] border border-b-0 border-border"
@@ -172,17 +172,17 @@ export default function ModelProviderDropdown({
           "bg-surface-deep backdrop-blur-[20px]",
         ].join(" ")}
       >
-        <span className="text-text-dim whitespace-nowrap text-sm">
+        <span className="text-text-dim whitespace-nowrap text-xs sm:text-sm shrink-0">
           Provider
         </span>
-        <span className="w-px h-4 bg-border mx-1" />
+        <span className="w-px h-4 bg-border mx-0.5 sm:mx-1 shrink-0" />
         <div
-          className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+          className="w-5 h-5 sm:w-6 sm:h-6 rounded-md flex items-center justify-center shrink-0"
           style={{ backgroundColor: branding.bg }}
         >
           <ProviderIcon provider={iconProvider} logoUrl={iconLogoUrl} color={branding.logo} size={13} />
         </div>
-        <span className="text-foreground font-medium whitespace-nowrap">
+        <span className="text-foreground font-medium text-xs sm:text-sm truncate min-w-0">
           {meta.label}
         </span>
         <svg

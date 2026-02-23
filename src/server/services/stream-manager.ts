@@ -28,6 +28,8 @@ import { assemblePrompt } from "./chat-pipeline.ts";
 import type { ProviderName } from "../../shared/providers.ts";
 import { createModel } from "../lib/llm.ts";
 import { getApiKey } from "../db/connections.ts";
+import { upsertUsage } from "../db/usage.ts";
+import { getModelPricing, computeCost, sanitizeTokens } from "../lib/model-pricing.ts";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -41,6 +43,12 @@ interface ActiveStream {
   startedAt: number;
   abortController?: AbortController;
   assistantPrefill: string | null;
+  /** Provider used for this stream (for cost tracking). */
+  provider?: ProviderName;
+  /** Model ID used for this stream (for cost tracking). */
+  model?: string;
+  /** The streamText result — stored so usage can be awaited on finalize/cancel. */
+  streamResult?: ReturnType<typeof streamText>;
 }
 
 // ── Test content ───────────────────────────────────────────────
@@ -251,6 +259,8 @@ export class StreamManager {
       startedAt: Date.now(),
       abortController,
       assistantPrefill: null,
+      provider,
+      model,
     };
 
     this.activeStreams.set(streamId, stream);
@@ -310,6 +320,9 @@ export class StreamManager {
       abortSignal: stream.abortController?.signal,
     });
 
+    // Store result so cancelStream can also access usage
+    stream.streamResult = result;
+
     for await (const delta of result.textStream) {
       // Check if stream was cancelled during iteration
       if (!this.activeStreams.has(stream.id)) return;
@@ -326,6 +339,10 @@ export class StreamManager {
 
     // Finalize only if not cancelled
     if (this.activeStreams.has(stream.id)) {
+      // Record usage before finalizing (non-blocking — don't fail the stream)
+      await this.recordUsage(stream).catch((err: unknown) => {
+        console.warn("[usage] Failed to record usage for stream", stream.id, err);
+      });
       this.finalizeStream(stream.id);
     }
   }
@@ -356,6 +373,11 @@ export class StreamManager {
     }
 
     if (stream.content.length > 0) {
+      // Record usage for partial stream (fire-and-forget, don't block cancel)
+      this.recordUsage(stream).catch((err: unknown) => {
+        console.warn("[usage] Failed to record usage for cancelled stream", streamId, err);
+      });
+
       // Persist partial content — don't throw away what we have
       const result = addMessage(this.db, {
         chat_id: stream.chatId,
@@ -385,6 +407,49 @@ export class StreamManager {
     this.activeStreams.delete(streamId);
     this.chatStreams.delete(chatId);
     return true;
+  }
+
+  // ── Usage tracking ──────────────────────────────────────────
+
+  /**
+   * Record token usage and cost for a stream.
+   * Awaits the AI SDK's usage promise and upserts into usage_logs.
+   * Safe to call on cancelled streams — handles rejected promises.
+   */
+  private async recordUsage(stream: ActiveStream): Promise<void> {
+    if (!stream.streamResult || !stream.provider || !stream.model) return;
+
+    let usage: { inputTokens: number | undefined; outputTokens: number | undefined };
+    try {
+      usage = await stream.streamResult.usage;
+    } catch {
+      // Aborted streams may reject the usage promise
+      return;
+    }
+
+    const promptTokens = sanitizeTokens(usage.inputTokens);
+    const completionTokens = sanitizeTokens(usage.outputTokens);
+
+    // Skip if no tokens were consumed
+    if (promptTokens === 0 && completionTokens === 0) return;
+
+    const pricing = await getModelPricing(stream.provider, stream.model);
+    const costUsd = pricing ? computeCost(promptTokens, completionTokens, pricing) : 0;
+
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+    upsertUsage(this.db, {
+      date: today,
+      provider: stream.provider,
+      model: stream.model,
+      chatId: stream.chatId,
+      speakerId: stream.speakerId,
+      promptTokens,
+      completionTokens,
+      costUsd,
+      inputPrice: pricing?.inputPrice ?? null,
+      outputPrice: pricing?.outputPrice ?? null,
+    });
   }
 
   // ── Finalize ───────────────────────────────────────────────

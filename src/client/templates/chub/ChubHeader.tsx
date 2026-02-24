@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import type { ChatHeaderLayoutProps } from "../../components/chat/chat-header/types.ts";
 import { DESIGN_TEMPLATES, type DesignTemplateId } from "../../../shared/design-templates.ts";
 import { Avatar } from "../../components/ui/avatar.tsx";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, PencilIcon, PenIcon, PenLineIcon } from "lucide-react";
+import { MenuIcon } from "lucide-react";
 
 export default function ChubHeader({
   chatName,
@@ -47,17 +48,17 @@ export default function ChubHeader({
   };
 
   return (
-    <div className="shrink-0 h-[42px] px-3 flex items-center md:w-[60vw] w-full mx-auto">
+    <div className="shrink-0 h-[42px] px-3 flex items-center md:w-[59vw] w-full mx-auto">
       {/* Left: back button */}
-      <div className="w-14 flex items-center justify-start">
+      <div className="w-14 flex items-center justify-start ">
           <button
             type="button"
             onClick={onBack}
-            className="!min-h-0 !min-w-0 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors px-3 py-2"
+            className="!min-h-0 !min-w-0 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors px-4 py-2.5 pl-3"
             aria-label="Back"
           >
-            <div className="w-[16px] h-[16px] flex items-center justify-center bg-[rgb(242,228,214)]/85 text-text-muted hover:text-text-body rounded-full">
-            <ChevronLeft width="12" height="12" className="text-[var(--color-background)]" />
+            <div className="w-[18px] h-[18px] flex items-center justify-center bg-[rgb(242,228,214)]/85 text-text-muted hover:text-text-body rounded-full ">
+            <ChevronLeft width="18" height="18" className="text-[#2e2e2e] pr-0.5" />
             </div>
           </button>
       </div>
@@ -68,13 +69,14 @@ export default function ChubHeader({
           <Avatar
             src={characterAvatarUrl}
             alt={displayName}
-            size={32}
+            size={30}
             fit="natural"
             borderRadius="40%"
+            className="max-h-[30px] "
           />
         ) : (
           <div
-            className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[1rem] font-medium shrink-0"
+            className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[1rem] font-extralight shrink-0"
             style={{
               fontFamily: "var(--chub-font)",
             }}
@@ -88,6 +90,7 @@ export default function ChubHeader({
         >
           {displayName}
         </span>
+        <PenLineIcon width="16" height="16" className="text-text-body" />
       </div>
 
       {/* Right: hamburger menu */}
@@ -102,12 +105,10 @@ export default function ChubHeader({
                 setExportSubmenuOpen(false);
               }
             }}
-            className="w-9 h-9 !min-h-0 !min-w-0 flex items-center justify-center rounded-full text-text-muted hover:text-text-body hover:bg-surface-hover transition-colors"
+            className="w-12 pl-2 h-12 !min-h-0 !min-w-0 flex items-center justify-center rounded-lg text-text-muted hover:text-text-body hover:bg-white/10 transition-colors"
             aria-label="Menu"
           >
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-              <path d="M4 6h12M4 10h12M4 14h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <MenuIcon width="22" height="22" className="text-text-body" />
           </button>
 
           {menuOpen && (

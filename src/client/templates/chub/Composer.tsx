@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { PersonaAvatar } from "../../components/personas/PersonaSidebar.tsx";
 import type { ComposerLayoutProps } from "../../components/chat/composer/types.ts";
 import PersonaPickerItem from "../../components/chat/composer/PersonaPickerItem.tsx";
+import { EllipsisVerticalIcon } from "lucide-react";
 
 export default function ChubComposer({
   isFocused,
@@ -50,22 +51,18 @@ export default function ChubComposer({
               "relative flex items-stretch gap-2 md:rounded-[6px] md:px-2 pb-1 bg-neutral-800/50",
             ].join(" ")}
           >
-            <div ref={menuRef} className="relative flex items-center pl-2">
+            <div ref={menuRef} className="relative flex items-center pl-2.5 pt-3">
               <button
                 type="button"
                 onClick={() => setMenuOpen(!menuOpen)}
                 title={activePersona ? `Persona: ${activePersona.name}` : "Set persona"}
                 className={[
-                  "shrink-0 p-2 rounded-md transition-colors duration-150",
-                  "bg-transparent border-none cursor-pointer",
-                  menuOpen ? "text-[#8ea3c3]" : "text-[#5f6e84] hover:text-[#8ea3c3]",
+                  "shrink-0 p-1 rounded-md transition-colors duration-150",
+                  "bg-transparent hover:bg-black/15 border-none cursor-pointer ",
+                  menuOpen ? "text-[#3498db]" : "text-[#3498db] hover:text-[#3498db]",
                 ].join(" ")}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="12" cy="5" r="1.8" />
-                  <circle cx="12" cy="12" r="1.8" />
-                  <circle cx="12" cy="19" r="1.8" />
-                </svg>
+                <EllipsisVerticalIcon width="22" height="22" className="text-[#3498db]" />
               </button>
 
               {menuOpen && (
@@ -126,7 +123,7 @@ export default function ChubComposer({
               placeholder={composerPlaceholder}
               rows={3}
               className={[
-                "flex-1 min-h-[84px] pt-3 pr-2 pl-0 pt-5",
+                "flex-1 min-h-[84px] pr-2 pl-2.5 pt-4",
                 "resize-none bg-transparent",
                 "text-[#c8d3e6] placeholder-neutral-600",
                 "focus:outline-none",

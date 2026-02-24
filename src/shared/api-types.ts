@@ -30,6 +30,53 @@ export interface UpdateChatRequest {
   persona_id?: string | null;
 }
 
+// ── Chat import endpoints ──
+
+/**
+ * A single message from a SillyTavern/Chub JSONL import.
+ * Parsed client-side, sent to the server with speaker mappings.
+ */
+export interface ImportedMessage {
+  /** Original speaker name from the file (e.g. "Sakaki", "You") */
+  name: string;
+  message: string;
+  is_user: boolean;
+  /** Epoch-ms timestamp from the source, if available */
+  send_date?: number;
+}
+
+/**
+ * Maps an original speaker name from the imported file to an existing
+ * character (for bot messages) or persona (for user messages).
+ *
+ * The server resolves these to speakers internally — creating speaker rows
+ * on the fly if needed (same logic as starting a new chat from a character).
+ */
+export interface SpeakerMapping {
+  /** Original name from the file */
+  original_name: string;
+  /** Whether this is the user speaker */
+  is_user: boolean;
+  /** Character ID — for bot speakers. Server creates/reuses a speaker for this character. */
+  character_id?: string;
+  /** Persona ID — for user speakers. Server uses the global user speaker. */
+  persona_id?: string;
+}
+
+export interface ImportJsonlRequest {
+  /** Chat name (defaults to character_name from the file header) */
+  name: string;
+  /** Parsed messages in order (first line metadata excluded) */
+  messages: ImportedMessage[];
+  /** How each unique speaker name maps to an existing speaker */
+  speaker_map: SpeakerMapping[];
+}
+
+export interface ImportJsonlResponse {
+  chat: Chat;
+  message_count: number;
+}
+
 // ── Persona endpoints ──
 
 export interface ListPersonasResponse {

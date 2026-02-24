@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "../ui/avatar.tsx";
+import { Upload } from "lucide-react";
 import {
   useChatList,
   useDeleteChat,
@@ -8,6 +9,7 @@ import {
   useRenameChat,
   type ChatListSort,
 } from "../../hooks/useChat.ts";
+import ChatImportModal from "./ChatImportModal.tsx";
 
 interface ChatGalleryProps {
   activeChatId: string | null;
@@ -52,6 +54,7 @@ export default function ChatGallery({
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [deleteConfirmChatId, setDeleteConfirmChatId] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const menuRef = useRef<HTMLDivElement | null>(null);
   const renameInputRef = useRef<HTMLInputElement | null>(null);
@@ -131,9 +134,20 @@ export default function ChatGallery({
       )}
 
       <div className="p-3 border-b border-border flex flex-col gap-2">
-        <span className="text-xs font-normal tracking-[0.15em] text-text-muted uppercase">
-          Chats
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-normal tracking-[0.15em] text-text-muted uppercase">
+            Chats
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            title="Import chat from JSONL"
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[0.7rem] text-text-dim hover:text-text-body hover:bg-surface-hover transition-colors cursor-pointer"
+          >
+            <Upload width={12} height={12} />
+            Import
+          </button>
+        </div>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -351,6 +365,16 @@ export default function ChatGallery({
           </div>
         )}
       </div>
+
+      {showImportModal && (
+        <ChatImportModal
+          onClose={() => setShowImportModal(false)}
+          onImported={(chatId) => {
+            setShowImportModal(false);
+            onSelectChat(chatId);
+          }}
+        />
+      )}
     </div>
   );
 }

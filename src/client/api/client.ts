@@ -1,6 +1,8 @@
 import type {
   CreateChatRequest,
   CreateChatResponse,
+  ImportJsonlRequest,
+  ImportJsonlResponse,
   GetChatResponse,
   ListChatsResponse,
   UpdateChatRequest,
@@ -108,6 +110,11 @@ export const api = {
       fetchJson<{ ok: true }>(`/chats/${id}/pin`, {
         method: "PATCH",
         body: JSON.stringify({ is_pinned: isPinned }),
+      }),
+    importJsonl: (body: ImportJsonlRequest) =>
+      fetchJson<ImportJsonlResponse>("/chats/import-jsonl", {
+        method: "POST",
+        body: JSON.stringify(body),
       }),
     exportChat: (id: string) => fetchFile(`/chats/${id}/export/chat`),
     exportJsonl: (id: string) => fetchFile(`/chats/${id}/export/jsonl`),

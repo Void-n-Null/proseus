@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client.ts";
-import type { UpdateChatRequest } from "../../shared/api-types.ts";
+import type { ImportJsonlRequest, UpdateChatRequest } from "../../shared/api-types.ts";
 
 export type ChatListSort =
   | "updated_at"
@@ -65,6 +65,16 @@ export function usePinChat() {
   return useMutation({
     mutationFn: ({ id, is_pinned }: { id: string; is_pinned: boolean }) =>
       api.chats.pin(id, is_pinned),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+    },
+  });
+}
+
+export function useImportJsonlChat() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ImportJsonlRequest) => api.chats.importJsonl(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     },

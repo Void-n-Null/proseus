@@ -11,11 +11,12 @@ import {
   type ChatListOptions,
 } from "../db/chats.ts";
 import { addMessage, getChatTree } from "../db/messages.ts";
-import { getSpeaker } from "../db/speakers.ts";
+import { createSpeaker, getSpeaker } from "../db/speakers.ts";
 import { getGlobalPersona } from "../db/personas.ts";
 import { getCharacter, getCharacterAvatar } from "../db/characters.ts";
 import { createMessagesRouter } from "./messages.ts";
 import { getActivePath } from "../../shared/tree.ts";
+import type { ImportJsonlRequest } from "../../shared/api-types.ts";
 
 function dateStamp(ts: number): string {
   return new Date(ts).toISOString().slice(0, 10);
@@ -57,6 +58,150 @@ export function createChatsRouter(db: Database): Hono {
     "name",
     "pinned_first",
   ];
+
+  // ── Static routes MUST come before the /:chatId wildcard ──
+
+  // POST /import-jsonl — import a SillyTavern/Chub JSONL chat
+  app.post("/import-jsonl", async (c) => {
+    const body = await c.req.json<ImportJsonlRequest>();
+
+    if (!body.name || typeof body.name !== "string") {
+      return c.json({ error: "name is required" }, 400);
+    }
+    if (!Array.isArray(body.messages) || body.messages.length === 0) {
+      return c.json({ error: "messages array is required and must not be empty" }, 400);
+    }
+    if (!Array.isArray(body.speaker_map) || body.speaker_map.length === 0) {
+      return c.json({ error: "speaker_map is required" }, 400);
+    }
+
+    // Resolve each mapping to a speaker_id, creating speakers as needed.
+    // This mirrors the logic in POST /api/characters/:id/chat.
+    const nameToSpeakerId = new Map<string, string>();
+    const speakerIdSet = new Set<string>();
+    let chatCharacterId: string | null = null;
+    let userSpeakerName: string | null = null;
+
+    for (const mapping of body.speaker_map) {
+      if (!mapping.original_name) {
+        return c.json({ error: "Each speaker_map entry needs original_name" }, 400);
+      }
+
+      let speakerId: string;
+
+      if (mapping.is_user) {
+        // User speaker — reuse the global singleton or create one
+        const existingUser = db
+          .query("SELECT id, name FROM speakers WHERE is_user = 1 LIMIT 1")
+          .get() as { id: string; name: string } | null;
+
+        if (existingUser) {
+          speakerId = existingUser.id;
+          userSpeakerName = existingUser.name;
+        } else {
+          const userSpeaker = createSpeaker(db, { name: "User", is_user: true });
+          speakerId = userSpeaker.id;
+          userSpeakerName = userSpeaker.name;
+        }
+      } else if (mapping.character_id) {
+        // Bot speaker — find or create a speaker for this character
+        const character = getCharacter(db, mapping.character_id);
+        if (!character) {
+          return c.json({ error: `Character not found: ${mapping.character_id}` }, 400);
+        }
+        chatCharacterId = mapping.character_id;
+
+        const existingBot = db
+          .query(
+            "SELECT id FROM speakers WHERE character_id = $cid AND is_user = 0 LIMIT 1",
+          )
+          .get({ $cid: mapping.character_id }) as { id: string } | null;
+
+        if (existingBot) {
+          speakerId = existingBot.id;
+        } else {
+          const botSpeaker = createSpeaker(db, {
+            name: character.name,
+            is_user: false,
+            color: "#7c3aed",
+          });
+          speakerId = botSpeaker.id;
+
+          // Link speaker to character and copy avatar
+          db.query(
+            "UPDATE speakers SET character_id = $cid WHERE id = $id",
+          ).run({ $cid: mapping.character_id, $id: speakerId });
+
+          const avatarData = getCharacterAvatar(db, mapping.character_id);
+          if (avatarData) {
+            db.query(
+              "UPDATE speakers SET avatar_blob = $blob, avatar_mime = $mime WHERE id = $id",
+            ).run({
+              $blob: avatarData.avatar,
+              $mime: "image/png",
+              $id: speakerId,
+            });
+          }
+        }
+      } else {
+        return c.json({
+          error: `Mapping for "${mapping.original_name}" needs either character_id (for bot) or is_user: true`,
+        }, 400);
+      }
+
+      nameToSpeakerId.set(mapping.original_name, speakerId);
+      speakerIdSet.add(speakerId);
+    }
+
+    // Verify every message has a mapped speaker
+    for (const msg of body.messages) {
+      if (!nameToSpeakerId.has(msg.name)) {
+        return c.json({
+          error: `No speaker mapping for "${msg.name}". All speakers in the file must be mapped.`,
+        }, 400);
+      }
+    }
+
+    const speakerIds = [...speakerIdSet];
+
+    // Create the chat, linking to the character if we found one
+    const chat = createChat(db, {
+      name: body.name,
+      speaker_ids: speakerIds,
+      character_id: chatCharacterId,
+    });
+
+    // Apply global persona
+    const globalPersona = getGlobalPersona(db);
+    if (globalPersona) {
+      updateChat(db, chat.id, { persona_id: globalPersona.id });
+    }
+
+    // Insert messages as a linear chain (each message is child of previous)
+    let parentId: string | null = null;
+    let messageCount = 0;
+
+    for (const msg of body.messages) {
+      const speakerId = nameToSpeakerId.get(msg.name)!;
+      let messageText = msg.message;
+      if (userSpeakerName) {
+        messageText = messageText.replace(/\{\{user\}\}/gi, userSpeakerName);
+      }
+
+      const result = addMessage(db, {
+        chat_id: chat.id,
+        parent_id: parentId,
+        message: messageText,
+        speaker_id: speakerId,
+        is_bot: !msg.is_user,
+      });
+      parentId = result.node.id;
+      messageCount++;
+    }
+
+    const finalChat = getChat(db, chat.id) ?? chat;
+    return c.json({ chat: finalChat, message_count: messageCount });
+  });
 
   // Mount message sub-routes under /:chatId/*
   app.route("/:chatId", createMessagesRouter(db));

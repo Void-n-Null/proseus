@@ -6,6 +6,7 @@ import { DESIGN_TEMPLATES, type DesignTemplateId } from "../../../shared/design-
 import { api } from "../../api/client.ts";
 import { getFilenameFromDisposition, triggerDownload } from "../../lib/download.ts";
 import ModelDashboard from "../../components/model/ModelDashboard.tsx";
+import PromptTemplateModal from "../../components/prompt-template/PromptTemplateModal.tsx";
 import DiscordDMList from "./DMList.tsx";
 import SidebarTopBar from "./SidebarTopBar.tsx";
 
@@ -39,6 +40,9 @@ export default function DiscordSidebar({
 
   // ── Model dashboard ──
   const [modelOpen, setModelOpen] = useState(false);
+
+  // ── Prompt template ──
+  const [promptOpen, setPromptOpen] = useState(false);
 
   // ── Export ──
   const [isExporting, setIsExporting] = useState(false);
@@ -96,11 +100,11 @@ export default function DiscordSidebar({
       <div className="flex-1 min-h-0 overflow-y-auto">
         {/* Nav rows */}
         <div className="flex flex-col px-2 pt-3 pb-1 gap-[2px]">
-          {/* Settings → Characters view */}
+          {/* Settings → Prompt template config */}
           <NavRow
             icon={<SettingsIcon />}
             label="Settings"
-            onClick={() => setView("characters")}
+            onClick={() => setPromptOpen(true)}
           />
 
           {/* Theme → submenu */}
@@ -177,6 +181,9 @@ export default function DiscordSidebar({
 
       {/* Model dashboard modal (portable — rendered here, opens on demand) */}
       <ModelDashboard open={modelOpen} onOpenChange={setModelOpen} />
+
+      {/* Prompt template modal (portable — same pattern as ModelDashboard) */}
+      <PromptTemplateModal open={promptOpen} onOpenChange={setPromptOpen} />
     </div>
   );
 }

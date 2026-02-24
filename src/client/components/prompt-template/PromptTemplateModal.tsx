@@ -1,4 +1,13 @@
 import React, { useState, useRef, useCallback } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "../ui/dialog.tsx";
+import MobileSlideUpSheet from "../ui/mobile-slide-up-sheet.tsx";
+import { useIsMobile } from "../../hooks/useMediaQuery.ts";
 import { usePromptTemplate } from "../../hooks/usePromptTemplate.ts";
 import {
   SLOT_META,
@@ -103,10 +112,53 @@ const ROLE_COLORS: Record<PreviewBlock["role"], { bg: string; text: string; bord
   assistant: { bg: "oklch(0.17 0.03 155 / 0.6)",  text: "oklch(0.70 0.15 155)", border: "oklch(0.34 0.09 155 / 0.5)" },
 };
 
-export default function PromptTemplateModal({ onClose }: { onClose: () => void }) {
+// ─── Public API (matches ModelDashboard) ────────────────────────────────────
+
+export interface PromptTemplateModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export default function PromptTemplateModal({
+  open,
+  onOpenChange,
+}: PromptTemplateModalProps) {
+  const isMobile = useIsMobile();
+
+  const content = <PromptTemplateContent onClose={() => onOpenChange(false)} isMobile={isMobile} />;
+
+  if (isMobile) {
+    return (
+      <MobileSlideUpSheet open={open} onClose={() => onOpenChange(false)}>
+        {content}
+      </MobileSlideUpSheet>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-5xl p-0 gap-0 overflow-hidden">
+        <div className="h-[700px]">
+          {content}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Inner content (rendered inside Dialog or MobileSlideUpSheet) ────────────
+
+function PromptTemplateContent({
+  onClose,
+  isMobile,
+}: {
+  onClose: () => void;
+  isMobile: boolean;
+}) {
   const { template, isLoading, updateTemplate, isUpdating } = usePromptTemplate();
   const [localSlots, setLocalSlots] = useState<PromptSlot[] | null>(null);
   const [expandedSlot, setExpandedSlot] = useState<SlotId | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const initializedRef = useRef(false);
 
   if (template && !initializedRef.current) {
@@ -181,42 +233,84 @@ export default function PromptTemplateModal({ onClose }: { onClose: () => void }
   const previewBlocks = buildPreview(slots);
 
   return (
-    <div className="flex flex-col h-full font-body text-text-body">
-      <div className="flex items-center justify-between px-4 py-[0.65rem] border-b border-border shrink-0">
-        <span className="text-[0.72rem] font-normal tracking-[0.15em] text-text-muted uppercase font-display">
-          Prompt Template
-        </span>
-        <div className="flex items-center gap-3">
+    <div className="flex flex-col h-full font-body text-text-body bg-surface-sunken rounded-2xl">
+      {/* Header */}
+      {isMobile ? (
+        <div className="flex flex-col space-y-1.5 px-4 pt-4 pb-0">
+          <h2 className="text-foreground text-lg font-semibold leading-none tracking-tight">
+            Prompt Template
+          </h2>
+          <p className="text-text-muted text-sm">
+            Configure the prompt assembly order and content.
+          </p>
+          <div className="flex items-center gap-2 pt-1">
+            {isDirty && (
+              <button
+                onClick={handleSave}
+                disabled={isUpdating}
+                className="px-3 py-1.5 bg-primary text-background border-none rounded-md text-[0.75rem] font-medium transition-opacity duration-150 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+              >
+                {isUpdating ? "Saving\u2026" : "Save"}
+              </button>
+            )}
+            <button
+              onClick={() => setShowPreview(!showPreview)}
+              className="px-3 py-1.5 bg-transparent text-text-muted border border-border rounded-md text-[0.75rem] font-medium transition-colors duration-150 cursor-pointer hover:text-text-body hover:border-text-dim"
+            >
+              {showPreview ? "Editor" : "Preview"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between px-6 pr-12 pt-5 pb-0">
+          <DialogHeader>
+            <DialogTitle className="text-foreground text-lg font-semibold">
+              Prompt Template
+            </DialogTitle>
+            <DialogDescription className="text-text-muted text-sm">
+              Configure the prompt assembly order and content.
+            </DialogDescription>
+          </DialogHeader>
           {isDirty && (
             <button
               onClick={handleSave}
               disabled={isUpdating}
-              className="px-[0.85rem] py-[0.3rem] bg-primary text-background border-none rounded-md text-[0.72rem] font-medium transition-opacity duration-[0.15s]"
-              style={{
-                /* intentionally dynamic */ cursor: isUpdating ? "wait" : "pointer",
-                /* intentionally dynamic */ opacity: isUpdating ? 0.6 : 1,
-              }}
+              className="px-[0.85rem] py-[0.3rem] bg-primary text-background border-none rounded-md text-[0.72rem] font-medium transition-opacity duration-150 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
             >
               {isUpdating ? "Saving\u2026" : "Save"}
             </button>
           )}
-          <button
-            onClick={onClose}
-            className="bg-transparent border-none text-text-dim cursor-pointer text-base leading-none px-[0.3rem] py-[0.2rem] transition-colors duration-[0.15s]"
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-text-body)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-dim)")}
-          >
-            ✕
-          </button>
         </div>
-      </div>
+      )}
 
+      {/* Body */}
       {isLoading || !template ? (
-        <div className="flex-1 flex items-center justify-center text-text-dim text-[0.82rem]">
-          Loading…
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+            <span className="text-sm text-text-muted">Loading template...</span>
+          </div>
+        </div>
+      ) : isMobile ? (
+        /* Mobile: single column, toggle between editor and preview */
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {showPreview ? (
+            <PromptPreview blocks={previewBlocks} />
+          ) : (
+            <SlotEditor
+              slots={slots}
+              expandedSlot={expandedSlot}
+              onToggle={handleToggle}
+              onContentChange={handleContentChange}
+              onMoveUp={handleMoveUp}
+              onMoveDown={handleMoveDown}
+              onToggleExpand={toggleExpand}
+            />
+          )}
         </div>
       ) : (
-        <div className="flex-1 flex min-h-0">
+        /* Desktop: side-by-side slot editor + preview */
+        <div className="flex-1 flex min-h-0 mt-3">
           <div className="w-80 min-w-80 border-r border-border flex flex-col overflow-y-auto">
             <SlotEditor
               slots={slots}
@@ -229,81 +323,87 @@ export default function PromptTemplateModal({ onClose }: { onClose: () => void }
             />
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-3 bg-[oklch(0.07_0.01_250)]">
-            <div className="text-[0.62rem] tracking-[0.12em] text-text-dim uppercase mb-3">
-              Assembled Prompt Preview
-            </div>
-
-            {previewBlocks.length === 0 ? (
-              <div className="text-text-dim text-[0.78rem]">
-                No slots enabled.
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {previewBlocks.map((block, bi) => {
-                  const colors = ROLE_COLORS[block.role];
-                  return (
-                    <div
-                      key={bi}
-                      className="rounded-md overflow-hidden"
-                      style={{
-                        /* intentionally dynamic */ border: `1px solid ${colors.border}`,
-                        /* intentionally dynamic */ background: colors.bg,
-                      }}
-                    >
-                      <div
-                        className="px-[0.65rem] py-[0.3rem] text-[0.58rem] font-semibold tracking-[0.12em] uppercase font-display"
-                        style={{
-                          /* intentionally dynamic */ borderBottom: `1px solid ${colors.border}`,
-                          /* intentionally dynamic */ color: colors.text,
-                        }}
-                      >
-                        {block.label}
-                      </div>
-                      <div className="px-[0.65rem] py-[0.5rem] flex flex-col gap-2">
-                        {block.segments.map((seg, si) => (
-                          <div key={si}>
-                            {block.segments.length > 1 && (
-                              <div
-                                className="text-[0.58rem] opacity-70 tracking-[0.08em] mb-[0.2rem] uppercase"
-                                style={{
-                                  /* intentionally dynamic */ color: colors.text,
-                                }}
-                              >
-                                {seg.slotLabel}
-                              </div>
-                            )}
-                            <pre
-                              className="m-0 font-body text-[0.72rem] text-text-body whitespace-pre-wrap break-words leading-[1.55]"
-                              style={{
-                                /* intentionally dynamic */ opacity: seg.text.startsWith("[") ? 0.45 : 1,
-                                /* intentionally dynamic */ fontStyle: seg.text.startsWith("[") ? "italic" : "normal",
-                              }}
-                            >
-                              {seg.text}
-                            </pre>
-                            {si < block.segments.length - 1 && (
-                              <div
-                                className="mt-2"
-                                style={{
-                                  /* intentionally dynamic */ borderTop: `1px solid ${colors.border}`,
-                                }}
-                              />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <PromptPreview blocks={previewBlocks} />
         </div>
       )}
     </div>
   );
 }
+
+// ─── Preview panel ──────────────────────────────────────────────────────────
+
+function PromptPreview({ blocks }: { blocks: PreviewBlock[] }) {
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-3 bg-[oklch(0.07_0.01_250)]">
+      <div className="text-[0.62rem] tracking-[0.12em] text-text-dim uppercase mb-3">
+        Assembled Prompt Preview
+      </div>
+
+      {blocks.length === 0 ? (
+        <div className="text-text-dim text-[0.78rem]">
+          No slots enabled.
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {blocks.map((block, bi) => {
+            const colors = ROLE_COLORS[block.role];
+            return (
+              <div
+                key={bi}
+                className="rounded-md overflow-hidden"
+                style={{
+                  border: `1px solid ${colors.border}`,
+                  background: colors.bg,
+                }}
+              >
+                <div
+                  className="px-[0.65rem] py-[0.3rem] text-[0.58rem] font-semibold tracking-[0.12em] uppercase font-display"
+                  style={{
+                    borderBottom: `1px solid ${colors.border}`,
+                    color: colors.text,
+                  }}
+                >
+                  {block.label}
+                </div>
+                <div className="px-[0.65rem] py-[0.5rem] flex flex-col gap-2">
+                  {block.segments.map((seg, si) => (
+                    <div key={si}>
+                      {block.segments.length > 1 && (
+                        <div
+                          className="text-[0.58rem] opacity-70 tracking-[0.08em] mb-[0.2rem] uppercase"
+                          style={{ color: colors.text }}
+                        >
+                          {seg.slotLabel}
+                        </div>
+                      )}
+                      <pre
+                        className="m-0 font-body text-[0.72rem] text-text-body whitespace-pre-wrap break-words leading-[1.55]"
+                        style={{
+                          opacity: seg.text.startsWith("[") ? 0.45 : 1,
+                          fontStyle: seg.text.startsWith("[") ? "italic" : "normal",
+                        }}
+                      >
+                        {seg.text}
+                      </pre>
+                      {si < block.segments.length - 1 && (
+                        <div
+                          className="mt-2"
+                          style={{ borderTop: `1px solid ${colors.border}` }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Slot editor ────────────────────────────────────────────────────────────
 
 function SlotEditor({
   slots,
@@ -350,8 +450,8 @@ function SlotEditor({
                   <div
                     className="flex items-center gap-[0.4rem] px-[0.45rem] py-[0.4rem] rounded-sm transition-[background] duration-[0.12s]"
                     style={{
-                      /* intentionally dynamic */ cursor: meta.hasContent ? "pointer" : "default",
-                      /* intentionally dynamic */ background: isExpanded ? "var(--color-surface-hover)" : "transparent",
+                      cursor: meta.hasContent ? "pointer" : "default",
+                      background: isExpanded ? "var(--color-surface-hover)" : "transparent",
                     }}
                     onClick={meta.hasContent ? () => onToggleExpand(slot.id) : undefined}
                     onMouseEnter={(e) => {
@@ -375,25 +475,21 @@ function SlotEditor({
                       disabled={meta.required}
                       className="w-[30px] h-[17px] rounded-[9px] border-none relative shrink-0 transition-[background] duration-[0.15s]"
                       style={{
-                        /* intentionally dynamic */ cursor: meta.required ? "not-allowed" : "pointer",
-                        /* intentionally dynamic */ background: slot.enabled ? "var(--color-primary)" : "var(--color-surface-raised)",
-                        /* intentionally dynamic */ opacity: meta.required ? 0.55 : 1,
+                        cursor: meta.required ? "not-allowed" : "pointer",
+                        background: slot.enabled ? "var(--color-primary)" : "var(--color-surface-raised)",
+                        opacity: meta.required ? 0.55 : 1,
                       }}
                     >
                       <div
                         className="w-[11px] h-[11px] rounded-full bg-[oklch(0.95_0_0)] absolute top-[3px] transition-[left] duration-[0.15s]"
-                        style={{
-                          /* intentionally dynamic */ left: slot.enabled ? 16 : 3,
-                        }}
+                        style={{ left: slot.enabled ? 16 : 3 }}
                       />
                     </button>
 
                     <div className="flex-1 min-w-0">
                       <div
                         className="text-[0.76rem] font-normal whitespace-nowrap overflow-hidden text-ellipsis"
-                        style={{
-                          /* intentionally dynamic */ color: slot.enabled ? "var(--color-text-body)" : "var(--color-text-dim)",
-                        }}
+                        style={{ color: slot.enabled ? "var(--color-text-body)" : "var(--color-text-dim)" }}
                       >
                         {meta.label}
                       </div>
@@ -411,9 +507,7 @@ function SlotEditor({
                     {meta.hasContent && (
                       <span
                         className="text-[0.55rem] text-text-dim shrink-0 transition-transform duration-[0.15s] inline-block"
-                        style={{
-                          /* intentionally dynamic */ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                        }}
+                        style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}
                       >
                         ▶
                       </span>
@@ -462,8 +556,8 @@ function ArrowButton({
       disabled={disabled}
       className="w-4 h-[10px] p-0 border-none bg-transparent text-[0.48rem] leading-none flex items-center justify-center"
       style={{
-        /* intentionally dynamic */ color: disabled ? "var(--color-surface-raised)" : "var(--color-text-dim)",
-        /* intentionally dynamic */ cursor: disabled ? "default" : "pointer",
+        color: disabled ? "var(--color-surface-raised)" : "var(--color-text-dim)",
+        cursor: disabled ? "default" : "pointer",
       }}
     >
       {direction === "up" ? "▲" : "▼"}

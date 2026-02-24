@@ -119,14 +119,15 @@ export function assemblePrompt(
   // Zone 3: Post-history (fixed order: post_history then assistant_prefill)
   for (const slot of enabledSlots) {
     if (slot.id === "post_history") {
-      // User-edited content takes priority; fall back to character card field
+      // Injected as a user message to avoid "multiple system messages"
+      // errors with providers like Anthropic that only allow one system turn.
       const userContent = (slot.content ?? "").trim();
       const charContent = character?.post_history_instructions?.trim() ?? "";
       const postHistoryParts: string[] = [];
       if (charContent) postHistoryParts.push(charContent);
       if (userContent) postHistoryParts.push(applyMacros(userContent, charName, userName));
       if (postHistoryParts.length > 0) {
-        messages.push({ role: "system", content: postHistoryParts.join("\n\n") });
+        messages.push({ role: "user", content: postHistoryParts.join("\n\n") });
       }
     }
     if (slot.id === "assistant_prefill") {

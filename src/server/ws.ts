@@ -103,6 +103,7 @@ export function createWebSocketHandler(streamManager: StreamManager) {
             msg.nodeId,
             msg.provider,
             msg.regenerate,
+            msg.targetNodeId,
           );
           if ("error" in result) {
             console.warn("[generate]", msg.chatId, result.error);

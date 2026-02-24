@@ -3,6 +3,9 @@ import type { VisualizerDrawFn } from "../../components/chat/composer/types.ts";
 import DiscordMessageItem from "./MessageItem.tsx";
 import DiscordComposer from "./Composer.tsx";
 import DiscordChatHeader from "./ChatHeader.tsx";
+import DiscordRegenerateButton from "./RegenerateButton.tsx";
+import DiscordMessageActions from "./MessageActions.tsx";
+import DiscordSidebar from "./Sidebar.tsx";
 
 /**
  * Discord-style audio visualizer.
@@ -104,6 +107,9 @@ export const discordTemplate: TemplateModule = {
   MessageItem: DiscordMessageItem,
   Composer: DiscordComposer,
   ChatHeader: DiscordChatHeader,
+  RegenerateButton: DiscordRegenerateButton,
+  MessageActions: DiscordMessageActions,
+  Sidebar: DiscordSidebar,
   messageListClassName: "w-full",
   placeholder: (personaName, { isDisconnected }) => {
     if (isDisconnected) return "Reconnecting to server...";

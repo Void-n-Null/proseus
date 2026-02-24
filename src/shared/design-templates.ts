@@ -25,8 +25,10 @@ export const DESIGN_TEMPLATES: Record<DesignTemplateId, DesignTemplate> = {
     description: "Discord-inspired dark theme.",
     tokenOverrides: {
       "--color-background": "#1a1a1e",
+      "--color-surface": "rgb(18,18,20)",
       "--discord-font": "'Noto Sans', sans-serif",
       "--chat-message-font-family": "'Noto Sans', sans-serif",
+      "--font-body": "'Noto Sans', sans-serif",
     },
   },
   chub: {
@@ -34,7 +36,8 @@ export const DESIGN_TEMPLATES: Record<DesignTemplateId, DesignTemplate> = {
     label: "Chub",
     description: "Warm dark theme with amber accents.",
     tokenOverrides: {
-      "--color-background": "#232424",
+      "--font-body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
+      "--color-background": "linear-gradient(to bottom, rgba(36, 37, 37, 1), rgb(36,36,36) 50%, rgba(36, 37, 37, 1) 100%)",
       "--color-surface": "#232424",
       "--chat-italic-color": "rgb(143, 142, 142)",
       "--chat-avatar-column-width": "50px",
@@ -50,7 +53,9 @@ export const DESIGN_TEMPLATES: Record<DesignTemplateId, DesignTemplate> = {
       "--chat-message-row-gap": "0.7rem",
       "--chat-message-bg": "rgb(38 38 38 / 0.5)",
       "--chat-message-bg-hover": "rgb(38 38 38 / 0.5)",
-      "--chat-message-margin-y": "0.1rem",
+      "--chat-message-margin-t": "0.1rem",
+      "--chat-message-margin-b": "0.1rem",
+      "--chat-message-padding": "0.6rem 0.8rem 0.45rem 1rem",
       "--chat-message-border-radius": "0.125rem",
       "--chat-message-group-start-pt": "0.8rem",
       "--chat-message-px": "0.5rem",

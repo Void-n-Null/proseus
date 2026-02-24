@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useChatList } from "./hooks/useChat.ts";
 import { useRoute } from "./hooks/useRoute.ts";
@@ -11,11 +11,13 @@ import PersonaSidebar from "./components/personas/PersonaSidebar.tsx";
 import { useOAuthCallback } from "./hooks/useOAuthCallback.ts";
 import { useDesignTemplateId } from "./hooks/useDesignTemplate.ts";
 import { getTemplate } from "./templates/index.ts";
+import DiscordFrameShell from "./templates/discord/DiscordFrameShell.tsx";
+import type { SidebarView } from "./templates/types.ts";
 
 export default function App() {
   const { data: chatData, isLoading, isFetching, refetch } = useChatList();
   const { route, navigateToChat, navigateHome, replaceRoute } = useRoute();
-  const [sidebarView, setSidebarView] = useState<"characters" | "chats" | "personas">(
+  const [sidebarView, setSidebarView] = useState<SidebarView>(
     // Default to "chats" if we loaded with a chat URL, otherwise "characters"
     route.chatId ? "chats" : "characters",
   );
@@ -83,37 +85,45 @@ export default function App() {
     }
   }, [isLoading, isFetching, activeChatId, resolvedChatId, replaceRoute]);
 
-  const sidebarTabs = (
-    <div className="flex gap-[2px] bg-surface-raised rounded-md p-[2px]">
-      <ToggleButton
-        active={sidebarView === "characters"}
-        onClick={() => {
-          setSidebarView("characters");
-          setSidebarCollapsed(false);
-        }}
-        label="Characters"
+  // ── Sidebar view-switching (also un-collapses in toggle mode) ──
+  const handleSetView = useCallback((view: SidebarView) => {
+    setSidebarView(view);
+    setSidebarCollapsed(false);
+  }, []);
+
+  // ── Render-prop factories for the three sidebar panels ──
+  // These let the template's Sidebar component compose the actual panel
+  // content without knowing anything about CharacterSidebar / PersonaSidebar /
+  // ChatGallery internals.
+  const renderCharacters = useCallback(
+    (tabs?: ReactNode) => <CharacterSidebar onChatCreated={handleChatCreated} tabs={tabs} />,
+    [handleChatCreated],
+  );
+  const renderPersonas = useCallback(
+    (tabs?: ReactNode) => <PersonaSidebar tabs={tabs} />,
+    [],
+  );
+  const renderChats = useCallback(
+    (tabs?: ReactNode) => (
+      <ChatGallery
+        activeChatId={resolvedChatId}
+        onSelectChat={handleSelectChat}
+        isLoading={isLoading}
+        tabs={tabs}
       />
-      <ToggleButton
-        active={sidebarView === "personas"}
-        onClick={() => {
-          setSidebarView("personas");
-          setSidebarCollapsed(false);
-        }}
-        label="Personas"
-      />
-      <ToggleButton
-        active={sidebarView === "chats"}
-        onClick={() => {
-          setSidebarView("chats");
-          setSidebarCollapsed(false);
-        }}
-        label={`Chats${chats.length > 0 ? ` (${chats.length})` : ""}`}
-      />
-    </div>
+    ),
+    [resolvedChatId, handleSelectChat, isLoading],
   );
 
+  const SidebarComponent = template.Sidebar;
+
+  const isDiscord = designTemplateId === "discord";
+
+  /** Picks the outer shell: DiscordFrameShell on desktop-discord, plain div otherwise. */
+  const Shell = isDiscord && !isMobile ? DiscordFrameShell : PassthroughShell;
+
   return (
-    <div className="font-body text-foreground bg-background h-dvh flex flex-col" style={appViewportStyle}>
+    <Shell style={appViewportStyle}>
       {/* OAuth callback feedback */}
       {oauthState.status === "exchanging" && (
         <div className="flex items-center gap-3 px-4 py-2.5 bg-surface border-b border-border text-sm text-text-body shrink-0">
@@ -152,45 +162,24 @@ export default function App() {
       {isMobile ? (
         /* ── Mobile: stacked navigation ──
            Sidebar is the base layer (always rendered, full width).
-           Chat slides over it as a full-screen overlay from the right. */
+           Chat slides over it as a full-screen overlay from the right.
+           Mobile uses its own header + tabs — the template Sidebar is
+           desktop-only so we render sub-components directly here. */
         <div className="flex-1 min-h-0 relative overflow-hidden">
           {/* Base layer — sidebar plus local mobile nav header */}
           <div className="absolute inset-0 flex flex-col">
-            <div className="flex items-center justify-between px-3 min-h-[44px] bg-[oklch(0.06_0.01_250)] border-b border-border shrink-0">
-              <span className="text-[1rem] font-light tracking-[0.25em] text-text-muted font-display">
-                PROSEUS
-              </span>
-              <div className="flex gap-[2px] bg-surface rounded-md p-[2px]">
-                <ToggleButton
-                  active={sidebarView === "characters"}
-                  onClick={() => setSidebarView("characters")}
-                  label="Characters"
-                />
-                <ToggleButton
-                  active={sidebarView === "personas"}
-                  onClick={() => setSidebarView("personas")}
-                  label="Personas"
-                />
-                <ToggleButton
-                  active={sidebarView === "chats"}
-                  onClick={() => setSidebarView("chats")}
-                  label={`Chats${chats.length > 0 ? ` (${chats.length})` : ""}`}
-                />
-              </div>
-            </div>
+            <MobileHeader
+              view={sidebarView}
+              setView={setSidebarView}
+              chatCount={chats.length}
+            />
 
             <div className="flex-1 min-h-0">
-              {sidebarView === "characters" ? (
-                <CharacterSidebar onChatCreated={handleChatCreated} />
-              ) : sidebarView === "personas" ? (
-                <PersonaSidebar />
-              ) : (
-                <ChatGallery
-                  activeChatId={resolvedChatId}
-                  onSelectChat={handleSelectChat}
-                  isLoading={isLoading}
-                />
-              )}
+              {sidebarView === "characters"
+                ? renderCharacters()
+                : sidebarView === "personas"
+                  ? renderPersonas()
+                  : renderChats()}
             </div>
           </div>
 
@@ -220,20 +209,20 @@ export default function App() {
       ) : (
         /* ── Desktop: side-by-side panels ── */
         <div className="flex-1 min-h-0 flex">
-          {/* Sidebar — always visible in "always" mode, toggleable in "toggle" mode */}
+          {/* Sidebar — delegated to the template's Sidebar component */}
           {(template.sidebarMode === "always" || !resolvedChatId || !sidebarCollapsed) && (
-            sidebarView === "characters" ? (
-              <CharacterSidebar onChatCreated={handleChatCreated} tabs={sidebarTabs} />
-            ) : sidebarView === "personas" ? (
-              <PersonaSidebar tabs={sidebarTabs} />
-            ) : (
-              <ChatGallery
-                activeChatId={resolvedChatId}
-                onSelectChat={handleSelectChat}
-                isLoading={isLoading}
-                tabs={sidebarTabs}
-              />
-            )
+            <SidebarComponent
+              view={sidebarView}
+              setView={handleSetView}
+              chatCount={chats.length}
+              activeChatId={resolvedChatId}
+              isLoading={isLoading}
+              onChatCreated={handleChatCreated}
+              onSelectChat={handleSelectChat}
+              renderCharacters={renderCharacters}
+              renderPersonas={renderPersonas}
+              renderChats={renderChats}
+            />
           )}
 
           {/* Chat area */}
@@ -261,9 +250,40 @@ export default function App() {
           </div>
         </div>
       )}
+    </Shell>
+  );
+}
+
+// ─── Mobile header with inline tab buttons ──────────────────────────────────
+
+function MobileHeader({
+  view,
+  setView,
+  chatCount,
+}: {
+  view: SidebarView;
+  setView: (view: SidebarView) => void;
+  chatCount: number;
+}) {
+  return (
+    <div className="flex items-center justify-between px-3 min-h-[44px] bg-[oklch(0.06_0.01_250)] border-b border-border shrink-0">
+      <span className="text-[1rem] font-light tracking-[0.25em] text-text-muted font-display">
+        PROSEUS
+      </span>
+      <div className="flex gap-[2px] bg-surface rounded-md p-[2px]">
+        <ToggleButton active={view === "characters"} onClick={() => setView("characters")} label="Characters" />
+        <ToggleButton active={view === "personas"} onClick={() => setView("personas")} label="Personas" />
+        <ToggleButton
+          active={view === "chats"}
+          onClick={() => setView("chats")}
+          label={`Chats${chatCount > 0 ? ` (${chatCount})` : ""}`}
+        />
+      </div>
     </div>
   );
 }
+
+// ─── Shared small components ────────────────────────────────────────────────
 
 function ToggleButton({
   active,
@@ -285,6 +305,21 @@ function ToggleButton({
     >
       {label}
     </button>
+  );
+}
+
+/** Default app shell — plain div with bg-background, no frame gutters. */
+function PassthroughShell({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div className="font-body text-foreground bg-background h-dvh flex flex-col" style={style}>
+      {children}
+    </div>
   );
 }
 

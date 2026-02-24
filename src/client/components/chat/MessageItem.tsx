@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import type { ChatNode, Speaker } from "../../../shared/types.ts";
-import { useIsStreamingNode } from "../../stores/streaming.ts";
+import { useIsStreamingNode, useIsStreaming } from "../../stores/streaming.ts";
 import { useChatMutations } from "../../hooks/useMutations.ts";
 import { useDesignTemplateId } from "../../hooks/useDesignTemplate.ts";
 import { getTemplate } from "../../templates/index.ts";
@@ -13,7 +13,7 @@ interface MessageItemProps {
   isFirstInGroup: boolean;
   isLast: boolean;
   userName: string;
-  onRegenerate?: () => void;
+  onRegenerate?: (nodeId: string) => void;
   dateDividerDate?: number;
   isFirstMessage?: boolean;
   characterName?: string | null;
@@ -37,29 +37,51 @@ const MessageItem = React.memo(
   }: MessageItemProps) {
     const [isHovered, setIsHovered] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [editDraft, setEditDraft] = useState("");
     const isStreaming = useIsStreamingNode(node.id);
-    const { editMessage } = useChatMutations(chatId);
+    const isStreamingGlobal = useIsStreaming();
+    const { editMessage, deleteMessage } = useChatMutations(chatId);
     const designTemplateId = useDesignTemplateId();
     const template = getTemplate(designTemplateId);
 
-    const handleEditSubmit = useCallback(
-      (message: string) => {
-        editMessage.mutate({ nodeId: node.id, message });
-        setIsEditing(false);
-      },
-      [editMessage, node.id],
-    );
+    const handleEditSubmit = useCallback(() => {
+      editMessage.mutate({ nodeId: node.id, message: editDraft });
+      setIsEditing(false);
+    }, [editMessage, node.id, editDraft]);
 
     const handleEditCancel = useCallback(() => {
       setIsEditing(false);
     }, []);
 
     const handleStartEdit = useCallback(() => {
+      setEditDraft(node.message);
       setIsEditing(true);
-    }, []);
+    }, [node.message]);
+
+    const handleCopy = useCallback(() => {
+      navigator.clipboard.writeText(node.message).catch(() => {
+        // Silently fail if clipboard not available
+      });
+    }, [node.message]);
+
+    const handleDelete = useCallback(() => {
+      const confirmed = window.confirm(
+        "Delete this message and all its descendants?",
+      );
+      if (confirmed) {
+        deleteMessage.mutate(node.id);
+      }
+    }, [deleteMessage, node.id]);
 
     const onMouseEnter = useCallback(() => setIsHovered(true), []);
     const onMouseLeave = useCallback(() => setIsHovered(false), []);
+
+    /* Show regenerate on all non-user messages (not just the last one). */
+    const showRegenerate =
+      speaker != null && !speaker.is_user && onRegenerate != null;
+
+    /* Actions visible: always during edit (save/cancel), hover otherwise */
+    const actionsVisible = isEditing || (isHovered && !isStreaming);
 
     const sharedProps = {
       node,
@@ -73,18 +95,44 @@ const MessageItem = React.memo(
       isEditing,
       isStreaming,
       onRegenerate,
-      onMouseEnter,
-      onMouseLeave,
+      editDraft,
+      onEditDraftChange: setEditDraft,
       handleEditSubmit,
       handleEditCancel,
-      handleStartEdit,
       dateDividerDate,
       isFirstMessage,
       characterName,
       characterAvatarUrl,
     };
 
-    return <template.MessageItem {...sharedProps} />;
+    const RegenerateButton = template.RegenerateButton;
+    const MessageActions = template.MessageActions;
+
+    return (
+      <div
+        className="group/message relative"
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+      >
+        <template.MessageItem {...sharedProps} />
+        {showRegenerate && onRegenerate && (
+          <RegenerateButton
+            onRegenerate={onRegenerate}
+            nodeId={node.id}
+            isStreaming={isStreamingGlobal}
+          />
+        )}
+        <MessageActions
+          onEdit={handleStartEdit}
+          onCopy={handleCopy}
+          onDelete={handleDelete}
+          onSave={handleEditSubmit}
+          onCancel={handleEditCancel}
+          isVisible={actionsVisible}
+          isEditing={isEditing}
+        />
+      </div>
+    );
   },
   (prev, next) =>
     prev.node.id === next.node.id &&

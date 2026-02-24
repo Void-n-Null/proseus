@@ -69,7 +69,9 @@
   --chat-message-row-gap: 0.6rem;
   --chat-message-bg: transparent;
   --chat-message-bg-hover: var(--color-surface-raised);
-  --chat-message-margin-y: 0;
+  --chat-message-margin-t: 0;
+  --chat-message-margin-b: 0;
+  --chat-message-padding: 0;
   --chat-message-border-radius: 0;
   --chat-message-group-start-pt: 0.5rem;
   --chat-message-px: 0.625rem;

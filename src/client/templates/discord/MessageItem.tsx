@@ -2,9 +2,7 @@ import React from "react";
 import { Avatar } from "../../components/ui/avatar.tsx";
 import MessageContent from "../forge/MessageContent.tsx";
 import MessageBranch from "../../components/chat/MessageBranch.tsx";
-import MessageActions from "../../components/chat/MessageActions.tsx";
 import type { MessageItemLayoutProps } from "../../components/chat/message-item/types.ts";
-import { useIsStreaming } from "../../stores/streaming.ts";
 import DateDivider from "./DateDivider.tsx";
 import ChatBeginningBlock from "./ChatBeginningBlock.tsx";
 
@@ -16,36 +14,6 @@ function formatDiscordTime(epochMs: number): string {
   const h = hours % 12 || 12;
   const m = minutes.toString().padStart(2, "0");
   return `${h}:${m} ${ampm}`;
-}
-
-function RegenerateButton({ onRegenerate }: { onRegenerate: () => void }) {
-  const isStreamingGlobal = useIsStreaming();
-  if (isStreamingGlobal) return null;
-
-  return (
-    <button
-      type="button"
-      onClick={onRegenerate}
-      className="mt-1 flex items-center gap-1.5 px-2 py-0.5 rounded text-[0.75rem] text-[hsl(214_8%_62%)] hover:text-[hsl(214_10%_86%)] hover:bg-[hsl(228_6%_18%)] transition-colors duration-150 cursor-pointer"
-    >
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-        <path d="M3 3v5h5" />
-        <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-        <path d="M16 16h5v5" />
-      </svg>
-      Regenerate
-    </button>
-  );
 }
 
 export default function DiscordMessageItem({
@@ -60,11 +28,10 @@ export default function DiscordMessageItem({
   isEditing,
   isStreaming,
   onRegenerate,
-  onMouseEnter,
-  onMouseLeave,
+  editDraft,
+  onEditDraftChange,
   handleEditSubmit,
   handleEditCancel,
-  handleStartEdit,
   dateDividerDate,
   isFirstMessage,
   characterName,
@@ -86,15 +53,13 @@ export default function DiscordMessageItem({
       )}
 
     <div
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
         className={[
           "relative flex flex-row gap-4 transition-colors duration-100",
           isFirstInGroup
             ? "mt-[1.0625rem] pt-[0.125rem] pb-[0.125rem] pl-14 pr-3 sm:pl-[4.5rem] sm:pr-12"
             : "py-[0.125rem] pl-14 pr-3 sm:pl-[4.5rem] sm:pr-12",
           isHovered
-            ? "bg-[#2a2a2e]"
+            ? "bg-[#2a2a2e]/50"
             : "bg-transparent",
         ].join(" ")}
         style={{ fontFamily: "var(--discord-font)" }}
@@ -150,6 +115,8 @@ export default function DiscordMessageItem({
             isStreaming={isStreaming}
             speakerColor={speaker?.color}
             userName={userName}
+            editDraft={editDraft}
+            onEditDraftChange={onEditDraftChange}
             onEditSubmit={handleEditSubmit}
             onEditCancel={handleEditCancel}
           />
@@ -163,20 +130,7 @@ export default function DiscordMessageItem({
           />
         )}
 
-        {isLast && speaker && !speaker.is_user && onRegenerate && (
-          <RegenerateButton onRegenerate={onRegenerate} />
-        )}
       </div>
-
-      {/* Actions toolbar */}
-      {!isStreaming && (
-        <MessageActions
-          node={node}
-          chatId={chatId}
-          onStartEdit={handleStartEdit}
-          isVisible={isHovered && !isEditing}
-        />
-      )}
     </div>
     </>
   );

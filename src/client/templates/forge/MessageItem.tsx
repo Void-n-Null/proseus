@@ -3,31 +3,8 @@ import { Avatar } from "../../components/ui/avatar.tsx";
 import MessageMeta from "../../components/chat/MessageMeta.tsx";
 import MessageContent from "./MessageContent.tsx";
 import MessageBranch from "../../components/chat/MessageBranch.tsx";
-import MessageActions from "../../components/chat/MessageActions.tsx";
 import type { MessageItemLayoutProps } from "../../components/chat/message-item/types.ts";
-import { useIsStreaming } from "../../stores/streaming.ts";
-import { RefreshCcw } from "lucide-react";
 import { useIsMobile } from "../../hooks/useMediaQuery.ts";
-
-function RegenerateButton({ onRegenerate }: { onRegenerate: () => void }) {
-  const isStreamingGlobal = useIsStreaming();
-  if (isStreamingGlobal) return null;
-
-  return (
-    <button
-      type="button"
-      onClick={onRegenerate}
-      className="mt-1.5 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-text-dim hover:text-text-body hover:bg-surface-hover transition-colors duration-150 cursor-pointer"
-    >
-      <RefreshCcw
-        width="14"
-        height="14"
-        className="text-[var(--color-background-elevated)]"
-      />
-      Regenerate
-    </button>
-  );
-}
 
 export default function ForgeMessageItem({
   node,
@@ -41,17 +18,14 @@ export default function ForgeMessageItem({
   isEditing,
   isStreaming,
   onRegenerate,
-  onMouseEnter,
-  onMouseLeave,
+  editDraft,
+  onEditDraftChange,
   handleEditSubmit,
   handleEditCancel,
-  handleStartEdit,
 }: MessageItemLayoutProps) {
   const isMobile = useIsMobile();
   return (
     <div
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
       className={`relative flex flex-row gap-[var(--chat-message-row-gap)] transition-colors duration-150 ${
         isFirstInGroup
           ? "pt-[var(--chat-message-group-start-pt)] pb-[0.15rem] px-2.5 sm:px-4"
@@ -61,9 +35,10 @@ export default function ForgeMessageItem({
       style={{
         maxWidth: isMobile ? 'var(--chat-message-max-width-mobile)' : 'var(--chat-message-max-width)',
         margin: '0 auto',
-        marginTop: 'var(--chat-message-margin-y)',
-        marginBottom: 'var(--chat-message-margin-y)',
+        marginTop: 'var(--chat-message-margin-t)',
+        marginBottom: 'var(--chat-message-margin-b)',
         borderRadius: 'var(--chat-message-border-radius)',
+        padding: 'var(--chat-message-padding)',
         background: isHovered
           ? 'var(--chat-message-bg-hover)'
           : 'var(--chat-message-bg)',
@@ -112,6 +87,8 @@ export default function ForgeMessageItem({
             isStreaming={isStreaming}
             speakerColor={speaker?.color}
             userName={userName}
+            editDraft={editDraft}
+            onEditDraftChange={onEditDraftChange}
             onEditSubmit={handleEditSubmit}
             onEditCancel={handleEditCancel}
           />
@@ -125,19 +102,7 @@ export default function ForgeMessageItem({
           />
         )}
 
-        {isLast && speaker && !speaker.is_user && onRegenerate && (
-          <RegenerateButton onRegenerate={onRegenerate} />
-        )}
       </div>
-
-      {!isStreaming && (
-        <MessageActions
-          node={node}
-          chatId={chatId}
-          onStartEdit={handleStartEdit}
-          isVisible={isHovered && !isEditing}
-        />
-      )}
     </div>
   );
 }

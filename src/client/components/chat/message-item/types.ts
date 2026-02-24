@@ -1,5 +1,37 @@
 import type { ChatNode, Speaker } from "../../../../shared/types.ts";
 
+/**
+ * Props for the template-specific regenerate button component.
+ *
+ * Each design template provides its own visual variant (e.g. inline text
+ * button for Forge, chevron overlay for Chub). The shared MessageItem
+ * wrapper decides *when* to render; the template decides *how*.
+ */
+export interface RegenerateButtonProps {
+  onRegenerate: (nodeId: string) => void;
+  nodeId: string;
+  isStreaming: boolean;
+}
+
+/**
+ * Props for the template-specific message actions toolbar.
+ *
+ * Each design template provides its own visual variant (e.g. text buttons
+ * for Forge, Lucide icons for Chub). The shared MessageItem wrapper
+ * decides *when* to render and provides the callbacks; the template
+ * decides *how* to render them.
+ */
+export interface MessageActionsProps {
+  onEdit: () => void;
+  onCopy: () => void;
+  onDelete: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+  isVisible: boolean;
+  /** When true, show save/cancel instead of edit/copy/delete. */
+  isEditing: boolean;
+}
+
 export interface MessageItemLayoutProps {
   node: ChatNode;
   speaker: Speaker | undefined;
@@ -11,12 +43,14 @@ export interface MessageItemLayoutProps {
   isHovered: boolean;
   isEditing: boolean;
   isStreaming: boolean;
-  onRegenerate?: () => void;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-  handleEditSubmit: (message: string) => void;
+  onRegenerate?: (nodeId: string) => void;
+  /** Current edit draft text — managed by the shared wrapper, passed down for the textarea. */
+  editDraft: string;
+  /** Called on every keystroke while editing. */
+  onEditDraftChange: (value: string) => void;
+  /** Save the current edit (no args — reads from editDraft). */
+  handleEditSubmit: () => void;
   handleEditCancel: () => void;
-  handleStartEdit: () => void;
 
   /**
    * When defined, a date divider should be rendered above this message.

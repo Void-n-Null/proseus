@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import React, { useCallback, useEffect, useRef, useMemo } from "react";
 import { subscribeToContent } from "../../lib/streaming-buffer.ts";
 import {
   renderMarkdown,
@@ -11,7 +11,11 @@ interface MessageContentProps {
   isStreaming: boolean;
   speakerColor?: string | null;
   userName: string;
-  onEditSubmit: (msg: string) => void;
+  /** Current edit draft — managed by the shared MessageItem wrapper. */
+  editDraft: string;
+  /** Called on every keystroke while editing. */
+  onEditDraftChange: (value: string) => void;
+  onEditSubmit: () => void;
   onEditCancel: () => void;
 }
 
@@ -29,21 +33,40 @@ const MessageContent = React.memo(function MessageContent({
   isStreaming,
   speakerColor,
   userName,
+  editDraft,
+  onEditDraftChange,
   onEditSubmit,
   onEditCancel,
 }: MessageContentProps) {
-  const [draft, setDraft] = useState(message);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const streamContentRef = useRef<HTMLDivElement>(null);
 
+  // Auto-focus and auto-size the textarea when entering edit mode
   useEffect(() => {
     if (isEditing) {
-      setDraft(message);
       requestAnimationFrame(() => {
-        textareaRef.current?.focus();
+        const ta = textareaRef.current;
+        if (ta) {
+          ta.focus();
+          // Auto-size to fit content
+          ta.style.height = "auto";
+          ta.style.height = `${ta.scrollHeight}px`;
+        }
       });
     }
-  }, [isEditing, message]);
+  }, [isEditing]);
+
+  // Auto-resize textarea as content changes
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      onEditDraftChange(e.target.value);
+      // Auto-size
+      const ta = e.target;
+      ta.style.height = "auto";
+      ta.style.height = `${ta.scrollHeight}px`;
+    },
+    [onEditDraftChange],
+  );
 
   useEffect(() => {
     if (!isStreaming) return;
@@ -67,43 +90,25 @@ const MessageContent = React.memo(function MessageContent({
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        onEditSubmit(draft);
+        onEditSubmit();
       } else if (e.key === "Escape") {
         e.preventDefault();
         onEditCancel();
       }
     },
-    [draft, onEditSubmit, onEditCancel],
+    [onEditSubmit, onEditCancel],
   );
 
   if (isEditing) {
     return (
-      <div>
-        <textarea
-          ref={textareaRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="w-full min-h-[3rem] p-2 bg-[#1a1a1a] text-[#e0e0e0] border border-[#333] rounded-[4px] font-[inherit] text-[0.9rem] leading-[1.5] resize-y outline-none box-border"
-        />
-        <div className="flex gap-[0.4rem] mt-[0.3rem]">
-          <button
-            onClick={() => onEditSubmit(draft)}
-            className="py-[0.25rem] px-[0.6rem] bg-[#2563eb] text-white border-none rounded-[3px] cursor-pointer text-[0.75rem]"
-          >
-            Save
-          </button>
-          <button
-            onClick={onEditCancel}
-            className="py-[0.25rem] px-[0.6rem] bg-transparent text-[#888] border border-[#333] rounded-[3px] cursor-pointer text-[0.75rem]"
-          >
-            Cancel
-          </button>
-          <span className="text-[0.65rem] text-[#555] self-center">
-            Ctrl+Enter to save, Esc to cancel
-          </span>
-        </div>
-      </div>
+      <textarea
+        ref={textareaRef}
+        value={editDraft}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        className={`${contentClass} w-full bg-transparent border-none outline-none resize-none p-0 m-0 whitespace-pre-wrap`}
+        rows={1}
+      />
     );
   }
 

@@ -1,7 +1,51 @@
-import type { ComponentType } from "react";
-import type { MessageItemLayoutProps } from "../components/chat/message-item/types.ts";
+import type { ComponentType, ReactNode } from "react";
+import type { MessageItemLayoutProps, RegenerateButtonProps, MessageActionsProps } from "../components/chat/message-item/types.ts";
 import type { ComposerLayoutProps, VisualizerDrawFn } from "../components/chat/composer/types.ts";
 import type { ChatHeaderLayoutProps } from "../components/chat/chat-header/types.ts";
+
+// ─── Sidebar types ──────────────────────────────────────────────────────────
+
+export type SidebarView = "characters" | "chats" | "personas";
+
+/**
+ * Props passed to a template's `Sidebar` component.
+ *
+ * The template controls the top-level sidebar layout — tab bar style,
+ * ordering, chrome around the panels, etc. It renders the actual panel
+ * content via the sub-component props below, so existing CharacterSidebar /
+ * PersonaSidebar / ChatGallery can be reused without reimplementation.
+ */
+export interface SidebarLayoutProps {
+  /** Which panel is currently active. */
+  view: SidebarView;
+  /** Switch to a different panel. */
+  setView: (view: SidebarView) => void;
+
+  /** Number of chats — useful for badge counts on the tab bar. */
+  chatCount: number;
+  /** The currently-open chat ID, if any. */
+  activeChatId: string | null;
+  /** Whether chat data is still loading. */
+  isLoading: boolean;
+
+  // ── Callbacks the sidebar panels need ────────────────────────────
+  onChatCreated: (chatId: string) => void;
+  onSelectChat: (chatId: string) => void;
+
+  // ── Sub-components the template can compose ──────────────────────
+  /**
+   * Render prop for the Characters panel.
+   * Pass an optional `tabs` ReactNode that the sub-component will render
+   * in its header slot.
+   */
+  renderCharacters: (tabs?: ReactNode) => ReactNode;
+  /** Render prop for the Personas panel. */
+  renderPersonas: (tabs?: ReactNode) => ReactNode;
+  /** Render prop for the Chats panel. */
+  renderChats: (tabs?: ReactNode) => ReactNode;
+}
+
+// ─── Template module ────────────────────────────────────────────────────────
 
 /**
  * Contract that every design template must satisfy.
@@ -21,6 +65,34 @@ export interface TemplateModule {
 
   /** Layout component for the chat header bar. */
   ChatHeader: ComponentType<ChatHeaderLayoutProps>;
+
+  /**
+   * Visual variant of the regenerate button.
+   *
+   * The shared MessageItem wrapper decides *when* to render the button
+   * (all non-user messages while not streaming). The template decides
+   * *how* it looks — inline text button, chevron overlay, etc.
+   */
+  RegenerateButton: ComponentType<RegenerateButtonProps>;
+
+  /**
+   * Visual variant of the message actions toolbar (edit, copy, delete).
+   *
+   * The shared MessageItem wrapper owns the behavior (clipboard, confirm
+   * dialog, mutation calls). The template decides *how* the buttons look
+   * — text labels, icons, positioning, etc.
+   */
+  MessageActions: ComponentType<MessageActionsProps>;
+
+  /**
+   * Top-level sidebar layout component.
+   *
+   * Controls the tab bar, panel switching chrome, and overall sidebar
+   * structure. Uses `renderCharacters` / `renderPersonas` / `renderChats`
+   * render props to compose the actual panel content — so templates can
+   * restyle the shell without reimplementing every panel.
+   */
+  Sidebar: ComponentType<SidebarLayoutProps>;
 
   /** Tailwind className for the message list width container. */
   messageListClassName: string;

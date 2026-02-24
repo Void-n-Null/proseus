@@ -15,7 +15,7 @@ interface MessageListProps {
   nodeMap: Map<string, ChatNode>;
   chatId: string;
   userName: string;
-  onRegenerate?: () => void;
+  onRegenerate?: (nodeId: string) => void;
   /** Character (non-user speaker) name — forwarded to template for beginning blocks. */
   characterName?: string | null;
   /** Character avatar URL — forwarded to template for beginning blocks. */

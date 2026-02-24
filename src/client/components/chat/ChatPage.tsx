@@ -12,6 +12,7 @@ import { setStoredDesignTemplateId, applyDesignTemplate } from "../../lib/design
 import type { DesignTemplateId } from "../../../shared/design-templates.ts";
 import { api } from "../../api/client.ts";
 import type { Speaker } from "../../../shared/types.ts";
+import { getFilenameFromDisposition, triggerDownload } from "../../lib/download.ts";
 import MessageList from "./MessageList.tsx";
 import Composer from "./Composer.tsx";
 import StreamDebug from "../debug/StreamDebug.tsx";
@@ -22,28 +23,6 @@ interface ChatPageProps {
   chatId: string;
   /** Called when the mobile back button is tapped to dismiss the chat overlay. */
   onBack?: () => void;
-}
-
-function getFilenameFromDisposition(
-  contentDisposition: string | null,
-  fallback: string,
-): string {
-  if (!contentDisposition) return fallback;
-
-  const match = contentDisposition.match(/filename="?([^";]+)"?/i);
-  if (!match || !match[1]) return fallback;
-  return match[1];
-}
-
-function triggerDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
 }
 
 export default function ChatPage({
@@ -137,12 +116,12 @@ export default function ChatPage({
     sendGenerate(modelId, provider);
   }, [sendGenerate, modelId, provider]);
 
-  const handleRegenerate = useCallback(() => {
+  const handleRegenerate = useCallback((targetNodeId: string) => {
     if (!modelId) {
       setModelBrowserOpen(true);
       return;
     }
-    sendGenerate(modelId, provider, true);
+    sendGenerate(modelId, provider, true, targetNodeId);
   }, [sendGenerate, modelId, provider]);
 
   const handleExport = useCallback(

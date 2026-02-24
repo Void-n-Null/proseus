@@ -29,6 +29,12 @@ export type ClientWsMessage =
       provider?: ProviderName;
       /** When true, branch from the parent of the leaf (sibling of last message). */
       regenerate?: boolean;
+      /**
+       * When regenerating a specific message (not the last one), this is the
+       * node ID of the message to regenerate. The server will branch from its
+       * parent, creating a sibling at that position in the tree.
+       */
+      targetNodeId?: string;
     }
   | { type: "cancel-stream"; chatId: string };
 

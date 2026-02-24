@@ -114,6 +114,7 @@ export class StreamManager {
     nodeId: string,
     provider: ProviderName = "openrouter",
     regenerate?: boolean,
+    targetNodeId?: string,
   ): Promise<{ streamId: string } | { error: string }> {
     if (!(await this.hasApiKey(provider))) return { error: `No API key configured for ${provider}` };
     if (this.chatStreams.has(chatId)) return { error: "Chat already streaming" };
@@ -128,8 +129,15 @@ export class StreamManager {
     if (pathIds.length === 0) return { error: "Chat has no active path" };
 
     let parentId: string;
-    if (regenerate) {
-      // Branch from the parent of the leaf — creates a sibling of the last message
+    if (regenerate && targetNodeId) {
+      // Per-message regenerate: branch from the parent of the specified node.
+      // The target node might be anywhere in the tree, not just on the active path.
+      const targetNode = nodesMap.get(targetNodeId);
+      if (!targetNode) return { error: "Target node not found" };
+      if (!targetNode.parent_id) return { error: "Cannot regenerate root node" };
+      parentId = targetNode.parent_id;
+    } else if (regenerate) {
+      // Legacy regenerate: branch from the parent of the active path leaf
       if (pathIds.length < 2) return { error: "Cannot regenerate: no parent to branch from" };
       parentId = pathIds[pathIds.length - 2]!;
     } else {

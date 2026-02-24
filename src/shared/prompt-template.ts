@@ -128,7 +128,8 @@ export const SLOT_META: Record<SlotId, SlotMeta> = {
     label: 'After-History Instructions',
     description: 'Character post-history instructions, injected after the chat (the jailbreak / UJB slot).',
     zone: 'post_history',
-    hasContent: false,
+    hasContent: true,
+    hasMacros: true,
   },
   assistant_prefill: {
     id: 'assistant_prefill',

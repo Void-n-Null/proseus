@@ -106,13 +106,28 @@ export function assemblePrompt(
   }
 
   if (enabledSlots.some((s) => s.id === "history")) {
-    for (const nodeId of pathIds) {
-      const node = nodesMap.get(nodeId);
-      if (!node || !node.message.trim()) continue;
-      messages.push({
-        role: node.is_bot ? "assistant" : "user",
-        content: node.message,
-      });
+    if (template.flattenHistory) {
+      // Chub-style: flatten all history into a single user message with Name: prefixes
+      const lines: string[] = [];
+      for (const nodeId of pathIds) {
+        const node = nodesMap.get(nodeId);
+        if (!node || !node.message.trim()) continue;
+        const speaker = node.is_bot ? charName : userName;
+        lines.push(`${speaker}: ${node.message}`);
+      }
+      if (lines.length > 0) {
+        messages.push({ role: "user", content: lines.join("\n") });
+      }
+    } else {
+      // Standard multi-turn: individual role-tagged messages
+      for (const nodeId of pathIds) {
+        const node = nodesMap.get(nodeId);
+        if (!node || !node.message.trim()) continue;
+        messages.push({
+          role: node.is_bot ? "assistant" : "user",
+          content: node.message,
+        });
+      }
     }
   }
 

@@ -122,6 +122,14 @@ export default function App() {
   /** Picks the outer shell: DiscordFrameShell on desktop-discord, plain div otherwise. */
   const Shell = isDiscord && !isMobile ? DiscordFrameShell : PassthroughShell;
 
+  if (route.page === "playground") {
+    return (
+      <Shell style={appViewportStyle}>
+        <PlaygroundPage onBack={navigateHome} />
+      </Shell>
+    );
+  }
+
   return (
     <Shell style={appViewportStyle}>
       {/* OAuth callback feedback */}
@@ -330,3 +338,13 @@ function CenterMessage({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+function PlaygroundPage({ onBack }: { onBack: () => void }) {
+  return (
+    <React.Suspense fallback={<CenterMessage>Loading playground...</CenterMessage>}>
+      <PlaygroundInner onBack={onBack} />
+    </React.Suspense>
+  );
+}
+
+const PlaygroundInner = React.lazy(() => import("./playground/PlaygroundView.tsx"));

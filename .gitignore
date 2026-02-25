@@ -55,3 +55,6 @@ devlogs/
 .DS_Store
 CLAUDE.md
 AGENTS.md
+
+# playground design experiments (ephemeral, not shipped)
+src/client/playground/

@@ -22,6 +22,13 @@ const ALGORITHM = "AES-GCM";
 const KEY_LENGTH = 256; // bits
 const IV_LENGTH = 12; // bytes — AES-GCM standard
 
+/**
+ * Prefix prepended to all encrypted values. Makes detection deterministic
+ * instead of relying on a heuristic that can false-positive on base64-looking
+ * plaintext. Legacy (unprefixed) values are still accepted by decrypt().
+ */
+const ENCRYPTED_PREFIX = "v1:";
+
 /** Cached CryptoKey instance — loaded once, reused for the process lifetime. */
 let cachedKey: CryptoKey | null = null;
 
@@ -103,7 +110,7 @@ export async function encrypt(plaintext: string): Promise<string> {
   combined.set(iv, 0);
   combined.set(new Uint8Array(cipherBuf), IV_LENGTH);
 
-  return btoa(String.fromCharCode(...combined));
+  return ENCRYPTED_PREFIX + btoa(String.fromCharCode(...combined));
 }
 
 /**
@@ -112,7 +119,13 @@ export async function encrypt(plaintext: string): Promise<string> {
  */
 export async function decrypt(encrypted: string): Promise<string> {
   const key = getEncryptionKey();
-  const combined = Uint8Array.from(atob(encrypted), (c) => c.charCodeAt(0));
+
+  // Strip prefix if present (handles both new v1: format and legacy raw base64)
+  const b64 = encrypted.startsWith(ENCRYPTED_PREFIX)
+    ? encrypted.slice(ENCRYPTED_PREFIX.length)
+    : encrypted;
+
+  const combined = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 
   if (combined.byteLength <= IV_LENGTH) {
     throw new Error("Encrypted data too short — missing IV or ciphertext");
@@ -135,22 +148,28 @@ export async function decrypt(encrypted: string): Promise<string> {
 // ============================================
 
 /**
- * Heuristic to detect if a stored value is already encrypted (base64 of
- * IV+ciphertext) vs plaintext. Encrypted values are always valid base64
- * and decode to at least IV_LENGTH+1 bytes. Plaintext API keys (sk-...,
- * AIza..., xai-...) contain characters like `-` that aren't in standard
- * base64, so this is reliable.
+ * Deterministic check: does this value carry the v1: encrypted prefix?
+ * All values produced by encrypt() since the prefix was introduced start
+ * with "v1:". Legacy (pre-prefix) encrypted values are handled by
+ * isLegacyEncrypted() during migration only.
  */
 export function isEncrypted(value: string): boolean {
-  // Plaintext keys contain hyphens, underscores in non-base64 positions, etc.
-  // Quick check: if it contains a hyphen, it's definitely plaintext.
+  return value.startsWith(ENCRYPTED_PREFIX);
+}
+
+/**
+ * Heuristic for detecting legacy encrypted values (pre-prefix format).
+ * Only used during migration to distinguish old encrypted values from
+ * plaintext. Not reliable for general use — can false-positive on long
+ * base64-looking plaintext strings.
+ */
+export function isLegacyEncrypted(value: string): boolean {
   if (value.includes("-")) return false;
 
   try {
     const decoded = atob(value);
-    // Must be long enough for IV + at least 1 byte of ciphertext + 16 byte auth tag
     return decoded.length >= IV_LENGTH + 1 + 16;
   } catch {
-    return false; // Not valid base64 → plaintext
+    return false;
   }
 }

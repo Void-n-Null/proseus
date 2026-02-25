@@ -36,6 +36,7 @@ import {
   encrypt,
   decrypt,
   isEncrypted,
+  isLegacyEncrypted,
 } from "../server/lib/crypto.ts";
 import type { ProviderName } from "../shared/providers.ts";
 import { PROVIDER_IDS } from "../shared/providers.ts";
@@ -89,11 +90,15 @@ describe("connections", () => {
       expect(row.updated_at).toBe(row.created_at);
     });
 
-    test("encrypted key is valid base64", async () => {
+    test("encrypted key has v1: prefix and valid base64 payload", async () => {
       const row = await upsertConnection(db, "anthropic", "sk-ant-test456");
 
-      // Should not throw when decoded
-      const decoded = atob(row.api_key);
+      // Should have the v1: prefix
+      expect(row.api_key.startsWith("v1:")).toBe(true);
+
+      // Payload after prefix should be valid base64
+      const payload = row.api_key.slice(3);
+      const decoded = atob(payload);
       // AES-GCM output: 12 byte IV + at least 1 byte ciphertext + 16 byte auth tag
       expect(decoded.length).toBeGreaterThanOrEqual(12 + 1 + 16);
     });
@@ -129,6 +134,35 @@ describe("connections", () => {
 
       // updated_at should be >= first.created_at
       expect(dbRow.updated_at).toBeGreaterThanOrEqual(first.created_at);
+    });
+
+    // ── BUG: return value contract mismatch ────────────────────
+    // upsertConnection always returns { created_at: now } even on updates.
+    // But the DB keeps the original created_at (ON CONFLICT only updates
+    // api_key + updated_at). So the returned row disagrees with the DB.
+    // This test encodes the DESIRED behavior: returned created_at must
+    // match what's actually in the database.
+    test("BUG: upsert return value should match DB state on conflict", async () => {
+      const first = await upsertConnection(db, "xai", "xai-original");
+      const originalCreatedAt = first.created_at;
+
+      await Bun.sleep(10);
+
+      const second = await upsertConnection(db, "xai", "xai-updated");
+
+      // Check what the DB actually has
+      const dbRow = db
+        .query("SELECT created_at, updated_at FROM connections WHERE provider = 'xai'")
+        .get() as { created_at: number; updated_at: number };
+
+      // DB should preserve original created_at
+      expect(dbRow.created_at).toBe(originalCreatedAt);
+
+      // BUG: The returned row's created_at should match the DB, not be a new timestamp
+      // Currently second.created_at === second.updated_at (both are `now`),
+      // but the DB's created_at is the original value.
+      expect(second.created_at).toBe(originalCreatedAt);
+      expect(second.updated_at).toBeGreaterThan(originalCreatedAt);
     });
 
     test("different providers are isolated", async () => {
@@ -318,6 +352,25 @@ describe("connections", () => {
       // but real Gemini keys contain non-base64 chars (underscores) typically.
       // The heuristic relies on real keys having hyphens or being short.
     });
+
+    // ── BUG: isEncrypted false-positive on base64-looking plaintext ──
+    // A plaintext API key that happens to be valid base64 with no hyphens
+    // and decodes to >= 29 bytes will be misclassified as encrypted.
+    // getApiKey would then try to decrypt it and throw.
+    // This test encodes the DESIRED behavior: a known-plaintext key that
+    // is valid base64 should NOT be classified as encrypted.
+    test("BUG: long base64-valid plaintext key is misclassified as encrypted", () => {
+      // This is a 44-char base64 string (decodes to 32 bytes, well above 29).
+      // It contains no hyphens. It's valid base64. But it was never encrypted.
+      const fakeKey = "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFB";
+      // Verify it's valid base64 that decodes long enough
+      const decoded = atob(fakeKey);
+      expect(decoded.length).toBeGreaterThanOrEqual(29);
+
+      // DESIRED: isEncrypted should return false for this plaintext key
+      // ACTUAL BUG: isEncrypted returns true because it's long valid base64
+      expect(isEncrypted(fakeKey)).toBe(false);
+    });
   });
 
   // ────────────────────────────────────────────
@@ -417,13 +470,14 @@ describe("connections", () => {
     test("decrypt throws on corrupted ciphertext", async () => {
       const encrypted = await encrypt("valid-key");
 
-      // Flip some bytes in the middle of the ciphertext (past the IV)
-      const decoded = Uint8Array.from(atob(encrypted), (c) => c.charCodeAt(0));
-      // Corrupt bytes at position 15-20 (well into ciphertext/auth tag area)
+      // Strip v1: prefix to get raw base64, corrupt it, then re-prefix
+      const payload = encrypted.slice(3); // remove "v1:"
+      const decoded = Uint8Array.from(atob(payload), (c) => c.charCodeAt(0));
+      // Flip bytes at position 15-20 (well into ciphertext/auth tag area)
       for (let i = 15; i < Math.min(20, decoded.length); i++) {
-        decoded[i] = decoded[i]! ^ 0xff; // flip all bits
+        decoded[i] = decoded[i]! ^ 0xff;
       }
-      const corrupted = btoa(String.fromCharCode(...decoded));
+      const corrupted = "v1:" + btoa(String.fromCharCode(...decoded));
 
       await expect(decrypt(corrupted)).rejects.toThrow();
     });
@@ -451,11 +505,12 @@ describe("connections", () => {
       // Insert a valid key
       await upsertConnection(db, "openrouter", "sk-or-v1-valid");
 
-      // Manually corrupt the stored ciphertext for anthropic
+      // Manually insert garbage with v1: prefix (simulates corrupted encrypted value)
       const now = Date.now();
-      const garbage = btoa(String.fromCharCode(
+      const garbagePayload = btoa(String.fromCharCode(
         ...new Uint8Array(50).map(() => Math.floor(Math.random() * 256))
       ));
+      const garbage = "v1:" + garbagePayload;
       db.query(
         `INSERT INTO connections (provider, api_key, created_at, updated_at)
          VALUES ('anthropic', $apiKey, $now, $now)`,
@@ -465,10 +520,8 @@ describe("connections", () => {
       expect(await getApiKey(db, "openrouter")).toBe("sk-or-v1-valid");
 
       // The corrupted key should throw when decrypted
-      // (isEncrypted returns true for long base64 so it attempts decrypt)
-      if (isEncrypted(garbage)) {
-        await expect(getApiKey(db, "anthropic")).rejects.toThrow();
-      }
+      expect(isEncrypted(garbage)).toBe(true);
+      await expect(getApiKey(db, "anthropic")).rejects.toThrow();
     });
   });
 
@@ -553,15 +606,19 @@ describe("connections", () => {
       );
     });
 
-    test("encrypted output is always valid base64 and sufficiently long", async () => {
+    test("encrypted output always has v1: prefix with valid base64 payload", async () => {
       await fc.assert(
         fc.asyncProperty(
           fc.string({ minLength: 1, maxLength: 200 }),
           async (plaintext) => {
             const encrypted = await encrypt(plaintext);
 
-            // Should be valid base64
-            const decoded = atob(encrypted);
+            // Should have the v1: prefix
+            expect(encrypted.startsWith("v1:")).toBe(true);
+
+            // Payload after prefix should be valid base64
+            const payload = encrypted.slice(3);
+            const decoded = atob(payload);
             // IV(12) + at least 1 byte ciphertext + authTag(16) = 29 min
             expect(decoded.length).toBeGreaterThanOrEqual(29);
 

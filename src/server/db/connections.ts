@@ -9,7 +9,7 @@
 
 import type { Database } from "bun:sqlite";
 import type { ProviderName } from "../../shared/providers.ts";
-import { encrypt, decrypt, isEncrypted } from "../lib/crypto.ts";
+import { encrypt, decrypt, isEncrypted, isLegacyEncrypted } from "../lib/crypto.ts";
 
 export interface ConnectionRow {
   provider: ProviderName;
@@ -49,8 +49,8 @@ export async function getApiKey(
 
   if (!row) return null;
 
-  // Decrypt if encrypted, return as-is if still plaintext (pre-migration)
-  if (isEncrypted(row.api_key)) {
+  // Decrypt if encrypted (v1: prefix or legacy format), return as-is if plaintext
+  if (isEncrypted(row.api_key) || isLegacyEncrypted(row.api_key)) {
     return decrypt(row.api_key);
   }
   return row.api_key;
@@ -73,7 +73,14 @@ export async function upsertConnection(
        updated_at = excluded.updated_at`,
   ).run({ $provider: provider, $apiKey: encryptedKey, $now: now });
 
-  return { provider, api_key: encryptedKey, created_at: now, updated_at: now };
+  // Read back the actual row so created_at is correct on conflict updates
+  // (ON CONFLICT preserves the original created_at, but we'd return `now` if
+  // we constructed the return value from local variables).
+  return db
+    .query(
+      "SELECT provider, api_key, created_at, updated_at FROM connections WHERE provider = $provider",
+    )
+    .get({ $provider: provider }) as ConnectionRow;
 }
 
 /** Delete a connection. */
@@ -99,8 +106,13 @@ export function hasConnection(
 }
 
 /**
- * Migrate any existing plaintext API keys to encrypted form.
- * Safe to call on every startup — skips already-encrypted values.
+ * Migrate connections to the current encrypted format (v1: prefix).
+ * Handles three cases:
+ *   1. Already v1: prefixed → skip
+ *   2. Legacy encrypted (raw base64, no prefix) → decrypt, re-encrypt with prefix
+ *   3. Plaintext → encrypt with prefix
+ *
+ * Safe to call on every startup — idempotent once all values are v1: format.
  */
 export async function migrateUnencryptedKeys(db: Database): Promise<number> {
   const rows = db
@@ -110,17 +122,26 @@ export async function migrateUnencryptedKeys(db: Database): Promise<number> {
   let migrated = 0;
 
   for (const row of rows) {
-    if (!isEncrypted(row.api_key)) {
-      const encryptedKey = await encrypt(row.api_key);
-      db.query(
-        "UPDATE connections SET api_key = $apiKey WHERE provider = $provider",
-      ).run({ $apiKey: encryptedKey, $provider: row.provider });
-      migrated++;
+    // Already in current format — nothing to do
+    if (isEncrypted(row.api_key)) continue;
+
+    // Determine the plaintext value: either decrypt legacy or use as-is
+    let plaintext: string;
+    if (isLegacyEncrypted(row.api_key)) {
+      plaintext = await decrypt(row.api_key);
+    } else {
+      plaintext = row.api_key;
     }
+
+    const encryptedKey = await encrypt(plaintext);
+    db.query(
+      "UPDATE connections SET api_key = $apiKey WHERE provider = $provider",
+    ).run({ $apiKey: encryptedKey, $provider: row.provider });
+    migrated++;
   }
 
   if (migrated > 0) {
-    console.log(`[crypto] Migrated ${migrated} plaintext key(s) to encrypted storage`);
+    console.log(`[crypto] Migrated ${migrated} key(s) to v1: encrypted format`);
   }
 
   return migrated;

@@ -17,7 +17,6 @@ const server = Bun.serve<WsContext>({
   routes: {
     "/": index,
     "/chat/:id": index,
-    "/playground": index,
     "/icons/:file": async (req: Request & { params: { file: string } }) => {
       const file = Bun.file(`icons/${req.params.file}`);
       if (await file.exists()) {

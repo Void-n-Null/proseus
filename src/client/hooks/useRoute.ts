@@ -4,7 +4,6 @@
  * URL structure:
  *   /            → home (no chat open)
  *   /chat/:id    → chat view
- *   /playground  → design playground sandbox
  *
  * The hook reads the initial route from `window.location.pathname` on mount,
  * and subscribes to `popstate` (back/forward) to stay in sync. It exposes
@@ -30,12 +29,7 @@ export interface RouteChat {
   chatId: string;
 }
 
-export interface RoutePlayground {
-  page: "playground";
-  chatId: null;
-}
-
-export type Route = RouteHome | RouteChat | RoutePlayground;
+export type Route = RouteHome | RouteChat;
 
 // ---------------------------------------------------------------------------
 // URL ↔ Route parsing
@@ -43,10 +37,6 @@ export type Route = RouteHome | RouteChat | RoutePlayground;
 
 /** Parse a pathname into a Route. */
 function parseRoute(pathname: string): Route {
-  if (pathname === "/playground" || pathname === "/playground/") {
-    return { page: "playground", chatId: null };
-  }
-
   // Match /chat/:id
   const chatMatch = pathname.match(/^\/chat\/([^/]+)\/?$/);
   if (chatMatch && chatMatch[1]) {
@@ -61,9 +51,6 @@ function parseRoute(pathname: string): Route {
 function routeToPath(route: Route): string {
   if (route.page === "chat") {
     return `/chat/${route.chatId}`;
-  }
-  if (route.page === "playground") {
-    return "/playground";
   }
   return "/";
 }
@@ -109,8 +96,6 @@ export interface UseRouteReturn {
   route: Route;
   /** Navigate to a chat. Pushes to browser history. */
   navigateToChat: (chatId: string) => void;
-  /** Navigate to playground route. Pushes to browser history. */
-  navigateToPlayground: () => void;
   /** Navigate home (close chat). Pushes to browser history. */
   navigateHome: () => void;
   /**
@@ -136,17 +121,11 @@ export function useRoute(): UseRouteReturn {
     setRoute(next);
   }, []);
 
-  const navigateToPlayground = useCallback(() => {
-    const next: RoutePlayground = { page: "playground", chatId: null };
-    window.history.pushState(null, "", "/playground");
-    setRoute(next);
-  }, []);
-
   const replaceRoute = useCallback((next: Route) => {
     const path = routeToPath(next);
     window.history.replaceState(null, "", path);
     setRoute(next);
   }, []);
 
-  return { route, navigateToChat, navigateToPlayground, navigateHome, replaceRoute };
+  return { route, navigateToChat, navigateHome, replaceRoute };
 }

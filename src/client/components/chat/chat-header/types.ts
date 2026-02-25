@@ -18,6 +18,9 @@ export interface ChatHeaderLayoutProps {
   /* Model dashboard */
   onOpenModelDashboard: () => void;
 
+  /* Prompt template editor */
+  onOpenPromptTemplate?: () => void;
+
   /* Design template / theme switching */
   designTemplateId: DesignTemplateId;
   onSelectDesignTemplate: (id: DesignTemplateId) => void;

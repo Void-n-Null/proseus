@@ -17,6 +17,7 @@ import MessageList from "./MessageList.tsx";
 import Composer from "./Composer.tsx";
 import StreamDebug from "../debug/StreamDebug.tsx";
 import ModelDashboard from "../model/ModelDashboard.tsx";
+import PromptTemplateModal from "../prompt-template/PromptTemplateModal.tsx";
 import { Avatar } from "../ui/avatar.tsx";
 
 interface ChatPageProps {
@@ -101,6 +102,7 @@ export default function ChatPage({
 
   const { modelId, provider } = useModelStore();
   const [modelBrowserOpen, setModelBrowserOpen] = useState(false);
+  const [promptTemplateOpen, setPromptTemplateOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   const handleSelectDesignTemplate = useCallback((templateId: DesignTemplateId) => {
@@ -163,7 +165,7 @@ export default function ChatPage({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" style={{ background: "var(--color-background)" }}>
       <template.ChatHeader
         chatName={chatData.chat.name}
         isMobile={isMobile}
@@ -174,6 +176,7 @@ export default function ChatPage({
         isExporting={isExporting}
         onExport={(format) => void handleExport(format)}
         onOpenModelDashboard={() => setModelBrowserOpen(true)}
+        onOpenPromptTemplate={() => setPromptTemplateOpen(true)}
         designTemplateId={designTemplateId}
         onSelectDesignTemplate={handleSelectDesignTemplate}
       />
@@ -246,6 +249,13 @@ export default function ChatPage({
       <ModelDashboard
         open={modelBrowserOpen}
         onOpenChange={setModelBrowserOpen}
+      />
+
+      {/* Prompt template editor */}
+      <PromptTemplateModal
+        open={promptTemplateOpen}
+        onOpenChange={setPromptTemplateOpen}
+        chatId={chatId}
       />
     </div>
   );

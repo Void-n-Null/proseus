@@ -183,7 +183,7 @@ export default function DiscordSidebar({
       <ModelDashboard open={modelOpen} onOpenChange={setModelOpen} />
 
       {/* Prompt template modal (portable — same pattern as ModelDashboard) */}
-      <PromptTemplateModal open={promptOpen} onOpenChange={setPromptOpen} />
+      <PromptTemplateModal open={promptOpen} onOpenChange={setPromptOpen} chatId={activeChatId} />
     </div>
   );
 }

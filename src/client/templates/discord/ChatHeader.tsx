@@ -19,6 +19,7 @@ export default function DiscordChatHeader({
   isExporting,
   onExport,
   onOpenModelDashboard,
+  onOpenPromptTemplate,
   designTemplateId,
   onSelectDesignTemplate,
 }: ChatHeaderLayoutProps) {
@@ -199,6 +200,22 @@ export default function DiscordChatHeader({
                   <line x1="12" y1="17" x2="12" y2="21" />
                 </svg>
                 Change Model
+              </button>
+
+              {/* Edit Prompt */}
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenPromptTemplate?.();
+                  closeAll();
+                }}
+                className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors flex items-center gap-2"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                Edit Prompt
               </button>
 
               {/* Divider */}

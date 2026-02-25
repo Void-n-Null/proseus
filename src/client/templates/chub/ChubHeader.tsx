@@ -14,6 +14,7 @@ export default function ChubHeader({
   isExporting,
   onExport,
   onOpenModelDashboard,
+  onOpenPromptTemplate,
   designTemplateId,
   onSelectDesignTemplate,
 }: ChatHeaderLayoutProps) {
@@ -57,7 +58,7 @@ export default function ChubHeader({
             className="!min-h-0 !min-w-0 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors px-4 py-2.5 pl-3"
             aria-label="Back"
           >
-            <div className="w-[18px] h-[18px] flex items-center justify-center bg-[rgb(242,228,214)]/85 text-text-muted hover:text-text-body rounded-full ">
+            <div className="w-[18px] h-[18px] flex items-center justify-center bg-[rgb(242,228,214)] text-text-muted hover:text-text-body rounded-full ">
             <ChevronLeft width="18" height="18" className="text-[#2e2e2e] pr-0.5" />
             </div>
           </button>
@@ -77,16 +78,14 @@ export default function ChubHeader({
         ) : (
           <div
             className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[1rem] font-extralight shrink-0"
-            style={{
-              fontFamily: "var(--chub-font)",
-            }}
+
           >
             {displayName.charAt(0).toUpperCase()}
           </div>
         )}
         <span
           className="text-[1rem] text-text-body truncate"
-          style={{ fontFamily: "var(--chub-font)" }}
+
         >
           {displayName}
         </span>
@@ -181,6 +180,22 @@ export default function ChubHeader({
                   <line x1="12" y1="17" x2="12" y2="21" />
                 </svg>
                 Change Model
+              </button>
+
+              {/* Edit Prompt */}
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenPromptTemplate?.();
+                  closeAll();
+                }}
+                className="w-full text-left px-2 py-1.5 text-xs text-text-muted hover:text-text-body hover:bg-surface-raised rounded flex items-center gap-2"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                Edit Prompt
               </button>
 
               {/* Divider */}

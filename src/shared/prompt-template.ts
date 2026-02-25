@@ -158,6 +158,13 @@ export interface PromptSlot {
 /** The full prompt template: an ordered list of slots. */
 export interface PromptTemplate {
   slots: PromptSlot[];
+  /**
+   * When true, chat history is flattened into a single user message with
+   * `CharName:` / `UserName:` prefixes instead of individual role-tagged
+   * messages. Some providers/models respond better to one format or the other.
+   * Default: false (standard multi-turn).
+   */
+  flattenHistory?: boolean;
 }
 
 // ── Defaults ────────────────────────────────────────────────────
@@ -226,7 +233,10 @@ export function mergeWithDefaults(saved: PromptTemplate): PromptTemplate {
   const history = mergedSlots.filter((s) => SLOT_META[s.id]?.zone === 'history');
   const postHistory = mergedSlots.filter((s) => SLOT_META[s.id]?.zone === 'post_history');
 
-  return { slots: [...orderedPreHistory, ...history, ...postHistory] };
+  return {
+    slots: [...orderedPreHistory, ...history, ...postHistory],
+    flattenHistory: saved.flattenHistory ?? false,
+  };
 }
 
 /**

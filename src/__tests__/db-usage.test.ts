@@ -109,6 +109,29 @@ describe("usage", () => {
     expect(rows[0]!.speaker_id).toBeNull();
   });
 
+  // ── BUG: NULL upsert fragmentation ──────────────────────────
+  // SQLite treats NULL != NULL in unique indexes. So ON CONFLICT
+  // never fires when chat_id or speaker_id is NULL — each insert
+  // creates a new row instead of accumulating into one.
+  // This test encodes the DESIRED behavior (merge into one row).
+  // It will FAIL until the code is fixed.
+  test("BUG: upsertUsage with null FKs should still accumulate into one row", () => {
+    const params = makeUsageParams({ chatId: null, speakerId: null });
+
+    upsertUsage(db, params);
+    upsertUsage(db, params);
+    upsertUsage(db, params);
+
+    const rows = getUsageSummary(db);
+    // DESIRED: 1 row with request_count=3
+    // ACTUAL BUG: 3 rows with request_count=1 each
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.request_count).toBe(3);
+    expect(rows[0]!.prompt_tokens).toBe(300);
+    expect(rows[0]!.completion_tokens).toBe(150);
+    expect(rows[0]!.total_tokens).toBe(450);
+  });
+
   test("upsertUsage handles zero tokens", () => {
     upsertUsage(
       db,

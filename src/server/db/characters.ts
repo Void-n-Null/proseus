@@ -282,11 +282,11 @@ export function deleteCharacter(db: Database, id: string): boolean {
   return result.changes > 0;
 }
 
-export function updateCharacter(
+export async function updateCharacter(
   db: Database,
   id: string,
   input: Partial<NormalizedCard>,
-): Character | null {
+): Promise<Character | null> {
   const existing = db
     .query("SELECT * FROM characters WHERE id = $id")
     .get({ $id: id }) as CharacterRow | null;
@@ -353,6 +353,19 @@ export function updateCharacter(
     $extensions: extensions,
     $character_book: character_book,
     $updated_at: now,
+  });
+
+  // Recompute content_hash from the merged (post-update) fields
+  const newHash = await computeContentHash({
+    name,
+    description,
+    first_mes,
+    system_prompt,
+    post_history_instructions,
+  } as NormalizedCard);
+  db.query("UPDATE characters SET content_hash = $hash WHERE id = $id").run({
+    $hash: newHash,
+    $id: id,
   });
 
   const updated = db

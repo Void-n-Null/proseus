@@ -590,7 +590,7 @@ export function createCharactersRouter(db: Database): Hono {
   app.patch("/:id", async (c) => {
     const id = c.req.param("id");
     const body = await c.req.json<{ name?: string; description?: string; personality?: string; scenario?: string; first_mes?: string; mes_example?: string; creator_notes?: string; system_prompt?: string; post_history_instructions?: string; alternate_greetings?: string[]; tags?: string[]; creator?: string; character_version?: string }>();
-    const updated = updateCharacter(db, id, body);
+    const updated = await updateCharacter(db, id, body);
     if (!updated) return c.json({ error: "Character not found" }, 404);
     return c.json({ character: updated });
   });

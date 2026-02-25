@@ -17,7 +17,7 @@ export default function ChubRegenerateButton({
     <button
       type="button"
       onClick={() => onRegenerate(nodeId)}
-      className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 flex items-center justify-center w-6 h-10 rounded-full text-text-dim hover:text-text-body hover:bg-surface-hover opacity-0 group-hover/message:opacity-100 transition-all duration-150 cursor-pointer"
+      className="absolute right-0 top-1/2 -translate-y-1/2 md:translate-x-1/2 flex items-center justify-center w-6 h-10 rounded-full text-text-dim hover:text-text-body hover:bg-surface-hover opacity-0 group-hover/message:opacity-100 transition-all duration-150 cursor-pointer"
       aria-label="Regenerate"
     >
       <ChevronRight width="18" height="18" />

@@ -38,17 +38,16 @@ export default function ChubComposer({
 
   return (
     <div className="shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <div className="relative w-full bg-gradient-to-l from-neutral-850/50 via-transparent to-neutral-850/50 h-[3px]"></div>
+      <div className="relative w-full h-[1.5px] md:from-neutral-850 md:via-neutral-900 md:to-neutral-850 md:h-[3px]"></div>
       <div className="w-full sm:max-w-[60vw] sm:mx-auto sm:pl-1 sm:pr-3">
         <div
           className="relative"
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          style={{ fontFamily: "var(--chub-font)" }}
         >
           <div
             className={[
-              "relative flex items-stretch gap-2 md:rounded-[6px] md:px-2 pb-1 bg-neutral-800/50",
+              "relative flex items-stretch gap-2 md:rounded-[6px] md:px-2 pb-1 bg-neutral-800",
             ].join(" ")}
           >
             <div ref={menuRef} className="relative flex items-center pl-2.5 pt-3">
@@ -130,7 +129,6 @@ export default function ChubComposer({
                 "leading-6 text-[1rem]",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
               ].join(" ")}
-              style={{ fontFamily: "var(--chub-font)" }}
             />
 
             <div className="flex flex-col items-center justify-between md:py-2">

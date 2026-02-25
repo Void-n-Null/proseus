@@ -39,6 +39,35 @@ const MAX_STREAM_DURATION_MS = 600_000;
 /** Maximum accumulated content length before forced cancellation (500k chars ≈ ~125k tokens). */
 const MAX_STREAM_CONTENT_LENGTH = 500_000;
 
+// ── Error extraction ───────────────────────────────────────────
+
+/**
+ * Extract a clean, user-facing error message from AI SDK errors.
+ *
+ * AI SDK's `APICallError` includes a `data` field with the parsed
+ * provider response (e.g. `{ error: { message: "..." } }`) and a
+ * `responseBody` with the raw JSON. We prefer the provider's clean
+ * message over the verbose SDK error string.
+ */
+function extractErrorMessage(err: unknown): string {
+  if (!(err instanceof Error)) return "Unknown error";
+
+  // AI SDK APICallError — extract clean message from provider response
+  const apiErr = err as Error & {
+    data?: { error?: { message?: string } };
+    responseBody?: string;
+    statusCode?: number;
+  };
+
+  // Try the parsed data.error.message first (cleanest)
+  if (typeof apiErr.data?.error?.message === "string") {
+    return apiErr.data.error.message;
+  }
+
+  // Fall back to err.message — but strip the verbose AI SDK prefix if present
+  return err.message;
+}
+
 // ── Types ──────────────────────────────────────────────────────
 
 interface ActiveStream {
@@ -297,11 +326,30 @@ export class StreamManager {
     this.runAIStream(stream, model, provider).catch((err) => {
       // Only broadcast error if the stream is still active (not cancelled)
       if (this.activeStreams.has(streamId)) {
+        // Clear duration timeout if set
+        if (stream.durationTimeout) {
+          clearTimeout(stream.durationTimeout);
+          stream.durationTimeout = undefined;
+        }
+
+        // Swallow rejected internal promises from the AI SDK result object
+        // to prevent unhandled rejection noise in the console. The error
+        // from textStream is the same one — we just need to consume these.
+        // AI SDK uses PromiseLike (not Promise), so use .then(null, noop).
+        if (stream.streamResult) {
+          const noop = () => {};
+          stream.streamResult.usage.then(noop, noop);
+          stream.streamResult.response.then(noop, noop);
+        }
+
+        const error = extractErrorMessage(err);
+        console.warn(`[stream] Stream ${streamId} failed:`, error);
+
         this.publish(chatId, {
           type: "stream:error",
           chatId,
           streamId,
-          error: err instanceof Error ? err.message : "Unknown error",
+          error,
         });
         this.activeStreams.delete(streamId);
         this.chatStreams.delete(chatId);

@@ -4,6 +4,7 @@ import { useConnectionStatus } from "../../stores/connection.ts";
 import { useChatMutations } from "../../hooks/useMutations.ts";
 import { usePersonas, useSetChatPersona } from "../../hooks/usePersonas.ts";
 import { useDesignTemplateId } from "../../hooks/useDesignTemplate.ts";
+import { useIsMobile } from "../../hooks/useMediaQuery.ts";
 import { getTemplate } from "../../templates/index.ts";
 
 interface ComposerProps {
@@ -42,6 +43,7 @@ const Composer = React.memo(function Composer({
   const animFrameRef = useRef<number>(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  const isMobile = useIsMobile();
   const isStreaming = useIsStreaming();
   const connectionStatus = useConnectionStatus();
   const isConnected = connectionStatus === "connected";
@@ -111,12 +113,14 @@ const Composer = React.memo(function Composer({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // On mobile, Enter always inserts a newline — users send via the button.
+      if (isMobile) return;
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleSend();
       }
     },
-    [handleSend],
+    [isMobile, handleSend],
   );
 
   const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {

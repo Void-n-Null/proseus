@@ -26,13 +26,22 @@ function rowToPersona(row: PersonaRow): Persona {
 }
 
 export function listPersonas(db: Database): Persona[] {
+  // Exclude avatar blob from the list query for performance
   const rows = db
     .query(
-      `SELECT id, name, prompt, avatar_blob, avatar_mime, is_global, created_at, updated_at
+      `SELECT id, name, prompt, avatar_blob IS NOT NULL as has_avatar, is_global, created_at, updated_at
        FROM personas ORDER BY created_at ASC`,
     )
-    .all() as PersonaRow[];
-  return rows.map(rowToPersona);
+    .all() as (Omit<PersonaRow, "avatar_blob" | "avatar_mime"> & { has_avatar: number })[];
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    prompt: row.prompt,
+    avatar_url: row.has_avatar ? `/api/personas/${row.id}/avatar` : null,
+    is_global: row.is_global === 1,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  }));
 }
 
 export function getPersona(db: Database, id: string): Persona | null {

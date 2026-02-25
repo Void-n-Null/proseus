@@ -42,6 +42,7 @@
   /* Font families */
   --font-display: 'Instrument Serif', Georgia, serif;
   --font-body: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-body-weight: 300;
   --font-sani: "Sani Trixie Sans", 'Outfit', system-ui, -apple-system, sans-serif;
 
   /* Sharp radius — matches forge aesthetic */
@@ -55,8 +56,7 @@
    
   --chat-italic-color: oklch(0.6 0.03 250);
   --chat-italic-font-style: italic; /* Use "normal" to disable italics */
-  --chub-font: var(--font-body);
-  --chat-message-font-family: var(--chub-font, var(--font-body));
+  --chat-message-font-family: var(--font-body);
   --chat-avatar-column-width: 50px;
   --chat-avatar-column-width-mobile: 30px;
   --chat-avatar-column-width-active: var(--chat-avatar-column-width);
@@ -118,7 +118,7 @@
 
 body {
   font-family: var(--font-body);
-  font-weight: 300;
+  font-weight: var(--font-body-weight, 300);
   background: var(--color-background);
   color: var(--color-foreground);
   -webkit-font-smoothing: antialiased;
@@ -126,6 +126,7 @@ body {
 }
 
 html {
+  color-scheme: dark;
   -webkit-tap-highlight-color: transparent;
 }
 

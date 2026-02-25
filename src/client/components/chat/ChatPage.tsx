@@ -13,6 +13,7 @@ import type { DesignTemplateId } from "../../../shared/design-templates.ts";
 import { api } from "../../api/client.ts";
 import type { Speaker } from "../../../shared/types.ts";
 import { getFilenameFromDisposition, triggerDownload } from "../../lib/download.ts";
+import { toast } from "../../stores/toast.ts";
 import MessageList from "./MessageList.tsx";
 import Composer from "./Composer.tsx";
 import StreamDebug from "../debug/StreamDebug.tsx";
@@ -149,6 +150,10 @@ export default function ChatPage({
           fallbackName,
         );
         triggerDownload(result.blob, filename);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Unknown error";
+        toast.error("Export failed", { description: message });
       } finally {
         setIsExporting(false);
       }

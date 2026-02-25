@@ -31,6 +31,14 @@ import { getApiKey } from "../db/connections.ts";
 import { upsertUsage } from "../db/usage.ts";
 import { getModelPricing, computeCost, sanitizeTokens } from "../lib/model-pricing.ts";
 
+// ── Safety limits ──────────────────────────────────────────────
+
+/** Maximum wall-clock duration for a single stream (10 minutes). */
+const MAX_STREAM_DURATION_MS = 600_000;
+
+/** Maximum accumulated content length before forced cancellation (500k chars ≈ ~125k tokens). */
+const MAX_STREAM_CONTENT_LENGTH = 500_000;
+
 // ── Types ──────────────────────────────────────────────────────
 
 interface ActiveStream {
@@ -49,6 +57,8 @@ interface ActiveStream {
   model?: string;
   /** The streamText result — stored so usage can be awaited on finalize/cancel. */
   streamResult?: ReturnType<typeof streamText>;
+  /** Safety-net timeout that forces cancellation after MAX_STREAM_DURATION_MS. */
+  durationTimeout?: Timer;
 }
 
 // ── Test content ───────────────────────────────────────────────
@@ -331,11 +341,31 @@ export class StreamManager {
     // Store result so cancelStream can also access usage
     stream.streamResult = result;
 
+    // Safety net: force-cancel after MAX_STREAM_DURATION_MS even if the
+    // provider never sends a stop token. cancelStream handles cleanup.
+    stream.durationTimeout = setTimeout(() => {
+      if (this.activeStreams.has(stream.id)) {
+        console.warn(
+          `[stream] Stream ${stream.id} exceeded ${MAX_STREAM_DURATION_MS}ms duration limit — force cancelling`,
+        );
+        this.cancelStream(stream.chatId);
+      }
+    }, MAX_STREAM_DURATION_MS);
+
     for await (const delta of result.textStream) {
       // Check if stream was cancelled during iteration
-      if (!this.activeStreams.has(stream.id)) return;
+      if (!this.activeStreams.has(stream.id)) break;
 
       stream.content += delta;
+
+      // Check content size limit
+      if (stream.content.length >= MAX_STREAM_CONTENT_LENGTH) {
+        console.warn(
+          `[stream] Stream ${stream.id} exceeded ${MAX_STREAM_CONTENT_LENGTH} char content limit — force cancelling`,
+        );
+        this.cancelStream(stream.chatId);
+        break;
+      }
 
       this.publish(stream.chatId, {
         type: "stream:chunk",
@@ -343,6 +373,12 @@ export class StreamManager {
         streamId: stream.id,
         delta,
       });
+    }
+
+    // Clear the duration safety net (stream completed normally)
+    if (stream.durationTimeout) {
+      clearTimeout(stream.durationTimeout);
+      stream.durationTimeout = undefined;
     }
 
     // Finalize only if not cancelled
@@ -372,6 +408,12 @@ export class StreamManager {
 
     // Abort AI request if running — stops billing immediately
     stream.abortController?.abort();
+
+    // Clear duration safety-net timeout
+    if (stream.durationTimeout) {
+      clearTimeout(stream.durationTimeout);
+      stream.durationTimeout = undefined;
+    }
 
     // Stop test stream timer if running
     const timer = this.streamTimers.get(streamId);

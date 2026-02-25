@@ -74,17 +74,25 @@ export function createPersona(
   const prompt = input.prompt ?? "";
   const is_global = input.is_global ? 1 : 0;
 
-  db.query(
-    `INSERT INTO personas (id, name, prompt, is_global, created_at, updated_at)
-     VALUES ($id, $name, $prompt, $is_global, $created_at, $updated_at)`,
-  ).run({
-    $id: id,
-    $name: input.name,
-    $prompt: prompt,
-    $is_global: is_global,
-    $created_at: now,
-    $updated_at: now,
+  const insert = db.transaction(() => {
+    // Enforce at-most-one global persona
+    if (is_global) {
+      db.query("UPDATE personas SET is_global = 0 WHERE is_global = 1").run();
+    }
+
+    db.query(
+      `INSERT INTO personas (id, name, prompt, is_global, created_at, updated_at)
+       VALUES ($id, $name, $prompt, $is_global, $created_at, $updated_at)`,
+    ).run({
+      $id: id,
+      $name: input.name,
+      $prompt: prompt,
+      $is_global: is_global,
+      $created_at: now,
+      $updated_at: now,
+    });
   });
+  insert();
 
   return {
     id,
@@ -117,16 +125,24 @@ export function updatePersona(
     input.is_global !== undefined ? (input.is_global ? 1 : 0) : existing.is_global;
   const now = Date.now();
 
-  db.query(
-    `UPDATE personas SET name = $name, prompt = $prompt, is_global = $is_global, updated_at = $updated_at
-     WHERE id = $id`,
-  ).run({
-    $id: id,
-    $name: name,
-    $prompt: prompt,
-    $is_global: is_global,
-    $updated_at: now,
+  const update = db.transaction(() => {
+    // Enforce at-most-one global persona
+    if (is_global) {
+      db.query("UPDATE personas SET is_global = 0 WHERE is_global = 1").run();
+    }
+
+    db.query(
+      `UPDATE personas SET name = $name, prompt = $prompt, is_global = $is_global, updated_at = $updated_at
+       WHERE id = $id`,
+    ).run({
+      $id: id,
+      $name: name,
+      $prompt: prompt,
+      $is_global: is_global,
+      $updated_at: now,
+    });
   });
+  update();
 
   return rowToPersona({ ...existing, name, prompt, is_global, updated_at: now });
 }

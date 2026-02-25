@@ -10,6 +10,76 @@ import type { ServerWebSocket } from "bun";
 import type { ClientWsMessage, WsContext } from "../shared/ws-types.ts";
 import type { StreamManager } from "./services/stream-manager.ts";
 
+// ── Runtime validation ─────────────────────────────────────────
+
+function isString(v: unknown): v is string {
+  return typeof v === "string";
+}
+
+function isOptionalString(v: unknown): v is string | undefined {
+  return v === undefined || typeof v === "string";
+}
+
+function isOptionalBoolean(v: unknown): v is boolean | undefined {
+  return v === undefined || typeof v === "boolean";
+}
+
+/**
+ * Validate a parsed JSON object against the ClientWsMessage union.
+ * Returns the validated message or an error string describing the first
+ * field that failed validation.
+ */
+function validateMessage(
+  raw: Record<string, unknown>,
+): ClientWsMessage | string {
+  const type = raw.type;
+  if (!isString(type)) return "missing or invalid 'type' field";
+
+  switch (type) {
+    case "subscribe":
+    case "unsubscribe":
+    case "cancel-stream":
+      if (!isString(raw.chatId)) return `${type}: missing string 'chatId'`;
+      return raw as unknown as ClientWsMessage;
+
+    case "test-stream":
+      if (!isString(raw.chatId)) return `${type}: missing string 'chatId'`;
+      if (!isString(raw.parentId)) return `${type}: missing string 'parentId'`;
+      if (!isString(raw.speakerId))
+        return `${type}: missing string 'speakerId'`;
+      if (!isString(raw.nodeId)) return `${type}: missing string 'nodeId'`;
+      return raw as unknown as ClientWsMessage;
+
+    case "ai-stream":
+      if (!isString(raw.chatId)) return `${type}: missing string 'chatId'`;
+      if (!isString(raw.parentId)) return `${type}: missing string 'parentId'`;
+      if (!isString(raw.speakerId))
+        return `${type}: missing string 'speakerId'`;
+      if (!isString(raw.model)) return `${type}: missing string 'model'`;
+      if (!isString(raw.nodeId)) return `${type}: missing string 'nodeId'`;
+      if (!isOptionalString(raw.provider))
+        return `${type}: 'provider' must be a string if provided`;
+      return raw as unknown as ClientWsMessage;
+
+    case "generate":
+      if (!isString(raw.chatId)) return `${type}: missing string 'chatId'`;
+      if (!isString(raw.model)) return `${type}: missing string 'model'`;
+      if (!isString(raw.nodeId)) return `${type}: missing string 'nodeId'`;
+      if (!isOptionalString(raw.provider))
+        return `${type}: 'provider' must be a string if provided`;
+      if (!isOptionalBoolean(raw.regenerate))
+        return `${type}: 'regenerate' must be a boolean if provided`;
+      if (!isOptionalString(raw.targetNodeId))
+        return `${type}: 'targetNodeId' must be a string if provided`;
+      return raw as unknown as ClientWsMessage;
+
+    default:
+      return `unknown message type '${type}'`;
+  }
+}
+
+// ── Handler ────────────────────────────────────────────────────
+
 export function createWebSocketHandler(streamManager: StreamManager) {
   return {
     open(ws: ServerWebSocket<WsContext>) {
@@ -17,12 +87,26 @@ export function createWebSocketHandler(streamManager: StreamManager) {
     },
 
     async message(ws: ServerWebSocket<WsContext>, raw: string | Buffer) {
-      let msg: ClientWsMessage;
+      let parsed: Record<string, unknown>;
       try {
-        msg = JSON.parse(typeof raw === "string" ? raw : raw.toString());
+        parsed = JSON.parse(typeof raw === "string" ? raw : raw.toString());
       } catch {
-        return; // Ignore malformed messages
+        ws.send(JSON.stringify({ type: "error", error: "invalid JSON" }));
+        return;
       }
+
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        ws.send(JSON.stringify({ type: "error", error: "message must be a JSON object" }));
+        return;
+      }
+
+      const result = validateMessage(parsed);
+      if (typeof result === "string") {
+        ws.send(JSON.stringify({ type: "error", error: result }));
+        return;
+      }
+
+      const msg = result;
 
       switch (msg.type) {
         case "subscribe": {

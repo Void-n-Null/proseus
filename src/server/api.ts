@@ -18,23 +18,4 @@ api.route("/settings", createSettingsRouter(db));
 api.route("/personas", createPersonasRouter(db));
 api.route("/usage", createUsageRouter(db));
 
-// Dev-only routes
-api.post("/dev/seed", async (c) => {
-  const { seedDatabase } = await import("./db/seed.ts");
-  seedDatabase(db);
-  return c.json({ ok: true });
-});
-
-api.post("/dev/reset", async (c) => {
-  // Drop all data and re-seed
-  db.exec("DELETE FROM chat_nodes");
-  db.exec("DELETE FROM chat_speakers");
-  db.exec("DELETE FROM chats");
-  db.exec("DELETE FROM speakers");
-  db.exec("DELETE FROM characters");
-  const { seedDatabase } = await import("./db/seed.ts");
-  seedDatabase(db);
-  return c.json({ ok: true });
-});
-
 export default api;

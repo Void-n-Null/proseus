@@ -108,105 +108,116 @@ export function createWebSocketHandler(streamManager: StreamManager) {
 
       const msg = result;
 
-      switch (msg.type) {
-        case "subscribe": {
-          // Idempotent subscribe: duplicate subscribe calls can happen during
-          // reconnect races. Guarding here prevents duplicate chunk delivery.
-          if (ws.data.subscribedChats.has(msg.chatId)) {
+      try {
+        switch (msg.type) {
+          case "subscribe": {
+            // Idempotent subscribe: duplicate subscribe calls can happen during
+            // reconnect races. Guarding here prevents duplicate chunk delivery.
+            if (ws.data.subscribedChats.has(msg.chatId)) {
+              break;
+            }
+
+            const topic = `chat:${msg.chatId}`;
+            ws.subscribe(topic);
+            ws.data.subscribedChats.add(msg.chatId);
+
+            // If there's an active stream, send current state to this client
+            const active = streamManager.getActiveStream(msg.chatId);
+            if (active) {
+              ws.send(
+                JSON.stringify({
+                  type: "stream:start",
+                  chatId: active.chatId,
+                  streamId: active.id,
+                  parentId: active.parentId,
+                  speakerId: active.speakerId,
+                  nodeId: active.nodeId,
+                }),
+              );
+              // Send full accumulated content
+              if (active.content.length > 0) {
+                ws.send(
+                  JSON.stringify({
+                    type: "stream:content",
+                    chatId: active.chatId,
+                    streamId: active.id,
+                    content: active.content,
+                  }),
+                );
+              }
+            }
             break;
           }
 
-          const topic = `chat:${msg.chatId}`;
-          ws.subscribe(topic);
-          ws.data.subscribedChats.add(msg.chatId);
+          case "unsubscribe": {
+            if (!ws.data.subscribedChats.has(msg.chatId)) {
+              break;
+            }
+            const topic = `chat:${msg.chatId}`;
+            ws.unsubscribe(topic);
+            ws.data.subscribedChats.delete(msg.chatId);
+            break;
+          }
 
-          // If there's an active stream, send current state to this client
-          const active = streamManager.getActiveStream(msg.chatId);
-          if (active) {
-            ws.send(
-              JSON.stringify({
-                type: "stream:start",
-                chatId: active.chatId,
-                streamId: active.id,
-                parentId: active.parentId,
-                speakerId: active.speakerId,
-                nodeId: active.nodeId,
-              }),
+          case "test-stream": {
+            streamManager.startTestStream(
+              msg.chatId,
+              msg.parentId,
+              msg.speakerId,
+              msg.nodeId,
             );
-            // Send full accumulated content
-            if (active.content.length > 0) {
+            break;
+          }
+
+          case "ai-stream": {
+            await streamManager.startAIStream(
+              msg.chatId,
+              msg.parentId,
+              msg.speakerId,
+              msg.model,
+              msg.nodeId,
+              msg.provider,
+            );
+            break;
+          }
+
+          case "generate": {
+            const genResult = await streamManager.startGeneration(
+              msg.chatId,
+              msg.model,
+              msg.nodeId,
+              msg.provider,
+              msg.regenerate,
+              msg.targetNodeId,
+            );
+            if ("error" in genResult) {
+              console.warn("[generate]", msg.chatId, genResult.error);
               ws.send(
                 JSON.stringify({
-                  type: "stream:content",
-                  chatId: active.chatId,
-                  streamId: active.id,
-                  content: active.content,
+                  type: "stream:error",
+                  chatId: msg.chatId,
+                  streamId: "",
+                  error: genResult.error,
                 }),
               );
             }
-          }
-          break;
-        }
-
-        case "unsubscribe": {
-          if (!ws.data.subscribedChats.has(msg.chatId)) {
             break;
           }
-          const topic = `chat:${msg.chatId}`;
-          ws.unsubscribe(topic);
-          ws.data.subscribedChats.delete(msg.chatId);
-          break;
-        }
 
-        case "test-stream": {
-          streamManager.startTestStream(
-            msg.chatId,
-            msg.parentId,
-            msg.speakerId,
-            msg.nodeId,
-          );
-          break;
-        }
-
-        case "ai-stream": {
-          await streamManager.startAIStream(
-            msg.chatId,
-            msg.parentId,
-            msg.speakerId,
-            msg.model,
-            msg.nodeId,
-            msg.provider,
-          );
-          break;
-        }
-
-        case "generate": {
-          const result = await streamManager.startGeneration(
-            msg.chatId,
-            msg.model,
-            msg.nodeId,
-            msg.provider,
-            msg.regenerate,
-            msg.targetNodeId,
-          );
-          if ("error" in result) {
-            console.warn("[generate]", msg.chatId, result.error);
-            ws.send(
-              JSON.stringify({
-                type: "stream:error",
-                chatId: msg.chatId,
-                streamId: "",
-                error: result.error,
-              }),
-            );
+          case "cancel-stream": {
+            streamManager.cancelStream(msg.chatId);
+            break;
           }
-          break;
         }
-
-        case "cancel-stream": {
-          streamManager.cancelStream(msg.chatId);
-          break;
-        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Internal server error";
+        console.error("[ws] Unhandled error in message handler:", err);
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            error: message,
+          }),
+        );
       }
     },
 

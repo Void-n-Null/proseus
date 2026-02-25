@@ -40,6 +40,7 @@ import {
   finalizeSession,
   cancelSession,
 } from "../lib/streaming-buffer.ts";
+import { toast } from "../stores/toast.ts";
 
 // ---------------------------------------------------------------------------
 // Reconnection constants
@@ -347,6 +348,11 @@ export function useStreamSocket(
           }
           cancelSession();
           storeStopRef.current();
+
+          // Surface the error to the user
+          toast.error("Generation failed", {
+            description: msg.error || "An unexpected error occurred",
+          });
           break;
         }
       }

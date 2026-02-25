@@ -4,24 +4,32 @@
  * Behavior:
  * - **Sticky to bottom** by default. While sticky, new content or streaming
  *   growth keeps the scroll pinned to the end.
- * - **User scrolls up** → sticky disengages. The user is reading history.
+ * - **User scrolls up** → sticky disengages *immediately*. Any upward wheel,
+ *   upward touch-drag, or scroll event away from bottom kills sticky.
  * - **User scrolls back to bottom** (within threshold) → sticky re-engages.
- * - **Scroll-past-bottom gesture** (wheel/touch down while already at bottom)
- *   → forces sticky on, so streaming content will be followed.
+ * - Touch events on mobile are unambiguous intent — a `touchstart` on the
+ *   scroll container during active sticky-scrolling disengages immediately.
  *
- * All state lives in refs — zero React re-renders from scroll events.
+ * The hook uses a "last programmatic scrollTop" ref instead of a boolean flag
+ * to distinguish programmatic scrolls from user scrolls. This prevents the
+ * race condition where high-frequency `onContentGrow()` calls clobber the
+ * flag before `onScroll` can read it.
  *
- * Usage:
- *   const { scrollRef, onScroll, scrollToBottom, isSticky } = useAutoScroll();
- *   // Attach scrollRef to the scroll container, onScroll to its onScroll prop.
- *   // Call scrollToBottom() when new items arrive (if sticky).
- *   // Call onContentGrow() from streaming rAF to keep up with growing content.
+ * Exposes both a ref-based `isSticky()` (zero re-renders) and a reactive
+ * `stickyState` boolean (re-renders only on transition) so the UI can
+ * conditionally show a scroll-to-bottom button.
  */
 
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 
 /** How far from the bottom (px) the user can be and still count as "at bottom". */
-const BOTTOM_THRESHOLD = 40;
+const BOTTOM_THRESHOLD = 100;
+
+/**
+ * Tolerance (px) for comparing actual scrollTop to programmatic target.
+ * Browsers may round or clamp scrollTop, so we allow a small delta.
+ */
+const PROGRAMMATIC_TOLERANCE = 2;
 
 interface UseAutoScrollOptions {
   /** Initial sticky state. Defaults to true. */
@@ -33,16 +41,16 @@ interface UseAutoScrollReturn {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   /** Scroll event handler — attach to the container's `onScroll`. */
   onScroll: () => void;
-  /** Wheel event handler — attach to the container's `onWheel` for scroll-past-bottom detection. */
-  onWheel: (e: WheelEvent) => void;
   /** Snap to bottom if currently sticky. Returns whether it scrolled. */
   scrollToBottom: () => boolean;
   /** Force-scroll to bottom regardless of sticky state (e.g., user sends a message). */
   forceScrollToBottom: () => void;
-  /** Call this on every rAF during streaming to keep up with growing content. */
+  /** Call this on every content update during streaming to keep scroll pinned. */
   onContentGrow: () => void;
   /** Read current sticky state (ref-based, no re-render). */
   isSticky: () => boolean;
+  /** Reactive sticky state — triggers re-render only on transition. */
+  stickyState: boolean;
 }
 
 export function useAutoScroll(
@@ -52,10 +60,30 @@ export function useAutoScroll(
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickyRef = useRef(initialSticky);
+  const [stickyState, setStickyState] = useState(initialSticky);
 
-  // Track whether the last scroll event was programmatic (from us) vs user.
-  // This prevents our own scrollToBottom from disengaging sticky.
-  const programmaticScrollRef = useRef(false);
+  /**
+   * Instead of a boolean "was this programmatic?" flag (which gets clobbered),
+   * we store the scrollTop value we last set programmatically. In `onScroll`,
+   * if the actual scrollTop matches this value (within tolerance), the event
+   * was from us. If it doesn't match, the user intervened.
+   */
+  const programmaticTargetRef = useRef<number | null>(null);
+
+  /**
+   * True while the user's finger is on the scroll container. Used to suppress
+   * onContentGrow() during touch without changing sticky state (which would
+   * flash the scroll-to-bottom button on every tap).
+   */
+  const touchActiveRef = useRef(false);
+
+  /** Update both the ref and the reactive state in one call. */
+  const setSticky = useCallback((value: boolean) => {
+    if (stickyRef.current !== value) {
+      stickyRef.current = value;
+      setStickyState(value);
+    }
+  }, []);
 
   /** Check if the scroll container is at (or near) the bottom. */
   const isAtBottom = useCallback((): boolean => {
@@ -64,77 +92,124 @@ export function useAutoScroll(
     return el.scrollHeight - el.scrollTop - el.clientHeight <= BOTTOM_THRESHOLD;
   }, []);
 
-  /** Scroll handler — detects user intent. */
+  /** Scroll handler — distinguishes programmatic scrolls from user scrolls. */
   const onScroll = useCallback(() => {
-    // If we triggered this scroll programmatically, ignore it.
-    if (programmaticScrollRef.current) {
-      programmaticScrollRef.current = false;
-      return;
+    const el = scrollRef.current;
+    if (!el) return;
+
+    // Check if this scroll event matches our last programmatic scroll.
+    const target = programmaticTargetRef.current;
+    if (target !== null) {
+      const actual = el.scrollTop;
+      if (Math.abs(actual - target) <= PROGRAMMATIC_TOLERANCE) {
+        // This was our programmatic scroll — ignore it.
+        programmaticTargetRef.current = null;
+        return;
+      }
+      // scrollTop doesn't match — user intervened between our set and this event.
+      programmaticTargetRef.current = null;
     }
 
     // User-initiated scroll: update sticky based on position.
     if (isAtBottom()) {
-      stickyRef.current = true;
+      setSticky(true);
     } else {
-      stickyRef.current = false;
+      setSticky(false);
     }
-  }, [isAtBottom]);
+  }, [isAtBottom, setSticky]);
 
-  /** Wheel handler — detects "scroll past bottom" gesture. */
-  const onWheel = useCallback(
-    (e: WheelEvent) => {
-      // User is scrolling down (positive deltaY) while already at bottom
-      if (e.deltaY > 0 && isAtBottom()) {
-        stickyRef.current = true;
-      }
-    },
-    [isAtBottom],
-  );
-
-  /** Register wheel listener (needs { passive: true } for performance). */
+  /**
+   * Register touch and wheel listeners for immediate intent detection.
+   *
+   * - touchstart: On mobile, any touch on the scroll area is intent to
+   *   interact. If we're currently sticky, disengage immediately so the
+   *   user's drag isn't fought by onContentGrow().
+   *
+   * - wheel (upward): An upward wheel event is unambiguous "I want to
+   *   scroll up" intent. Disengage sticky before the scroll even happens.
+   *
+   * - wheel (downward at bottom): Re-engage sticky (scroll-past-bottom gesture).
+   */
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
 
-    const handler = (e: WheelEvent) => onWheel(e);
-    el.addEventListener('wheel', handler, { passive: true });
-    return () => el.removeEventListener('wheel', handler);
-  }, [onWheel]);
+    const onTouchStart = () => {
+      // Mark touch as active so onContentGrow() won't fight the user's
+      // finger. We do NOT disengage sticky here — that would flash the
+      // scroll-to-bottom button on every tap. Actual scroll position
+      // changes are handled by onScroll/onWheel.
+      touchActiveRef.current = true;
+    };
+
+    const onTouchEnd = () => {
+      touchActiveRef.current = false;
+      // After the user lifts their finger, check if they ended up at
+      // the bottom. If so, re-engage sticky. We use a short delay to
+      // let momentum scrolling settle.
+      setTimeout(() => {
+        if (isAtBottom()) {
+          setSticky(true);
+        }
+      }, 150);
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY < 0) {
+        // Scrolling up — disengage immediately.
+        setSticky(false);
+      } else if (e.deltaY > 0 && isAtBottom()) {
+        // Scrolling down while at bottom — re-engage.
+        setSticky(true);
+      }
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    el.addEventListener('wheel', onWheel, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, [isAtBottom, setSticky]);
+
+  /** Programmatically scroll to bottom, recording the target for detection. */
+  const doScrollToBottom = useCallback((el: HTMLDivElement) => {
+    const target = el.scrollHeight - el.clientHeight;
+    programmaticTargetRef.current = target;
+    el.scrollTop = el.scrollHeight;
+  }, []);
 
   /** Snap to bottom if sticky. Returns whether it actually scrolled. */
   const scrollToBottom = useCallback((): boolean => {
     if (!stickyRef.current) return false;
     const el = scrollRef.current;
     if (!el) return false;
-
-    programmaticScrollRef.current = true;
-    el.scrollTop = el.scrollHeight;
+    doScrollToBottom(el);
     return true;
-  }, []);
+  }, [doScrollToBottom]);
 
   /** Force scroll to bottom regardless of sticky state. Also re-enables sticky. */
   const forceScrollToBottom = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-
-    stickyRef.current = true;
-    programmaticScrollRef.current = true;
-    el.scrollTop = el.scrollHeight;
-  }, []);
+    setSticky(true);
+    doScrollToBottom(el);
+  }, [doScrollToBottom, setSticky]);
 
   /**
-   * Call on every rAF during streaming to keep scroll pinned as content grows.
-   * This should run in the same frame as the DOM content update for jitter-free scrolling.
+   * Call on every content update during streaming to keep scroll pinned.
+   * Only scrolls if sticky is engaged — if the user has disengaged, this
+   * is a no-op.
    */
   const onContentGrow = useCallback(() => {
     if (!stickyRef.current) return;
+    if (touchActiveRef.current) return; // Don't fight the user's finger
     const el = scrollRef.current;
     if (!el) return;
-
-    // Direct assignment in the same frame as the content write — no intermediate frame.
-    programmaticScrollRef.current = true;
-    el.scrollTop = el.scrollHeight;
-  }, []);
+    doScrollToBottom(el);
+  }, [doScrollToBottom]);
 
   /** Read current sticky state without triggering a re-render. */
   const isSticky = useCallback(() => stickyRef.current, []);
@@ -142,10 +217,10 @@ export function useAutoScroll(
   return {
     scrollRef,
     onScroll,
-    onWheel,
     scrollToBottom,
     forceScrollToBottom,
     onContentGrow,
     isSticky,
+    stickyState,
   };
 }

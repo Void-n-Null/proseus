@@ -1,5 +1,6 @@
 import React, { useRef, useMemo, useEffect, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { ChevronDown } from "lucide-react";
 import type { ActivePath, ChatNode, Speaker } from "../../../shared/types.ts";
 import { getSiblingInfo } from "../../../shared/tree.ts";
 import { useIsStreaming } from "../../stores/streaming.ts";
@@ -45,7 +46,7 @@ const MessageList = React.memo(function MessageList({
   const template = getTemplate(templateId);
   const nodes = activePath?.nodes ?? [];
 
-  const { scrollRef, onScroll, scrollToBottom, forceScrollToBottom, onContentGrow } =
+  const { scrollRef, onScroll, scrollToBottom, forceScrollToBottom, onContentGrow, stickyState } =
     useAutoScroll();
 
   const getScrollElement = useCallback(() => scrollRef.current, [scrollRef]);
@@ -60,6 +61,16 @@ const MessageList = React.memo(function MessageList({
     estimateSize,
     overscan: 5,
   });
+
+  // During streaming the last item grows continuously. The virtualizer's
+  // default scroll-anchor correction shifts scrollTop by the height delta,
+  // which causes visible jitter when the growing message is the only item
+  // in the viewport. We skip the correction for the last item while
+  // streaming — our onContentGrow() already pins scroll to the bottom.
+  const lastIndex = nodes.length - 1;
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = isStreaming
+    ? (item, _delta, _instance) => item.index !== lastIndex
+    : undefined;
 
   const measureRef = useCallback(
     (node: HTMLElement | null) => {
@@ -121,63 +132,79 @@ const MessageList = React.memo(function MessageList({
 
   const virtualItems = virtualizer.getVirtualItems();
 
+  const showScrollButton = !stickyState && nodes.length > 0;
+
   return (
-    <div
-      ref={scrollRef}
-      onScroll={onScroll}
-      className="h-full overflow-y-auto [contain:strict]"
-    >
+    <div className="relative h-full">
       <div
-        className={`mx-auto relative ${template.messageListClassName}`}
-        style={{ height: virtualizer.getTotalSize() /* intentionally dynamic */ }}
+        ref={scrollRef}
+        onScroll={onScroll}
+        className="h-full overflow-y-auto [contain:strict]"
       >
-        {virtualItems.map((virtualItem) => {
-          const node = nodes[virtualItem.index]!;
-          const prevNode =
-            virtualItem.index > 0
-              ? nodes[virtualItem.index - 1]
-              : undefined;
-          const isFirstInGroup =
-            !prevNode || prevNode.speaker_id !== node.speaker_id;
-          const isLast = virtualItem.index === nodes.length - 1;
+        <div
+          className={`mx-auto relative ${template.messageListClassName}`}
+          style={{ height: virtualizer.getTotalSize() /* intentionally dynamic */ }}
+        >
+          {virtualItems.map((virtualItem) => {
+            const node = nodes[virtualItem.index]!;
+            const prevNode =
+              virtualItem.index > 0
+                ? nodes[virtualItem.index - 1]
+                : undefined;
+            const isFirstInGroup =
+              !prevNode || prevNode.speaker_id !== node.speaker_id;
+            const isLast = virtualItem.index === nodes.length - 1;
 
-          // Date divider: show when this message's day differs from the
-          // previous message's day (or always on the first message).
-          const currentDay = new Date(node.created_at).toDateString();
-          const prevDay = prevNode
-            ? new Date(prevNode.created_at).toDateString()
-            : null;
-          const dateDividerDate =
-            virtualItem.index === 0 || (prevDay != null && currentDay !== prevDay)
-              ? node.created_at
-              : undefined;
+            // Date divider: show when this message's day differs from the
+            // previous message's day (or always on the first message).
+            const currentDay = new Date(node.created_at).toDateString();
+            const prevDay = prevNode
+              ? new Date(prevNode.created_at).toDateString()
+              : null;
+            const dateDividerDate =
+              virtualItem.index === 0 || (prevDay != null && currentDay !== prevDay)
+                ? node.created_at
+                : undefined;
 
-          return (
-            <div
-              key={node.id}
-              data-index={virtualItem.index}
-              ref={measureRef}
-              className="absolute top-0 left-0 w-full"
-              style={{ transform: `translateY(${virtualItem.start}px)` /* intentionally dynamic */ }}
-            >
-              <MessageItem
-                node={node}
-                speaker={speakerMap.get(node.speaker_id)}
-                siblingInfo={siblingInfos[virtualItem.index] ?? null}
-                chatId={chatId}
-                isFirstInGroup={isFirstInGroup}
-                isLast={isLast}
-                userName={userName}
-                onRegenerate={onRegenerate}
-                dateDividerDate={dateDividerDate}
-                isFirstMessage={virtualItem.index === 0}
-                characterName={characterName}
-                characterAvatarUrl={characterAvatarUrl}
-              />
-            </div>
-          );
-        })}
+            return (
+              <div
+                key={node.id}
+                data-index={virtualItem.index}
+                ref={measureRef}
+                className="absolute top-0 left-0 w-full"
+                style={{ transform: `translateY(${virtualItem.start}px)` /* intentionally dynamic */ }}
+              >
+                <MessageItem
+                  node={node}
+                  speaker={speakerMap.get(node.speaker_id)}
+                  siblingInfo={siblingInfos[virtualItem.index] ?? null}
+                  chatId={chatId}
+                  isFirstInGroup={isFirstInGroup}
+                  isLast={isLast}
+                  userName={userName}
+                  onRegenerate={onRegenerate}
+                  dateDividerDate={dateDividerDate}
+                  isFirstMessage={virtualItem.index === 0}
+                  characterName={characterName}
+                  characterAvatarUrl={characterAvatarUrl}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Scroll-to-bottom FAB — shown when user has scrolled away from bottom */}
+      {showScrollButton && (
+        <button
+          type="button"
+          onClick={forceScrollToBottom}
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-surface-raised border border-border text-text-muted hover:text-text-body hover:bg-surface-hover shadow-lg transition-all duration-150 cursor-pointer"
+          aria-label="Scroll to bottom"
+        >
+          <ChevronDown width="18" height="18" />
+        </button>
+      )}
     </div>
   );
 });

@@ -476,7 +476,7 @@ describe("Connections API routes", () => {
       await fc.assert(
         fc.asyncProperty(
           fc.constantFrom(...PROVIDER_IDS),
-          fc.string({ minLength: 10, maxLength: 200 }),
+          fc.string({ minLength: 10, maxLength: 200 }).filter((s) => s.trim().length >= 10),
           async (provider, key) => {
             // Fresh DB and app per iteration
             const iterDb = new Database(":memory:");

@@ -332,18 +332,9 @@ export class StreamManager {
           stream.durationTimeout = undefined;
         }
 
-        // Swallow rejected internal promises from the AI SDK result object
-        // to prevent unhandled rejection noise in the console. The error
-        // from textStream is the same one — we just need to consume these.
-        // AI SDK uses PromiseLike (not Promise), so use .then(null, noop).
-        if (stream.streamResult) {
-          const noop = () => {};
-          stream.streamResult.usage.then(noop, noop);
-          stream.streamResult.response.then(noop, noop);
-        }
-
         const error = extractErrorMessage(err);
         console.warn(`[stream] Stream ${streamId} failed:`, error);
+
 
         this.publish(chatId, {
           type: "stream:error",
@@ -384,10 +375,30 @@ export class StreamManager {
       model: aiModel,
       messages: finalMessages,
       abortSignal: stream.abortController?.signal,
+      onError: ({ error }) => {
+        // Re-throw so the error propagates to the textStream async iterator
+        // and our .catch() handler can surface it to the client via WS.
+        // The default onError just console.error's and swallows the error.
+        throw error;
+      },
     });
 
     // Store result so cancelStream can also access usage
     stream.streamResult = result;
+
+    // Immediately swallow the AI SDK's internal parallel promises so they
+    // don't surface as unhandled rejections. The real error is caught from
+    // the textStream async iterator below — these carry the same error.
+    const noop = () => {};
+    result.usage.then(noop, noop);
+    result.response.then(noop, noop);
+    result.reasoning.then(noop, noop);
+    result.finishReason.then(noop, noop);
+    result.text.then(noop, noop);
+    result.steps.then(noop, noop);
+    result.toolCalls.then(noop, noop);
+    result.toolResults.then(noop, noop);
+    result.sources.then(noop, noop);
 
     // Safety net: force-cancel after MAX_STREAM_DURATION_MS even if the
     // provider never sends a stop token. cancelStream handles cleanup.

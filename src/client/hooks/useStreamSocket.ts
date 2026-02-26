@@ -40,7 +40,7 @@ import {
   finalizeSession,
   cancelSession,
 } from "../lib/streaming-buffer.ts";
-import { toast } from "../stores/toast.ts";
+import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
 // Reconnection constants
@@ -264,6 +264,7 @@ export function useStreamSocket(
       } catch {
         return;
       }
+
 
       // Only process messages for the currently active chat
       const currentChatId = chatIdRef.current;

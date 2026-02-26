@@ -13,7 +13,7 @@ import type { DesignTemplateId } from "../../../shared/design-templates.ts";
 import { api } from "../../api/client.ts";
 import type { Speaker } from "../../../shared/types.ts";
 import { getFilenameFromDisposition, triggerDownload } from "../../lib/download.ts";
-import { toast } from "../../stores/toast.ts";
+import { toast } from "sonner";
 import MessageList from "./MessageList.tsx";
 import Composer from "./Composer.tsx";
 import StreamDebug from "../debug/StreamDebug.tsx";

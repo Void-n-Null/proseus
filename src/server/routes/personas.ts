@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Database } from "bun:sqlite";
 import { parseSizeParam, resizeAvatar } from "../lib/thumbnail.ts";
+import { validateUpload, MAX_AVATAR_SIZE } from "../lib/upload.ts";
 import {
   listPersonas,
   getPersona,
@@ -113,10 +114,10 @@ export function createPersonasRouter(db: Database): Hono {
       return c.json({ error: "No file provided" }, 400);
     }
 
-    const validMimes = ["image/png", "image/jpeg", "image/webp", "image/gif"];
-    if (!validMimes.includes(file.type)) {
-      return c.json({ error: "Avatar must be a PNG, JPEG, WebP, or GIF" }, 400);
-    }
+    const uploadError = validateUpload(file, MAX_AVATAR_SIZE, {
+      checkMime: true,
+    });
+    if (uploadError) return c.json({ error: uploadError }, 413);
 
     const buffer = new Uint8Array(await file.arrayBuffer());
     const ok = setPersonaAvatar(db, id, buffer, file.type);

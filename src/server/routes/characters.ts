@@ -16,6 +16,11 @@ import {
   type NormalizedCard,
 } from "../lib/character-card-parser.ts";
 import type { CharacterBook } from "../../shared/types.ts";
+import {
+  validateUpload,
+  MAX_AVATAR_SIZE,
+  MAX_CARD_IMPORT_SIZE,
+} from "../lib/upload.ts";
 import { createSpeaker } from "../db/speakers.ts";
 import { createChat, updateChat } from "../db/chats.ts";
 import { addMessage, getChatTree } from "../db/messages.ts";
@@ -342,6 +347,9 @@ export function createCharactersRouter(db: Database): Hono {
       return c.json({ error: "No file provided. Include a 'file' field." }, 400);
     }
 
+    const uploadError = validateUpload(file, MAX_CARD_IMPORT_SIZE);
+    if (uploadError) return c.json({ error: uploadError }, 413);
+
     const buffer = new Uint8Array(await file.arrayBuffer());
     const force = formData.get("force") === "true";
 
@@ -612,6 +620,11 @@ export function createCharactersRouter(db: Database): Hono {
     if (!file || !(file instanceof File)) {
       return c.json({ error: "No file provided. Include a 'file' field." }, 400);
     }
+
+    const uploadError = validateUpload(file, MAX_AVATAR_SIZE, {
+      checkMime: true,
+    });
+    if (uploadError) return c.json({ error: uploadError }, 413);
 
     const buffer = new Uint8Array(await file.arrayBuffer());
     const hasher = new Bun.CryptoHasher("sha256");

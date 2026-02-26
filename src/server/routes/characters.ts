@@ -568,9 +568,59 @@ export function createCharactersRouter(db: Database): Hono {
       updateChat(db, chat.id, { persona_id: globalPersona.id });
     }
 
-    // Insert the character's first message
+    // Insert the character's greeting(s) as root message(s).
+    // If there are alternate_greetings, we use a hidden root node pattern:
+    // a synthetic empty root with first_mes + each alternate as sibling children.
+    // This lets the existing swipe/branch UI work automatically.
     let rootNode = null;
-    if (character.first_mes) {
+    const altGreetings = character.alternate_greetings?.filter(
+      (g) => g.trim().length > 0,
+    ) ?? [];
+    const hasAlternates = altGreetings.length > 0;
+
+    if (hasAlternates) {
+      // Create hidden root node (empty message, not displayed)
+      const hiddenRoot = addMessage(db, {
+        chat_id: chat.id,
+        parent_id: null,
+        message: "",
+        speaker_id: botSpeakerId,
+        is_bot: true,
+      });
+
+      // Insert first_mes as the first child (default greeting)
+      if (character.first_mes) {
+        const firstResult = addMessage(db, {
+          chat_id: chat.id,
+          parent_id: hiddenRoot.node.id,
+          message: character.first_mes,
+          speaker_id: botSpeakerId,
+          is_bot: true,
+        });
+        rootNode = firstResult.node;
+      }
+
+      // Insert each alternate greeting as a sibling child
+      for (const greeting of altGreetings) {
+        const altResult = addMessage(db, {
+          chat_id: chat.id,
+          parent_id: hiddenRoot.node.id,
+          message: greeting,
+          speaker_id: botSpeakerId,
+          is_bot: true,
+        });
+        // If there was no first_mes, use the first alternate as the displayed root
+        if (!rootNode) {
+          rootNode = altResult.node;
+        }
+      }
+
+      // Set active_child_index to 0 (first_mes or first alternate is default)
+      db.query(
+        `UPDATE chat_nodes SET active_child_index = 0 WHERE id = $id`,
+      ).run({ $id: hiddenRoot.node.id });
+    } else if (character.first_mes) {
+      // No alternates — keep the simple single-root behavior
       const result = addMessage(db, {
         chat_id: chat.id,
         parent_id: null,

@@ -1,8 +1,18 @@
 import type { ChatNode } from "./types.ts";
 
 /**
+ * Check whether a node is a hidden root (synthetic empty root used for
+ * alternate-greeting branching). Hidden roots have no parent and an empty message.
+ */
+export function isHiddenRoot(node: ChatNode): boolean {
+  return node.parent_id === null && node.message === "";
+}
+
+/**
  * Walk from root following active_child_index to produce the linear active path.
  * Returns array of node IDs from root to leaf.
+ * Hidden root nodes (empty-message roots used for greeting branching) are
+ * automatically skipped so they never appear in the rendered path.
  */
 export function getActivePath(
   rootId: string,
@@ -14,6 +24,14 @@ export function getActivePath(
   while (currentId !== undefined) {
     const node = nodes.get(currentId);
     if (!node) break;
+
+    // Skip hidden root nodes — advance to their active child without adding to path
+    if (isHiddenRoot(node)) {
+      if (node.child_ids.length === 0 || node.active_child_index === null) break;
+      if (node.active_child_index < 0 || node.active_child_index >= node.child_ids.length) break;
+      currentId = node.child_ids[node.active_child_index];
+      continue;
+    }
 
     path.push(node.id);
 

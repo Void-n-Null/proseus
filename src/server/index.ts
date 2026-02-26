@@ -6,14 +6,18 @@ import { StreamManager } from "./services/stream-manager.ts";
 import { createWebSocketHandler } from "./ws.ts";
 import { networkInterfaces } from "os";
 
+// Runtime flags
+const isDev = process.env.NODE_ENV !== "production";
+const isLan = process.argv.includes("--lan");
+
 // Initialize encryption key and migrate any plaintext API keys
 await initDatabase(db);
 
 const streamManager = new StreamManager(db);
 
 const server = Bun.serve<WsContext>({
-  port: 3000,
-  hostname: "0.0.0.0",
+  port: 8075,
+  hostname: isLan ? "0.0.0.0" : "127.0.0.1",
   routes: {
     "/": index,
     "/chat/:id": index,
@@ -46,18 +50,20 @@ const server = Bun.serve<WsContext>({
     return api.fetch(req);
   },
   websocket: createWebSocketHandler(streamManager),
-  development: {
-    hmr: true,
-    console: true,
-  },
+  ...(isDev ? { development: { hmr: true, console: true } } : {}),
 });
 
 // Stream manager needs the server instance for pub/sub broadcasting
 streamManager.setServer(server);
 
-const lanAddress = Object.values(networkInterfaces())
-  .flat()
-  .find((i) => i?.family === "IPv4" && !i?.internal)?.address;
+const mode = isDev ? "dev" : "production";
+console.log(`Proseus (${mode}) running at http://localhost:${server.port}`);
 
-console.log(`Proseus running at http://localhost:${server.port}`);
-if (lanAddress) console.log(`  LAN: http://${lanAddress}:${server.port}`);
+if (isLan) {
+  const lanAddress = Object.values(networkInterfaces())
+    .flat()
+    .find((i) => i?.family === "IPv4" && !i?.internal)?.address;
+  if (lanAddress) console.log(`  LAN: http://${lanAddress}:${server.port}`);
+} else if (isDev) {
+  console.log("  Pass --lan to expose on your local network");
+}

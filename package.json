@@ -5,7 +5,9 @@
   "private": true,
   "scripts": {
     "dev": "bun --hot src/server/index.ts",
-    "start": "bun src/server/index.ts",
+    "dev:lan": "bun --hot src/server/index.ts --lan",
+    "start": "NODE_ENV=production bun src/server/index.ts",
+    "start:lan": "NODE_ENV=production bun src/server/index.ts --lan",
     "typecheck": "bunx tsc --noEmit",
     "test": "bun test",
     "test:watch": "bun test --watch",

@@ -5,6 +5,7 @@ import type { WsContext } from "../shared/ws-types.ts";
 import { StreamManager } from "./services/stream-manager.ts";
 import { createWebSocketHandler } from "./ws.ts";
 import { networkInterfaces } from "os";
+import figlet from "figlet";
 
 // Runtime flags
 const isDev = process.env.NODE_ENV !== "production";
@@ -56,14 +57,36 @@ const server = Bun.serve<WsContext>({
 // Stream manager needs the server instance for pub/sub broadcasting
 streamManager.setServer(server);
 
-const mode = isDev ? "dev" : "production";
-console.log(`Proseus (${mode}) running at http://localhost:${server.port}`);
+// Startup banner
+const cyan = "\x1b[36m";
+const dim = "\x1b[2m";
+const bold = "\x1b[1m";
+const reset = "\x1b[0m";
+const white = "\x1b[37m";
+
+const cols = process.stdout.columns ?? 80;
+const fonts = ["ANSI Shadow", "Pagga"] as const;
+const fit = fonts.find((font) => {
+  const width = Math.max(...figlet.textSync("PROSEUS", { font }).split("\n").map((l) => l.length));
+  return width <= cols;
+});
+const banner = fit
+  ? `${cyan}${figlet.textSync("PROSEUS", { font: fit })}${reset}`
+  : `${cyan}${bold}PROSEUS${reset}`;
+
+const mode = isDev ? `${dim}dev${reset}` : `${bold}production${reset}`;
+const url = `${white}http://localhost:${server.port}${reset}`;
+
+console.log(banner);
+console.log(`  ${mode} · ${url}`);
 
 if (isLan) {
   const lanAddress = Object.values(networkInterfaces())
     .flat()
     .find((i) => i?.family === "IPv4" && !i?.internal)?.address;
-  if (lanAddress) console.log(`  LAN: http://${lanAddress}:${server.port}`);
+  if (lanAddress)
+    console.log(`  ${dim}LAN${reset}  · ${white}http://${lanAddress}:${server.port}${reset}`);
 } else if (isDev) {
-  console.log("  Pass --lan to expose on your local network");
+  console.log(`  ${dim}pass --lan to expose on your local network${reset}`);
 }
+console.log();

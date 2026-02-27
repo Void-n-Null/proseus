@@ -10,7 +10,6 @@
  */
 
 import { create } from 'zustand';
-import { startSession } from '../lib/streaming-buffer.ts';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -38,8 +37,10 @@ export const useStreamingStore = create<StreamingStore>((set) => ({
   meta: null,
 
   start: (parentId, speakerId, nodeId) => {
-    // Reset the content buffer for the new session.
-    startSession();
+    // NOTE: The content buffer session is now started by useStreamSocket's
+    // stream:start handler (with the server-provided streamId for dedup).
+    // Do NOT call startSession() here — it would reset the buffer after
+    // the hook already initialized it with the correct streamId.
 
     set({
       meta: {

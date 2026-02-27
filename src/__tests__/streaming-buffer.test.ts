@@ -21,7 +21,7 @@ beforeEach(() => {
     finalizeSession();
   }
   // Start + finalize to guarantee a full reset.
-  startSession();
+  startSession('reset');
   finalizeSession();
 });
 
@@ -32,21 +32,21 @@ beforeEach(() => {
 describe('streaming-buffer', () => {
   // 1
   test('startSession initializes empty buffer and marks session active', () => {
-    startSession();
+    startSession('test-stream');
     expect(isSessionActive()).toBe(true);
     expect(getContent()).toBe('');
   });
 
   // 2
   test('appendChunk + getContent returns accumulated content', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('hello');
     expect(getContent()).toBe('hello');
   });
 
   // 3
   test('multiple appendChunks concatenate correctly', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('Hello');
     appendChunk(', ');
     appendChunk('world');
@@ -56,7 +56,7 @@ describe('streaming-buffer', () => {
 
   // 4
   test('getContent flushes pending chunks before returning', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('pending');
     appendChunk('-flush');
     // getContent must flush synchronously
@@ -66,7 +66,7 @@ describe('streaming-buffer', () => {
 
   // 5
   test('subscribeToContent fires callback on flush', async () => {
-    startSession();
+    startSession('test-stream');
     let received = '';
     const unsub = subscribeToContent((content) => {
       received = content;
@@ -83,7 +83,7 @@ describe('streaming-buffer', () => {
 
   // 6
   test('multiple subscribers all receive updates', async () => {
-    startSession();
+    startSession('test-stream');
     const results: string[] = [];
 
     const unsub1 = subscribeToContent((c) => results.push(`a:${c}`));
@@ -101,7 +101,7 @@ describe('streaming-buffer', () => {
 
   // 7
   test('unsubscribe stops delivering to that listener', async () => {
-    startSession();
+    startSession('test-stream');
     let callCount = 0;
     const unsub = subscribeToContent(() => {
       callCount++;
@@ -120,7 +120,7 @@ describe('streaming-buffer', () => {
 
   // 8
   test('finalizeSession returns full content and clears buffer', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('part1');
     appendChunk('part2');
     const result = finalizeSession();
@@ -130,7 +130,7 @@ describe('streaming-buffer', () => {
 
   // 9
   test('after finalize, isSessionActive returns false', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('data');
     finalizeSession();
     expect(isSessionActive()).toBe(false);
@@ -138,7 +138,7 @@ describe('streaming-buffer', () => {
 
   // 10
   test('after finalize, getContent returns empty string', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('stuff');
     finalizeSession();
     expect(getContent()).toBe('');
@@ -146,7 +146,7 @@ describe('streaming-buffer', () => {
 
   // 11
   test('cancelSession returns partial content', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('partial');
     appendChunk('-content');
     const result = cancelSession();
@@ -155,7 +155,7 @@ describe('streaming-buffer', () => {
 
   // 12
   test('after cancel, isSessionActive returns false', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('x');
     cancelSession();
     expect(isSessionActive()).toBe(false);
@@ -163,10 +163,10 @@ describe('streaming-buffer', () => {
 
   // 13
   test('startSession resets previous session state', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('old data');
     // Start a new session without finalizing the old one
-    startSession();
+    startSession('test-stream');
     expect(getContent()).toBe('');
     expect(isSessionActive()).toBe(true);
   });
@@ -181,7 +181,7 @@ describe('streaming-buffer', () => {
 
   // 15 – bonus: setContent replaces everything and notifies listeners
   test('setContent replaces buffer and notifies listeners', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('old');
     getContent(); // flush
 
@@ -198,7 +198,7 @@ describe('streaming-buffer', () => {
 
   // 16 – bonus: subscribers receive cumulative content, not just the new chunk
   test('subscriber receives full accumulated content on each flush', async () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('a');
     getContent(); // flush "a"
 
@@ -217,7 +217,7 @@ describe('streaming-buffer', () => {
 
   // 17
   test('finalizeSession reveals all remaining content to listeners', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('partial');
     appendChunk('-content');
 
@@ -236,7 +236,7 @@ describe('streaming-buffer', () => {
 
   // 18
   test('cancelSession reveals all remaining content to listeners', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('saved');
     appendChunk('-text');
 
@@ -253,7 +253,7 @@ describe('streaming-buffer', () => {
 
   // 19
   test('setContent reveals replacement instantly to listeners', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('original');
     getContent(); // flush
 
@@ -270,7 +270,7 @@ describe('streaming-buffer', () => {
 
   // 20
   test('getContent returns full truth buffer regardless of reveal state', () => {
-    startSession();
+    startSession('test-stream');
     appendChunk('all');
     appendChunk('-of');
     appendChunk('-this');

@@ -40,6 +40,14 @@ let contentBuffer = '';
 let pendingChunks: string[] = [];
 let sessionActive = false;
 
+/**
+ * The streamId of the active session. Used as a dedup guard: appendChunk()
+ * and setContent() reject data that doesn't match the active stream. This
+ * prevents duplicate token delivery when stale WebSocket connections deliver
+ * messages from the same stream (PRO-71, Layer 2 defense).
+ */
+let activeStreamId: string | null = null;
+
 type ContentListener = (content: string) => void;
 const listeners = new Set<ContentListener>();
 
@@ -222,6 +230,7 @@ function resetState(): void {
   cancelFallbackFlush();
   contentBuffer = '';
   pendingChunks = [];
+  activeStreamId = null;
   revealedLength = 0;
   revealRate = MIN_RATE;
   lastRevealTime = 0;
@@ -262,9 +271,16 @@ export function getContent(): string {
   return contentBuffer;
 }
 
-/** Start a new streaming session. Resets the buffer and reveal state. */
-export function startSession(): void {
+/**
+ * Start a new streaming session. Resets the buffer and reveal state.
+ *
+ * @param streamId — unique ID for this stream (from the server's `stream:start`
+ * message). Used by `appendChunk` and `setContent` to reject data from stale
+ * or duplicate connections.
+ */
+export function startSession(streamId: string): void {
   resetState();
+  activeStreamId = streamId;
   sessionActive = true;
 }
 
@@ -275,10 +291,12 @@ export function startSession(): void {
  * accumulates chunks and smoothly advances the cursor. In non-browser
  * environments, a setTimeout flush delivers content immediately.
  *
- * No-op if no session is active.
+ * No-op if no session is active or if the streamId doesn't match the
+ * active session (dedup guard against stale WebSocket connections).
  */
-export function appendChunk(chunk: string): void {
+export function appendChunk(chunk: string, streamId?: string): void {
   if (!sessionActive) return;
+  if (streamId !== undefined && streamId !== activeStreamId) return;
 
   pendingChunks.push(chunk);
 
@@ -293,8 +311,11 @@ export function appendChunk(chunk: string): void {
  * Replace all content at once (for full-content updates on reconnect).
  * Reveals instantly — this is catch-up content, not new generation.
  * Notifies listeners immediately.
+ *
+ * No-op if the streamId doesn't match the active session.
  */
-export function setContent(content: string): void {
+export function setContent(content: string, streamId?: string): void {
+  if (streamId !== undefined && streamId !== activeStreamId) return;
   cancelRevealLoop();
   cancelFallbackFlush();
   pendingChunks = [];

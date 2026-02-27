@@ -35,6 +35,7 @@ import {
   type ConnectionStatus,
 } from "../stores/connection.ts";
 import {
+  startSession,
   appendChunk,
   setContent,
   finalizeSession,
@@ -227,15 +228,39 @@ export function useStreamSocket(
   /** Set to true during intentional cleanup (unmount). Prevents reconnect. */
   const intentionalCloseRef = useRef(false);
 
+  /**
+   * Monotonically increasing connection epoch. Each call to createWebSocket()
+   * increments this. Event handlers capture the epoch at creation time and
+   * bail out if it has advanced — this prevents stale sockets (from HMR or
+   * reconnect races) from triggering reconnects or processing messages.
+   */
+  const connectionEpochRef = useRef(0);
+
   // ── WebSocket factory ──────────────────────────────────────────
   const createWebSocket = useCallback(() => {
-    // Clean up any existing connection
+    // Advance the epoch — all handlers from previous sockets will see a
+    // stale epoch and bail out. This is the primary defense against the
+    // HMR race condition (PRO-71): even if a stale socket's close event
+    // fires after the new socket is created, it won't trigger a reconnect.
+    const epoch = ++connectionEpochRef.current;
+
+    // Clean up any existing connection.
+    // We null out event handlers on the old socket to prevent them from
+    // firing at all, and also rely on the epoch check as a safety net.
     if (wsRef.current) {
-      // Prevent the close handler from triggering reconnect
-      intentionalCloseRef.current = true;
-      wsRef.current.close();
-      intentionalCloseRef.current = false;
+      const oldWs = wsRef.current;
+      oldWs.onclose = null;
+      oldWs.onmessage = null;
+      oldWs.onerror = null;
+      oldWs.onopen = null;
+      oldWs.close();
       wsRef.current = null;
+    }
+
+    // Cancel any pending reconnect timer from a previous epoch
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
     }
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -246,6 +271,8 @@ export function useStreamSocket(
     connStore.getState().setStatus(isReconnect ? 'reconnecting' : 'connecting');
 
     ws.addEventListener("open", () => {
+      if (epoch !== connectionEpochRef.current) return; // Stale socket
+
       // Success — reset reconnect counter, update store
       reconnectAttemptRef.current = 0;
       connStore.getState().markConnected();
@@ -258,13 +285,14 @@ export function useStreamSocket(
     });
 
     ws.addEventListener("message", (event) => {
+      if (epoch !== connectionEpochRef.current) return; // Stale socket
+
       let msg: ServerWsMessage;
       try {
         msg = JSON.parse(event.data);
       } catch {
         return;
       }
-
 
       // Only process messages for the currently active chat
       const currentChatId = chatIdRef.current;
@@ -288,6 +316,7 @@ export function useStreamSocket(
             // so the placeholder is the only way it appears in the tree.
             let retries = 0;
             const retryInsert = () => {
+              if (epoch !== connectionEpochRef.current) return; // Stale
               if (insertPlaceholderNode(qc, msg.chatId, msg.nodeId, msg.parentId, msg.speakerId)) {
                 return; // Success
               }
@@ -298,17 +327,19 @@ export function useStreamSocket(
             setTimeout(retryInsert, PLACEHOLDER_RETRY_INTERVAL);
           }
 
+          // Start buffer session with streamId for dedup (Layer 2 defense)
+          startSession(msg.streamId);
           storeStartRef.current(msg.parentId, msg.speakerId, msg.nodeId);
           break;
         }
 
         case "stream:chunk": {
-          appendChunk(msg.delta);
+          appendChunk(msg.delta, msg.streamId);
           break;
         }
 
         case "stream:content": {
-          setContent(msg.content);
+          setContent(msg.content, msg.streamId);
           break;
         }
 
@@ -360,6 +391,10 @@ export function useStreamSocket(
     });
 
     ws.addEventListener("close", () => {
+      // If this socket is from a previous epoch (replaced by a newer
+      // createWebSocket call), ignore its close event entirely.
+      if (epoch !== connectionEpochRef.current) return;
+
       wsRef.current = null;
 
       // If this was intentional (unmount), don't reconnect
@@ -386,6 +421,7 @@ export function useStreamSocket(
     });
 
     ws.addEventListener("error", () => {
+      if (epoch !== connectionEpochRef.current) return; // Stale socket
       // The error event is always followed by a close event,
       // so reconnection is handled in the close handler.
       // We just log here for debugging.

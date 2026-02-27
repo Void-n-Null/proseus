@@ -26,7 +26,6 @@ export const DESIGN_TEMPLATES: Record<DesignTemplateId, DesignTemplate> = {
     tokenOverrides: {
       "--color-background": "#1a1a1e",
       "--color-surface": "rgb(18,18,20)",
-      "--discord-font": "'Noto Sans', sans-serif",
       "--chat-message-font-family": "'Noto Sans', sans-serif",
       "--font-body": "'Noto Sans', sans-serif",
     },

@@ -104,6 +104,7 @@ export interface Character {
 export interface CharacterListItem {
   id: string;
   name: string;
+  description: string;
   avatar_url: string | null;
   tags: string[];
   creator: string;

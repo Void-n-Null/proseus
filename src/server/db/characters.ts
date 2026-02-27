@@ -70,6 +70,7 @@ function rowToListItem(row: CharacterRow): CharacterListItem {
   return {
     id: row.id,
     name: row.name,
+    description: row.description,
     avatar_url: row.avatar ? `/api/characters/${row.id}/avatar` : null,
     tags: JSON.parse(row.tags) as string[],
     creator: row.creator,
@@ -257,17 +258,18 @@ export function listCharacters(db: Database): CharacterListItem[] {
   // Exclude avatar blob from the list query for performance
   const rows = db
     .query(
-      `SELECT id, name, avatar IS NOT NULL as has_avatar, tags, creator, created_at
+      `SELECT id, name, description, avatar IS NOT NULL as has_avatar, tags, creator, created_at
        FROM characters
        ORDER BY created_at DESC`,
     )
-    .all() as (Pick<CharacterRow, "id" | "name" | "tags" | "creator" | "created_at"> & {
+    .all() as (Pick<CharacterRow, "id" | "name" | "description" | "tags" | "creator" | "created_at"> & {
     has_avatar: number;
   })[];
 
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
+    description: row.description,
     avatar_url: row.has_avatar ? `/api/characters/${row.id}/avatar` : null,
     tags: JSON.parse(row.tags) as string[],
     creator: row.creator,

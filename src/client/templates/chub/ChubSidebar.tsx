@@ -32,7 +32,7 @@ const SIDEBAR_VAR_REBIND: React.CSSProperties = {
 
 // ─── Shorthand helpers for var() references ──────────────────────────────────
 const V = {
-  bg: "var(--sidebar-bg)",
+  bg: "rgba(16, 16, 16, 1)",
   surface: "var(--sidebar-surface)",
   surfaceRaised: "var(--sidebar-surface-raised)",
   surfaceHover: "var(--sidebar-surface-hover)",
@@ -248,7 +248,7 @@ function ChubCharacterPanel({
 
   return (
     <div
-      className="w-full sm:w-[400px] sm:min-w-[400px] h-full flex flex-col border-r"
+      className="w-full sm:w-[600px] sm:min-w-[600px] h-full flex flex-col border-r"
       style={{ background: V.bg, borderColor: V.border }}
     >
       {creating && (
@@ -346,7 +346,6 @@ function ChubCharacterPanel({
             e.target.value = "";
           }}
         />
-
         {statusMessage && (
           <div
             className="px-[0.5rem] py-[0.35rem] rounded-md text-[0.72rem] flex items-center justify-between gap-[0.35rem]"
@@ -433,6 +432,24 @@ function ChubCharacterPanel({
 
 // ─── Character card (Chub style) ─────────────────────────────────────────────
 
+// Hardcoded colors matching the Chub.ai card UI
+const C = {
+  headerBg: "#001b2d",
+  headerBorder: "transparent",
+  cardBg: "rgba(36, 37, 37, 1)",
+  cardBgHover: "rgba(41, 42, 42, 1)",
+  statBarBg: "#001b2d",
+  statText: "#b0b0c0",
+  statIcon: "#c06070",
+  descText: "#b8b8c8",
+  tagChipBg: "#2a2a3a",
+  tagChipBorder: "#3a3a4c",
+  tagChipText: "#d2d2de",
+  creatorText: "#e08050",
+  ageText: "#808098",
+  fireEmoji: "#e06030",
+} as const;
+
 function ChubCharacterCard({
   character,
   onStartChat,
@@ -481,8 +498,15 @@ function ChubCharacterCard({
     }
   };
 
-  const visibleTags = character.tags.slice(0, 4);
+  const visibleTags = character.tags.slice(0, 5);
   const extraTagCount = character.tags.length - visibleTags.length;
+
+  // Truncate description for card preview
+  const descPreview = character.description
+    ? character.description.length > 120
+      ? character.description.slice(0, 120) + "..."
+      : character.description
+    : "";
 
   return (
     <div
@@ -490,94 +514,135 @@ function ChubCharacterCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={handleClick}
-      className="rounded-lg overflow-hidden flex transition-colors duration-150 relative"
+      className="rounded-lg overflow-hidden flex flex-col transition-colors duration-150 relative"
       style={{
-        background: hovered || showPopover ? V.surfaceHover : V.surface,
-        border: `1px solid ${V.border}`,
+        background: hovered || showPopover ? C.cardBgHover : C.cardBg,
+        border: `1px solid ${C.headerBorder}`,
         cursor: showPopover ? "default" : "pointer",
-        minHeight: 140,
       }}
     >
-      {/* ── Left: avatar image ── */}
-      <div className="shrink-0 relative" style={{ width: 130 }}>
-        {character.avatar_url ? (
-          <Avatar
-            src={character.avatar_url}
-            alt={character.name}
-            width={130}
-            height="100%"
-            borderRadius="0"
-            className="absolute inset-0"
-            style={{ width: "100%", height: "100%" }}
-          />
-        ) : (
-          <div
-            className="w-full h-full flex items-center justify-center text-[2rem] font-medium"
-            style={{ background: V.tagBg, color: V.textDim }}
+      {/* ── Header: name + tag count ── */}
+      <div
+        className="flex items-center justify-between px-3 py-[0.4rem]"
+        style={{
+          background: C.headerBg,
+          borderBottom: `1px solid ${C.headerBorder}`,
+        }}
+      >
+        <span
+          className="text-[0.9rem] font-bold leading-tight truncate"
+          style={{ color: V.textBody }}
+        >
+          {character.name}
+        </span>
+        {character.tags.length > 0 && (
+          <span
+            className="text-[0.68rem] shrink-0 flex items-center gap-1"
+            style={{ color: V.textMuted }}
+            title={`${character.tags.length} tags`}
           >
-            {character.name.charAt(0).toUpperCase()}
-          </div>
+            <TagIcon />
+            {character.tags.length}
+          </span>
         )}
       </div>
 
-      {/* ── Right: content ── */}
-      <div className="flex-1 min-w-0 flex flex-col p-3 gap-1.5">
-        {/* Top row: name + tag count */}
-        <div className="flex items-start justify-between gap-2">
-          <span
-            className="text-[0.85rem] font-medium leading-tight truncate"
-            style={{ color: V.textBody }}
-          >
-            {character.name}
-          </span>
-          {character.tags.length > 0 && (
-            <span
-              className="text-[0.7rem] shrink-0 flex items-center gap-0.5"
-              style={{ color: V.textMuted }}
-              title={`${character.tags.length} tags`}
+      {/* ── Body: image + content side by side ── */}
+      <div className="flex" style={{ minHeight: 200, maxHeight: 200 }}>
+        {/* Left: avatar image with stat overlay */}
+        <div className="shrink-0 relative" style={{ width: 160 }}>
+          {character.avatar_url ? (
+            <Avatar
+              src={character.avatar_url}
+              alt={character.name}
+              width={160}
+              height="100%"
+              borderRadius="0"
+              className="absolute inset-0"
+              style={{ width: "100%", height: "100%" }}
+            />
+          ) : (
+            <div
+              className="w-full h-full flex items-center justify-center text-[2rem] font-medium"
+              style={{ background: V.tagBg, color: V.textDim }}
             >
-              <TagIcon />
-              {character.tags.length}
+              {character.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+
+          {/* Bottom stat overlay on image */}
+          <div
+            className="absolute bottom-0 left-0 right-0 flex items-center justify-around px-1 py-[0.3rem]"
+            style={{ background: C.statBarBg }}
+          >
+            <span className="flex items-center gap-[3px] text-[0.6rem]" style={{ color: C.statText }}>
+              <HeartIcon /> {character.tags.length}
             </span>
-          )}
-        </div>
-
-        {/* Creator + age */}
-        <div className="flex items-center gap-1.5 text-[0.7rem]" style={{ color: V.textMuted }}>
-          {character.creator && (
-            <span style={{ color: V.accent }}>@{character.creator}</span>
-          )}
-          <span>{relativeTime(character.created_at)}</span>
-        </div>
-
-        {/* Tags */}
-        {visibleTags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-auto pt-1">
-            {visibleTags.map((tag) => (
-              <span
-                key={tag}
-                className="px-[0.4rem] py-[0.12rem] rounded-[3px] text-[0.62rem] leading-[1.4] truncate max-w-[7rem] border"
-                style={{ background: V.tagBg, color: V.tagText, borderColor: V.tagBorder }}
-              >
-                {tag}
-              </span>
-            ))}
-            {extraTagCount > 0 && (
-              <span
-                className="px-[0.35rem] py-[0.12rem] rounded-[3px] text-[0.6rem] leading-[1.4]"
-                style={{ color: V.textDim }}
-              >
-                +{extraTagCount}
-              </span>
-            )}
+            <span className="flex items-center gap-[3px] text-[0.6rem]" style={{ color: C.statText }}>
+              <DownloadIcon /> --
+            </span>
+            <span className="flex items-center gap-[3px] text-[0.6rem]" style={{ color: C.statText }}>
+              <TokenIcon /> --
+            </span>
           </div>
-        )}
+        </div>
+
+        {/* Right: description + tags + creator */}
+        <div className="flex-1 min-w-0 flex flex-col p-2.5 gap-2">
+          {/* Description */}
+          {descPreview && (
+            <p
+              className="text-[0.72rem] leading-[1.45] m-0"
+              style={{ color: C.descText }}
+            >
+              {descPreview}
+            </p>
+          )}
+
+          {/* Tags row */}
+          {visibleTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1 mt-auto">
+              <span className="text-[0.7rem] mr-[2px]" style={{ color: C.fireEmoji }}>
+                🔥
+              </span>
+              {visibleTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-[0.4rem] py-[0.1rem] rounded-[3px] text-[0.6rem] leading-[1.4] truncate max-w-[5.5rem] border"
+                  style={{
+                    background: C.tagChipBg,
+                    color: C.tagChipText,
+                    borderColor: C.tagChipBorder,
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+              {extraTagCount > 0 && (
+                <span
+                  className="px-[0.3rem] py-[0.1rem] text-[0.58rem] leading-[1.4]"
+                  style={{ color: V.textDim }}
+                >
+                  +{extraTagCount}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Creator + age */}
+          <div className="flex items-center gap-1.5 text-[0.68rem]" style={{ color: C.ageText }}>
+            {character.creator && (
+              <span style={{ color: C.creatorText }}>@{character.creator}</span>
+            )}
+            <span>{relativeTime(character.created_at)}</span>
+          </div>
+        </div>
       </div>
 
       {/* ── Hover actions ── */}
       {hovered && !showPopover && (
         <div
-          className="absolute top-1.5 right-1.5 flex gap-[3px]"
+          className="absolute top-[0.35rem] right-[0.35rem] flex gap-[3px]"
           onClick={(e) => e.stopPropagation()}
         >
           <ActionBtn title="Edit" onClick={onEdit}>
@@ -619,6 +684,35 @@ function ChubCharacterCard({
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Stat icons ──────────────────────────────────────────────────────────────
+
+function HeartIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#c06070" }}>
+      <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function TokenIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+      <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" />
+    </svg>
   );
 }
 

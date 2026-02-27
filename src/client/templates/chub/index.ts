@@ -4,17 +4,14 @@ import ChubComposer from "./Composer.tsx";
 import ChubHeader from "./ChubHeader.tsx";
 import ChubRegenerateButton from "./RegenerateButton.tsx";
 import ChubMessageActions from "./MessageActions.tsx";
-import DefaultSidebar from "../DefaultSidebar.tsx";
+import ChubSidebar from "./ChubSidebar.tsx";
 
 /**
- * Chub template — shares Forge's layout structure.
+ * Chub template — shares Forge's layout structure with a custom sidebar.
  *
- * Chub's visual identity comes entirely from token overrides (warm dark +
- * amber/gold accents) defined in `src/shared/design-templates.ts`, not from
- * layout divergence. MessageItem and MessageContent are reused from forge;
- * the CSS variables drive the visual differences. If Chub later needs a
- * fundamentally different message layout, swap in local components here —
- * nothing else changes.
+ * The sidebar uses a Chub.ai-inspired card layout for the character list
+ * (large image + metadata tags), while MessageItem and MessageContent are
+ * reused from forge with CSS variable overrides for the warm-dark palette.
  */
 export const chubTemplate: TemplateModule = {
   MessageItem: ForgeMessageItem,
@@ -22,7 +19,7 @@ export const chubTemplate: TemplateModule = {
   ChatHeader: ChubHeader,
   RegenerateButton: ChubRegenerateButton,
   MessageActions: ChubMessageActions,
-  Sidebar: DefaultSidebar,
+  Sidebar: ChubSidebar,
   messageListClassName: "w-full sm:w-[60vw]",
   placeholder: (_personaName, { isDisconnected, isStreaming }) => {
     if (isDisconnected) return "Reconnecting to server...";

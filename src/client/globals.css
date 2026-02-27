@@ -45,6 +45,26 @@
   --font-body-weight: 300;
   --font-sani: "Sani Trixie Sans", 'Outfit', system-ui, -apple-system, sans-serif;
 
+  /* ── Sidebar tokens ─────────────────────────────────
+     Default to the global surface/text values so every template
+     gets consistent sidebar styling out of the box.  Templates
+     can override just these to restyle the sidebar without
+     touching the chat interface. */
+  --sidebar-bg: var(--color-background);
+  --sidebar-surface: var(--color-surface);
+  --sidebar-surface-raised: var(--color-surface-raised);
+  --sidebar-surface-hover: var(--color-surface-hover);
+  --sidebar-border: var(--color-border);
+  --sidebar-text-body: var(--color-text-body);
+  --sidebar-text-muted: var(--color-text-muted);
+  --sidebar-text-dim: var(--color-text-dim);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-destructive: var(--color-destructive);
+  --sidebar-tag-bg: var(--color-surface-raised);
+  --sidebar-tag-border: var(--color-border);
+  --sidebar-tag-text: var(--color-text-body);
+  --sidebar-accent: var(--color-primary);
+
   /* Sharp radius — matches forge aesthetic */
   --radius-sm: 0.125rem;
   --radius-md: 0.25rem;

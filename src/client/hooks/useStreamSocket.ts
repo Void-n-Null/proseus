@@ -206,6 +206,9 @@ export function useStreamSocket(
 ): UseStreamSocketReturn {
   const wsRef = useRef<WebSocket | null>(null);
   const qc = useQueryClient();
+  const placeholderRetryTimersRef = useRef(
+    new Set<ReturnType<typeof setTimeout>>(),
+  );
 
   // Connection store for global status
   const connStore = useConnectionStore;
@@ -236,6 +239,34 @@ export function useStreamSocket(
    */
   const connectionEpochRef = useRef(0);
 
+  const clearPlaceholderRetryTimers = useCallback(() => {
+    for (const timer of placeholderRetryTimersRef.current) {
+      clearTimeout(timer);
+    }
+    placeholderRetryTimersRef.current.clear();
+  }, []);
+
+  const schedulePlaceholderRetry = useCallback(
+    (callback: () => void, delayMs: number) => {
+      const timer = setTimeout(() => {
+        placeholderRetryTimersRef.current.delete(timer);
+        callback();
+      }, delayMs);
+      placeholderRetryTimersRef.current.add(timer);
+    },
+    [],
+  );
+
+  const guardConcurrentStreamRequest = useCallback((actionLabel: string) => {
+    if (useStreamingStore.getState().meta) {
+      toast.info("Generation already in progress", {
+        description: `Wait for the current stream to finish or cancel it before ${actionLabel}.`,
+      });
+      return false;
+    }
+    return true;
+  }, []);
+
   // ── WebSocket factory ──────────────────────────────────────────
   const createWebSocket = useCallback(() => {
     // Advance the epoch — all handlers from previous sockets will see a
@@ -262,13 +293,16 @@ export function useStreamSocket(
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
     }
+    clearPlaceholderRetryTimers();
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
     wsRef.current = ws;
 
     const isReconnect = reconnectAttemptRef.current > 0;
-    connStore.getState().setStatus(isReconnect ? 'reconnecting' : 'connecting');
+    connStore
+      .getState()
+      .setStatus(isReconnect ? "reconnecting" : "connecting");
 
     ws.addEventListener("open", () => {
       if (epoch !== connectionEpochRef.current) return; // Stale socket
@@ -300,6 +334,7 @@ export function useStreamSocket(
 
       switch (msg.type) {
         case "stream:start": {
+          clearPlaceholderRetryTimers();
           const inserted = insertPlaceholderNode(
             qc,
             msg.chatId,
@@ -321,10 +356,10 @@ export function useStreamSocket(
                 return; // Success
               }
               if (++retries < PLACEHOLDER_MAX_RETRIES) {
-                setTimeout(retryInsert, PLACEHOLDER_RETRY_INTERVAL);
+                schedulePlaceholderRetry(retryInsert, PLACEHOLDER_RETRY_INTERVAL);
               }
             };
-            setTimeout(retryInsert, PLACEHOLDER_RETRY_INTERVAL);
+            schedulePlaceholderRetry(retryInsert, PLACEHOLDER_RETRY_INTERVAL);
           }
 
           // Start buffer session with streamId for dedup (Layer 2 defense)
@@ -345,6 +380,7 @@ export function useStreamSocket(
 
         case "stream:end":
         case "stream:cancelled": {
+          clearPlaceholderRetryTimers();
           const finalContent = finalizeSession();
 
           const meta = useStreamingStore.getState().meta;
@@ -374,6 +410,7 @@ export function useStreamSocket(
         }
 
         case "stream:error": {
+          clearPlaceholderRetryTimers();
           const meta = useStreamingStore.getState().meta;
           if (meta && currentChatId) {
             removePlaceholderNode(qc, currentChatId, meta.nodeId, meta.parentId);
@@ -396,6 +433,7 @@ export function useStreamSocket(
       if (epoch !== connectionEpochRef.current) return;
 
       wsRef.current = null;
+      clearPlaceholderRetryTimers();
 
       // If this was intentional (unmount), don't reconnect
       if (intentionalCloseRef.current) {
@@ -427,7 +465,7 @@ export function useStreamSocket(
       // We just log here for debugging.
       console.warn("[ws] WebSocket error occurred.");
     });
-  }, [qc, connStore]);
+  }, [qc, connStore, clearPlaceholderRetryTimers, schedulePlaceholderRetry]);
 
   // ── Connection effect: ONE WebSocket for the app lifetime ──
   useEffect(() => {
@@ -437,6 +475,7 @@ export function useStreamSocket(
     return () => {
       // Intentional unmount — clean up without triggering reconnect
       intentionalCloseRef.current = true;
+      clearPlaceholderRetryTimers();
 
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);
@@ -466,16 +505,18 @@ export function useStreamSocket(
     // chatIdRef.current.
 
     return () => {
+      clearPlaceholderRetryTimers();
       // Unsubscribe when leaving this chat (but keep the WS alive)
       wsSend(wsRef.current, { type: "unsubscribe", chatId });
     };
-  }, [chatId]);
+  }, [chatId, clearPlaceholderRetryTimers]);
 
   // ── Actions ───────────────────────────────────────────────
 
   const sendTestStream = useCallback(
     (parentId: string, speakerId: string) => {
       if (!chatId) return;
+      if (!guardConcurrentStreamRequest("starting another stream")) return;
       const nodeId = generateId();
       wsSend(wsRef.current, {
         type: "test-stream",
@@ -485,12 +526,13 @@ export function useStreamSocket(
         nodeId,
       });
     },
-    [chatId],
+    [chatId, guardConcurrentStreamRequest],
   );
 
   const sendAIStream = useCallback(
     (parentId: string, speakerId: string, model: string) => {
       if (!chatId) return;
+      if (!guardConcurrentStreamRequest("starting another stream")) return;
       const nodeId = generateId();
       wsSend(wsRef.current, {
         type: "ai-stream",
@@ -501,12 +543,13 @@ export function useStreamSocket(
         nodeId,
       });
     },
-    [chatId],
+    [chatId, guardConcurrentStreamRequest],
   );
 
   const sendGenerate = useCallback(
     (model: string, provider?: ProviderName, regenerate?: boolean, targetNodeId?: string) => {
       if (!chatId) return;
+      if (!guardConcurrentStreamRequest("starting another generation")) return;
       const nodeId = generateId();
       wsSend(wsRef.current, {
         type: "generate",
@@ -518,7 +561,7 @@ export function useStreamSocket(
         ...(targetNodeId ? { targetNodeId } : {}),
       });
     },
-    [chatId],
+    [chatId, guardConcurrentStreamRequest],
   );
 
   const cancelStream = useCallback(() => {

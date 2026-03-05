@@ -90,7 +90,7 @@ const Composer = React.memo(function Composer({
     if (!canSend || !lastNodeId || !userSpeakerId) return;
 
     const msg = draft.trim();
-    addMessage
+    void addMessage
       .mutateAsync({
         parent_id: lastNodeId,
         speaker_id: userSpeakerId,
@@ -98,17 +98,17 @@ const Composer = React.memo(function Composer({
         message: msg,
       })
       .then(() => {
+        setDraft("");
+
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "auto";
+        }
+
         onMessageSent?.();
       })
       .catch(() => {
         // Mutation's own onError handles cache rollback.
       });
-
-    setDraft("");
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
   }, [canSend, lastNodeIdRef, userSpeakerId, draft, addMessage, onMessageSent]);
 
   const handleKeyDown = useCallback(

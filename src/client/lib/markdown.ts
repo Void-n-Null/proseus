@@ -285,6 +285,42 @@ const PURIFY_CONFIG: PurifyConfig = {
   RETURN_TRUSTED_TYPE: false,
 };
 
+const URL_ATTRS = ["href", "src", "xlink:href", "action", "formaction", "poster"] as const;
+
+function isUnsafeUrl(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return normalized.startsWith("javascript:") || normalized.startsWith("vbscript:");
+}
+
+function hardenSanitizedHtml(html: string): string {
+  if (!html || typeof DOMParser === "undefined") return html;
+
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const stack = [...Array.from(doc.body.children)];
+  while (stack.length > 0) {
+    const element = stack.pop();
+    if (!element) continue;
+
+    for (const attr of [...element.attributes]) {
+      if (/^on/i.test(attr.name)) {
+        element.removeAttribute(attr.name);
+        continue;
+      }
+
+      if (
+        (URL_ATTRS as readonly string[]).includes(attr.name.toLowerCase()) &&
+        isUnsafeUrl(attr.value)
+      ) {
+        element.removeAttribute(attr.name);
+      }
+    }
+
+    stack.push(...Array.from(element.children));
+  }
+
+  return doc.body.innerHTML;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -298,7 +334,8 @@ const PURIFY_CONFIG: PurifyConfig = {
 export function renderMarkdown(text: string): string {
   if (!text) return '';
   const html = marked.parse(text, { async: false }) as string;
-  return DOMPurify.sanitize(html, PURIFY_CONFIG) as string;
+  const sanitized = DOMPurify.sanitize(html, PURIFY_CONFIG) as string;
+  return hardenSanitizedHtml(sanitized);
 }
 
 /**
@@ -312,5 +349,6 @@ export function renderStreamingMarkdown(text: string): string {
   if (!text) return '';
   const completed = remend(text);
   const html = marked.parse(completed, { async: false }) as string;
-  return DOMPurify.sanitize(html, PURIFY_CONFIG) as string;
+  const sanitized = DOMPurify.sanitize(html, PURIFY_CONFIG) as string;
+  return hardenSanitizedHtml(sanitized);
 }

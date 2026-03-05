@@ -10,9 +10,24 @@ import CharacterSidebar from "./components/characters/CharacterSidebar.tsx";
 import PersonaSidebar from "./components/personas/PersonaSidebar.tsx";
 import { useOAuthCallback } from "./hooks/useOAuthCallback.ts";
 import { useDesignTemplateId } from "./hooks/useDesignTemplate.ts";
+import {
+  applyDesignTemplate,
+  setStoredDesignTemplateId,
+} from "./lib/design-templates.ts";
 import { getTemplate } from "./templates/index.ts";
 import DiscordFrameShell from "./templates/discord/DiscordFrameShell.tsx";
 import type { SidebarView } from "./templates/types.ts";
+import {
+  DESIGN_TEMPLATES,
+  type DesignTemplateId,
+} from "../shared/design-templates.ts";
+
+const ONBOARDING_DISMISSED_KEY = "proseus:onboarding-dismissed";
+
+function getInitialOnboardingState(): boolean {
+  if (typeof window === "undefined") return true;
+  return window.localStorage.getItem(ONBOARDING_DISMISSED_KEY) !== "1";
+}
 
 export default function App() {
   const { data: chatData, isLoading, isFetching, refetch } = useChatList();
@@ -26,6 +41,7 @@ export default function App() {
   const template = getTemplate(designTemplateId);
   const { oauthState, dismissOAuth } = useOAuthCallback();
   const isMobile = useIsMobile();
+  const [showOnboarding, setShowOnboarding] = useState(getInitialOnboardingState);
   useVisualViewportHeight(isMobile);
 
   const appViewportStyle = isMobile
@@ -68,6 +84,17 @@ export default function App() {
   }, []);
 
   const chats = chatData?.chats ?? [];
+  const shouldShowOnboarding = showOnboarding && chats.length === 0;
+
+  const handleSelectDesignTemplate = useCallback((id: DesignTemplateId) => {
+    setStoredDesignTemplateId(id);
+    applyDesignTemplate(id);
+  }, []);
+
+  const handleDismissOnboarding = useCallback(() => {
+    window.localStorage.setItem(ONBOARDING_DISMISSED_KEY, "1");
+    setShowOnboarding(false);
+  }, []);
 
   // Validate the chat ID from the URL against the actual chat list.
   // If the URL points to a chat that doesn't exist, silently redirect home.
@@ -174,6 +201,17 @@ export default function App() {
               chatCount={chats.length}
             />
 
+            {shouldShowOnboarding && (
+              <div className="border-b border-border bg-background/95 px-3 py-3">
+                <WelcomeCard
+                  designTemplateId={designTemplateId}
+                  onSelectDesignTemplate={handleSelectDesignTemplate}
+                  onDismiss={handleDismissOnboarding}
+                  compact
+                />
+              </div>
+            )}
+
             <div className="flex-1 min-h-0">
               {sidebarView === "characters"
                 ? renderCharacters()
@@ -236,15 +274,25 @@ export default function App() {
               />
             ) : (
               <CenterMessage>
-                <p className="text-base">
-                  {chats.length > 0
-                    ? "Select a chat or start one from a character"
-                    : "Import a character to get started"}
-                </p>
-                <p className="text-[0.82rem] text-text-dim mt-2">
-                  Drag and drop a PNG character card into the sidebar, or use the
-                  Import button.
-                </p>
+                {shouldShowOnboarding ? (
+                  <WelcomeCard
+                    designTemplateId={designTemplateId}
+                    onSelectDesignTemplate={handleSelectDesignTemplate}
+                    onDismiss={handleDismissOnboarding}
+                  />
+                ) : (
+                  <>
+                    <p className="text-base">
+                      {chats.length > 0
+                        ? "Select a chat or start one from a character"
+                        : "Import a character to get started"}
+                    </p>
+                    <p className="text-[0.82rem] text-text-dim mt-2">
+                      Drag and drop a PNG character card into the sidebar, or use the
+                      Import button.
+                    </p>
+                  </>
+                )}
               </CenterMessage>
             )}
           </div>
@@ -327,6 +375,85 @@ function CenterMessage({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center h-full text-text-muted text-center p-8">
       {children}
+    </div>
+  );
+}
+
+function WelcomeCard({
+  designTemplateId,
+  onSelectDesignTemplate,
+  onDismiss,
+  compact = false,
+}: {
+  designTemplateId: DesignTemplateId;
+  onSelectDesignTemplate: (id: DesignTemplateId) => void;
+  onDismiss: () => void;
+  compact?: boolean;
+}) {
+  return (
+    <div className="w-full max-w-3xl rounded-2xl border border-border bg-surface/80 p-5 text-left shadow-[0_18px_45px_oklch(0_0_0_/_0.18)]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-text-dim">
+            First Launch
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold text-text-body">
+            Make Proseus feel like home
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
+            Pick the look you want, connect a provider in the model dashboard, then
+            import a character card to start your first chat. Your data stays local,
+            and exports are built in when you want a backup.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="self-start rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-dim transition-colors hover:border-border-subtle hover:text-text-body"
+        >
+          Hide guide
+        </button>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {Object.values(DESIGN_TEMPLATES).map((template) => {
+          const active = template.id === designTemplateId;
+          return (
+            <button
+              key={template.id}
+              type="button"
+              onClick={() => onSelectDesignTemplate(template.id)}
+              className={[
+                "rounded-xl border px-4 py-4 text-left transition-all",
+                active
+                  ? "border-primary bg-primary/10 text-text-body shadow-[0_0_0_1px_oklch(0.7_0.15_280_/_0.25)]"
+                  : "border-border bg-background/70 text-text-muted hover:border-border-subtle hover:bg-surface-hover hover:text-text-body",
+              ].join(" ")}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold">{template.label}</span>
+                {active && (
+                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-primary">
+                    Active
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-xs leading-5 text-text-dim">
+                {template.description}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      {!compact && (
+        <div className="mt-5 grid gap-2 text-sm text-text-muted">
+          <p>1. Open the model dashboard and connect the provider you want to use.</p>
+          <p>2. Import a PNG or JSON character card from the Characters sidebar.</p>
+          <p>3. Start chatting, then export a `.chat`, `.jsonl`, or `.txt` backup anytime.</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -142,6 +142,11 @@ export default function CharacterSidebar({
 
   const handleDelete = useCallback(
     async (id: string, name: string) => {
+      const confirmed = window.confirm(
+        `Delete "${name}" from your character library?\n\nExisting chats will be kept, but they will no longer be linked to this character.`,
+      );
+      if (!confirmed) return;
+
       try {
         await deleteMutation.mutateAsync(id);
         showStatus(`Deleted "${name}"`, "success");

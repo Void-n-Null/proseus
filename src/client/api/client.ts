@@ -315,8 +315,4 @@ export const api = {
       return fetchJson<ListUsageResponse>(`/usage${query ? `?${query}` : ""}`);
     },
   },
-  dev: {
-    seed: () => fetchJson<{ ok: true }>("/dev/seed", { method: "POST" }),
-    reset: () => fetchJson<{ ok: true }>("/dev/reset", { method: "POST" }),
-  },
 };

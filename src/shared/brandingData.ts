@@ -65,10 +65,6 @@ export function getProviderColor(id: ProviderName): string {
   return PROVIDER_BRANDING[id].logo;
 }
 
-export function getProviderBg(id: ProviderName): string {
-  return PROVIDER_BRANDING[id].bg;
-}
-
 /**
  * Resolve the brand colors for a model creator.
  * Checks registered providers first, then CREATOR_BRANDING,

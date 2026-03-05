@@ -1,11 +1,19 @@
 import { Database } from "bun:sqlite";
 import { runMigrations } from "./schema.ts";
 import { ensureEncryptionKey } from "../lib/crypto.ts";
+import {
+  ensureParentDirectoryExists,
+  getDatabasePath,
+} from "../lib/data-paths.ts";
 import { migrateUnencryptedKeys } from "./connections.ts";
 
 /** Create a database instance with migrations applied. */
 export function createDatabase(path?: string): Database {
-  const db = new Database(path ?? "proseus.db", { create: true });
+  const resolvedPath = getDatabasePath(path);
+  if (resolvedPath !== ":memory:") {
+    ensureParentDirectoryExists(resolvedPath);
+  }
+  const db = new Database(resolvedPath, { create: true });
   runMigrations(db);
   return db;
 }

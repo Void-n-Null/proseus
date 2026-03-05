@@ -63,16 +63,24 @@ import type { ServerWsMessage } from "../shared/ws-types.ts";
 
 let tmpDir: string;
 let originalCwd: string;
+let originalDataDir: string | undefined;
 
 beforeAll(async () => {
   originalCwd = process.cwd();
+  originalDataDir = process.env.PROSEUS_DATA_DIR;
   tmpDir = await mkdtemp(join(tmpdir(), "proseus-stream-test-"));
+  process.env.PROSEUS_DATA_DIR = tmpDir;
   process.chdir(tmpDir);
   await ensureEncryptionKey();
 });
 
 afterAll(async () => {
   process.chdir(originalCwd);
+  if (originalDataDir === undefined) {
+    delete process.env.PROSEUS_DATA_DIR;
+  } else {
+    process.env.PROSEUS_DATA_DIR = originalDataDir;
+  }
   await rm(tmpDir, { recursive: true, force: true });
 });
 

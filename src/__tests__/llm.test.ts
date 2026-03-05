@@ -73,6 +73,7 @@ const { createModel, hasApiKey } = await import("../server/lib/llm.ts");
 let db: Database;
 let tmpDir: string;
 let originalCwd: string;
+let originalDataDir: string | undefined;
 
 // We need crypto initialized for encrypt() used by seedConnection
 beforeEach(async () => {
@@ -95,7 +96,9 @@ beforeEach(async () => {
 
 // One-time setup: crypto key for encrypt()
 originalCwd = process.cwd();
+originalDataDir = process.env.PROSEUS_DATA_DIR;
 tmpDir = await mkdtemp(join(tmpdir(), "proseus-llm-test-"));
+process.env.PROSEUS_DATA_DIR = tmpDir;
 process.chdir(tmpDir);
 await ensureEncryptionKey();
 
@@ -265,6 +268,11 @@ describe("hasApiKey", () => {
 process.on("exit", () => {
   try {
     process.chdir(originalCwd);
+    if (originalDataDir === undefined) {
+      delete process.env.PROSEUS_DATA_DIR;
+    } else {
+      process.env.PROSEUS_DATA_DIR = originalDataDir;
+    }
   } catch {
     // ignore
   }

@@ -1,3 +1,9 @@
+import { chmodSync } from "node:fs";
+import {
+  ensureParentDirectoryExists,
+  getEncryptionKeyPath,
+} from "./data-paths.ts";
+
 /**
  * Encryption at rest for API keys — AES-256-GCM via Web Crypto API.
  *
@@ -17,7 +23,6 @@
  * or explicitly listed).
  */
 
-const KEY_FILE = ".proseus-key";
 const ALGORITHM = "AES-GCM";
 const KEY_LENGTH = 256; // bits
 const IV_LENGTH = 12; // bytes — AES-GCM standard
@@ -31,6 +36,7 @@ const ENCRYPTED_PREFIX = "v1:";
 
 /** Cached CryptoKey instance — loaded once, reused for the process lifetime. */
 let cachedKey: CryptoKey | null = null;
+let cachedKeyPath: string | null = null;
 
 // ============================================
 // Key management
@@ -43,20 +49,26 @@ let cachedKey: CryptoKey | null = null;
  * Call this once at server startup (e.g., in db/index.ts).
  */
 export async function ensureEncryptionKey(): Promise<CryptoKey> {
-  if (cachedKey) return cachedKey;
+  const keyPath = getEncryptionKeyPath();
+  if (cachedKey && cachedKeyPath === keyPath) return cachedKey;
 
-  const keyFile = Bun.file(KEY_FILE);
+  cachedKey = null;
+  cachedKeyPath = keyPath;
+
+  ensureParentDirectoryExists(keyPath);
+  const keyFile = Bun.file(keyPath);
   let rawKeyB64: string;
 
   if (await keyFile.exists()) {
     rawKeyB64 = (await keyFile.text()).trim();
+    chmodSync(keyPath, 0o600);
   } else {
     // Generate a new random key
     const rawKey = new Uint8Array(KEY_LENGTH / 8);
     crypto.getRandomValues(rawKey);
     rawKeyB64 = btoa(String.fromCharCode(...rawKey));
-    await Bun.write(KEY_FILE, rawKeyB64 + "\n", { mode: 0o600 });
-    console.log("[crypto] Generated new encryption key at", KEY_FILE);
+    await Bun.write(keyPath, rawKeyB64 + "\n", { mode: 0o600 });
+    console.log("[crypto] Generated new encryption key at", keyPath);
   }
 
   // Import as CryptoKey

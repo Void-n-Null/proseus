@@ -500,148 +500,135 @@ export function createCharactersRouter(db: Database): Hono {
       return c.json({ error: "Character not found" }, 404);
     }
 
-    // Reuse or create ONE bot speaker per character.
-    // This avoids duplicating avatar blobs across 50 chats with the same character.
-    let botSpeakerId: string;
-    const existingBot = db
-      .query(
-        "SELECT id FROM speakers WHERE character_id = $cid AND is_user = 0 LIMIT 1",
-      )
-      .get({ $cid: characterId }) as { id: string } | null;
+    const createCharacterChat = db.transaction(() => {
+      // Reuse or create ONE bot speaker per character.
+      // This avoids duplicating avatar blobs across 50 chats with the same character.
+      let botSpeakerId: string;
+      const existingBot = db
+        .query(
+          "SELECT id FROM speakers WHERE character_id = $cid AND is_user = 0 LIMIT 1",
+        )
+        .get({ $cid: characterId }) as { id: string } | null;
 
-    if (existingBot) {
-      botSpeakerId = existingBot.id;
-    } else {
-      const botSpeaker = createSpeaker(db, {
-        name: character.name,
-        is_user: false,
-        color: "#7c3aed",
-      });
-      botSpeakerId = botSpeaker.id;
-
-      // Link speaker to character and copy avatar once
-      db.query(
-        "UPDATE speakers SET character_id = $cid WHERE id = $id",
-      ).run({ $cid: characterId, $id: botSpeakerId });
-
-      const avatarData = getCharacterAvatar(db, characterId);
-      if (avatarData) {
-        db.query(
-          "UPDATE speakers SET avatar_blob = $blob, avatar_mime = $mime WHERE id = $id",
-        ).run({
-          $blob: avatarData.avatar,
-          $mime: "image/png",
-          $id: botSpeakerId,
+      if (existingBot) {
+        botSpeakerId = existingBot.id;
+      } else {
+        const botSpeaker = createSpeaker(db, {
+          name: character.name,
+          is_user: false,
+          color: "#7c3aed",
         });
+        botSpeakerId = botSpeaker.id;
+
+        db.query(
+          "UPDATE speakers SET character_id = $cid WHERE id = $id",
+        ).run({ $cid: characterId, $id: botSpeakerId });
+
+        const avatarData = getCharacterAvatar(db, characterId);
+        if (avatarData) {
+          db.query(
+            "UPDATE speakers SET avatar_blob = $blob, avatar_mime = $mime WHERE id = $id",
+          ).run({
+            $blob: avatarData.avatar,
+            $mime: "image/png",
+            $id: botSpeakerId,
+          });
+        }
       }
-    }
 
-    // Reuse or create ONE user speaker (global singleton)
-    const existingUser = db
-      .query("SELECT id FROM speakers WHERE is_user = 1 LIMIT 1")
-      .get() as { id: string } | null;
+      const existingUser = db
+        .query("SELECT id FROM speakers WHERE is_user = 1 LIMIT 1")
+        .get() as { id: string } | null;
 
-    let userSpeakerId: string;
-    if (existingUser) {
-      userSpeakerId = existingUser.id;
-    } else {
-      const userSpeaker = createSpeaker(db, {
-        name: "User",
-        is_user: true,
-      });
-      userSpeakerId = userSpeaker.id;
-    }
+      let userSpeakerId: string;
+      if (existingUser) {
+        userSpeakerId = existingUser.id;
+      } else {
+        const userSpeaker = createSpeaker(db, {
+          name: "User",
+          is_user: true,
+        });
+        userSpeakerId = userSpeaker.id;
+      }
 
-    // Create the chat
-    const chat = createChat(db, {
-      name: character.name,
-      speaker_ids: [userSpeakerId, botSpeakerId],
-    });
-
-    // Tag the chat with the character_id and apply the global persona if one is set
-    const globalPersona = getGlobalPersona(db);
-    db.query("UPDATE chats SET character_id = $cid WHERE id = $id").run({
-      $cid: characterId,
-      $id: chat.id,
-    });
-    if (globalPersona) {
-      updateChat(db, chat.id, { persona_id: globalPersona.id });
-    }
-
-    // Insert the character's greeting(s) as root message(s).
-    // If there are alternate_greetings, we use a hidden root node pattern:
-    // a synthetic empty root with first_mes + each alternate as sibling children.
-    // This lets the existing swipe/branch UI work automatically.
-    let rootNode = null;
-    const altGreetings = character.alternate_greetings?.filter(
-      (g) => g.trim().length > 0,
-    ) ?? [];
-    const hasAlternates = altGreetings.length > 0;
-
-    if (hasAlternates) {
-      // Create hidden root node (empty message, not displayed)
-      const hiddenRoot = addMessage(db, {
-        chat_id: chat.id,
-        parent_id: null,
-        message: "",
-        speaker_id: botSpeakerId,
-        is_bot: true,
+      const chat = createChat(db, {
+        name: character.name,
+        speaker_ids: [userSpeakerId, botSpeakerId],
       });
 
-      // Insert first_mes as the first child (default greeting)
-      if (character.first_mes) {
-        const firstResult = addMessage(db, {
+      const globalPersona = getGlobalPersona(db);
+      db.query("UPDATE chats SET character_id = $cid WHERE id = $id").run({
+        $cid: characterId,
+        $id: chat.id,
+      });
+      if (globalPersona) {
+        updateChat(db, chat.id, { persona_id: globalPersona.id });
+      }
+
+      let rootNode = null;
+      const altGreetings = character.alternate_greetings?.filter(
+        (g) => g.trim().length > 0,
+      ) ?? [];
+      const hasAlternates = altGreetings.length > 0;
+
+      if (hasAlternates) {
+        const hiddenRoot = addMessage(db, {
           chat_id: chat.id,
-          parent_id: hiddenRoot.node.id,
+          parent_id: null,
+          message: "",
+          speaker_id: botSpeakerId,
+          is_bot: true,
+        });
+
+        if (character.first_mes) {
+          const firstResult = addMessage(db, {
+            chat_id: chat.id,
+            parent_id: hiddenRoot.node.id,
+            message: character.first_mes,
+            speaker_id: botSpeakerId,
+            is_bot: true,
+          });
+          rootNode = firstResult.node;
+        }
+
+        for (const greeting of altGreetings) {
+          const altResult = addMessage(db, {
+            chat_id: chat.id,
+            parent_id: hiddenRoot.node.id,
+            message: greeting,
+            speaker_id: botSpeakerId,
+            is_bot: true,
+          });
+          if (!rootNode) {
+            rootNode = altResult.node;
+          }
+        }
+
+        db.query(
+          `UPDATE chat_nodes SET active_child_index = 0 WHERE id = $id`,
+        ).run({ $id: hiddenRoot.node.id });
+      } else if (character.first_mes) {
+        const result = addMessage(db, {
+          chat_id: chat.id,
+          parent_id: null,
           message: character.first_mes,
           speaker_id: botSpeakerId,
           is_bot: true,
         });
-        rootNode = firstResult.node;
+        rootNode = result.node;
       }
 
-      // Insert each alternate greeting as a sibling child
-      for (const greeting of altGreetings) {
-        const altResult = addMessage(db, {
-          chat_id: chat.id,
-          parent_id: hiddenRoot.node.id,
-          message: greeting,
-          speaker_id: botSpeakerId,
-          is_bot: true,
-        });
-        // If there was no first_mes, use the first alternate as the displayed root
-        if (!rootNode) {
-          rootNode = altResult.node;
-        }
-      }
-
-      // Set active_child_index to 0 (first_mes or first alternate is default)
-      db.query(
-        `UPDATE chat_nodes SET active_child_index = 0 WHERE id = $id`,
-      ).run({ $id: hiddenRoot.node.id });
-    } else if (character.first_mes) {
-      // No alternates — keep the simple single-root behavior
-      const result = addMessage(db, {
-        chat_id: chat.id,
-        parent_id: null,
-        message: character.first_mes,
-        speaker_id: botSpeakerId,
-        is_bot: true,
-      });
-      rootNode = result.node;
-    }
-
-    // Fetch the updated chat to get root_node_id
-    const updatedChat = getChat(db, chat.id);
-
-    return c.json({
-      chat: updatedChat ?? chat,
-      root_node: rootNode,
-      speakers: {
-        user_id: userSpeakerId,
-        bot_id: botSpeakerId,
-      },
+      return {
+        chat: getChat(db, chat.id) ?? chat,
+        root_node: rootNode,
+        speakers: {
+          user_id: userSpeakerId,
+          bot_id: botSpeakerId,
+        },
+      };
     });
+
+    return c.json(createCharacterChat());
   });
 
   // PATCH /:id — update character fields

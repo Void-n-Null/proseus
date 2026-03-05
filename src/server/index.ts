@@ -10,6 +10,7 @@ import figlet from "figlet";
 // Runtime flags
 const isDev = process.env.NODE_ENV !== "production";
 const isLan = process.argv.includes("--lan");
+const port = Number.parseInt(process.env.PORT ?? "8075", 10);
 
 // Initialize encryption key and migrate any plaintext API keys
 await initDatabase(db);
@@ -17,7 +18,7 @@ await initDatabase(db);
 const streamManager = new StreamManager(db);
 
 const server = Bun.serve<WsContext>({
-  port: 8075,
+  port,
   hostname: isLan ? "0.0.0.0" : "127.0.0.1",
   routes: {
     "/": index,

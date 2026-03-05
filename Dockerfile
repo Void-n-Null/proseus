@@ -10,10 +10,15 @@ RUN bun install --frozen-lockfile
 FROM base
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json bun.lock ./
+COPY bunfig.toml ./
 COPY src ./src
+COPY fonts ./fonts
+COPY icons ./icons
 COPY tsconfig.json ./
 
-VOLUME /app/data
-EXPOSE 3000
+ENV PROSEUS_DATA_DIR=/app/data
 
-CMD ["bun", "run", "src/server/index.ts"]
+VOLUME /app/data
+EXPOSE 8075
+
+CMD ["bun", "run", "src/server/index.ts", "--lan"]

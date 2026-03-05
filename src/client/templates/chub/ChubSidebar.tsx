@@ -245,6 +245,33 @@ function ChubCharacterPanel({
 
   const characters = data?.characters ?? [];
   const isImporting = importMutation.isPending || importUrlMutation.isPending;
+  const trimmedUrl = urlInput.trim();
+  const canSubmitUrl = trimmedUrl.length > 0 && !importUrlMutation.isPending;
+  const statusTone = statusMessage
+    ? statusMessage.type === "success"
+      ? {
+          bg: "rgba(60,180,100,0.12)",
+          border: "rgba(108,192,144,0.28)",
+          text: "#6cc090",
+          actionBg: "rgba(108,192,144,0.18)",
+          actionText: "#8ad2a8",
+        }
+      : statusMessage.type === "warn"
+        ? {
+            bg: "rgba(200,160,50,0.12)",
+            border: "rgba(212,176,96,0.28)",
+            text: "#c8a050",
+            actionBg: "rgba(212,176,96,0.2)",
+            actionText: "#d4b060",
+          }
+        : {
+            bg: "rgba(200,60,60,0.12)",
+            border: "rgba(212,112,112,0.28)",
+            text: "#c06060",
+            actionBg: "rgba(212,112,112,0.18)",
+            actionText: "#d48a8a",
+          }
+    : null;
 
   return (
     <div
@@ -264,77 +291,162 @@ function ChubCharacterPanel({
       </div>
 
       {/* Header */}
-      <div className="px-3 py-2.5 border-b flex flex-col gap-2" style={{ borderColor: V.border }}>
+      <div className="px-3 py-2.5 border-b flex flex-col gap-2.5" style={{ borderColor: V.border }}>
         <div className="flex items-center justify-between">
           <span className="text-[0.75rem] font-normal tracking-[0.12em] uppercase" style={{ color: V.textMuted }}>
             Characters
           </span>
-          <div className="flex items-center gap-[0.35rem]">
-            <span className="text-[0.7rem]" style={{ color: V.textDim }}>
-              {characters.length}
-            </span>
-            <button
-              onClick={() => setCreating(true)}
-              className="px-[0.45rem] py-[0.15rem] border-none rounded-sm cursor-pointer text-[0.72rem] leading-[1.4] text-white"
-              style={{ background: V.primary }}
-            >
-              + New
-            </button>
-          </div>
-        </div>
-
-        {/* Import buttons */}
-        <div className="flex gap-[0.35rem]">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isImporting}
-            className="flex-1 px-[0.5rem] py-[0.4rem] rounded-md text-[0.75rem] transition-opacity duration-150 border cursor-pointer"
+          <span
+            className="min-w-[1.75rem] h-[1.25rem] px-1.5 rounded-full text-[0.68rem] inline-flex items-center justify-center"
             style={{
-              background: V.surface,
-              color: V.tagText,
-              borderColor: V.border,
-              opacity: isImporting ? 0.5 : 1,
+              background: "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01))",
+              color: V.textDim,
+              border: `1px solid ${V.border}`,
             }}
           >
-            {isImporting ? "Importing..." : "Import File"}
-          </button>
-          <button
-            onClick={() => setShowUrlInput(!showUrlInput)}
-            className="px-[0.5rem] py-[0.4rem] rounded-md cursor-pointer text-[0.75rem] transition-opacity duration-150 border"
-            style={{ background: V.surface, color: V.textMuted, borderColor: V.border }}
-          >
-            URL
-          </button>
+            {characters.length}
+          </span>
         </div>
 
-        {showUrlInput && (
-          <div className="flex gap-1">
-            <input
-              type="text"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleUrlImport();
-                if (e.key === "Escape") {
-                  setShowUrlInput(false);
-                  setUrlInput("");
-                }
-              }}
-              placeholder="chub.ai/characters/..."
-              className="flex-1 px-[0.5rem] py-[0.35rem] rounded-md text-[0.72rem] outline-none border"
-              style={{ background: V.bg, color: V.textBody, borderColor: V.border }}
-              autoFocus
-            />
+        {/* Creation + import controls */}
+        <div
+          className="rounded-xl border p-[0.5rem] flex flex-col gap-[0.5rem]"
+          style={{
+            background: "linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))",
+            borderColor: V.border,
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
+          }}
+        >
+          <div className="grid grid-cols-3 gap-[0.35rem]">
             <button
-              onClick={handleUrlImport}
-              disabled={importUrlMutation.isPending}
-              className="px-[0.5rem] py-[0.35rem] border-none rounded-md cursor-pointer text-[0.72rem] text-white"
-              style={{ background: V.primary }}
+              type="button"
+              onClick={() => setCreating(true)}
+              className="h-[2.05rem] px-[0.5rem] rounded-md border-none cursor-pointer text-[0.72rem] transition-all duration-200 flex items-center justify-center gap-1.5 text-white hover:-translate-y-[1px] hover:brightness-110 active:translate-y-0"
+              style={{
+                background: "linear-gradient(180deg, rgba(110,140,186,1), rgba(96,120,164,1))",
+                boxShadow: "0 6px 16px rgba(96,120,164,0.32)",
+              }}
             >
-              Go
+              <CreateIcon />
+              <span>New</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+              className="h-[2.05rem] px-[0.5rem] rounded-md text-[0.72rem] transition-all duration-200 border cursor-pointer flex items-center justify-center gap-1.5 hover:-translate-y-[1px] hover:border-white/15 disabled:hover:translate-y-0"
+              style={{
+                background: V.surfaceRaised,
+                color: V.tagText,
+                borderColor: V.border,
+                opacity: isImporting ? 0.55 : 1,
+              }}
+            >
+              <FileImportIcon />
+              <span>{isImporting ? "Importing" : "File"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowUrlInput((prev) => !prev)}
+              className="h-[2.05rem] px-[0.5rem] rounded-md cursor-pointer text-[0.72rem] transition-all duration-200 border flex items-center justify-center gap-1.5 hover:-translate-y-[1px]"
+              style={{
+                background: showUrlInput ? "rgba(96, 140, 220, 0.18)" : V.surfaceRaised,
+                color: showUrlInput ? V.textBody : V.textMuted,
+                borderColor: showUrlInput ? "rgba(96, 140, 220, 0.35)" : V.border,
+                boxShadow: showUrlInput ? "0 0 0 1px rgba(96,140,220,0.12) inset" : "none",
+              }}
+            >
+              <LinkImportIcon />
+              <span>URL</span>
             </button>
           </div>
-        )}
+
+          {showUrlInput ? (
+            <div
+              className="rounded-lg border p-[0.4rem] flex flex-col gap-[0.35rem]"
+              style={{
+                background: "rgba(0,0,0,0.2)",
+                borderColor: "rgba(96, 140, 220, 0.28)",
+              }}
+            >
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[0.64rem] tracking-[0.08em] uppercase" style={{ color: "rgba(190, 210, 255, 0.85)" }}>
+                  Import From URL
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUrlInput(false);
+                    setUrlInput("");
+                  }}
+                  className="w-5 h-5 rounded-sm border-none cursor-pointer flex items-center justify-center transition-colors duration-150"
+                  style={{ color: V.textDim, background: "transparent" }}
+                  aria-label="Close URL input"
+                >
+                  <CloseIcon />
+                </button>
+              </div>
+
+              <div
+                className="flex items-center gap-1.5 rounded-md border px-[0.45rem] py-[0.3rem]"
+                style={{ background: V.bg, borderColor: V.border }}
+              >
+                <UrlInputIcon />
+                <input
+                  type="text"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleUrlImport();
+                    if (e.key === "Escape") {
+                      setShowUrlInput(false);
+                      setUrlInput("");
+                    }
+                  }}
+                  placeholder="https://chub.ai/characters/..."
+                  className="flex-1 px-[0.1rem] py-[0.2rem] rounded-md text-[0.72rem] outline-none border-none"
+                  style={{ background: "transparent", color: V.textBody }}
+                  autoFocus
+                />
+                {urlInput.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setUrlInput("")}
+                    className="w-5 h-5 rounded-sm border-none cursor-pointer flex items-center justify-center transition-colors duration-150"
+                    style={{ color: V.textDim, background: "transparent" }}
+                    aria-label="Clear URL"
+                  >
+                    <CloseIcon />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between gap-2 px-1">
+                <span className="text-[0.64rem] leading-[1.35]" style={{ color: V.textDim }}>
+                  Paste a direct Chub character link.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleUrlImport}
+                  disabled={!canSubmitUrl}
+                  className="px-[0.65rem] py-[0.35rem] border-none rounded-md cursor-pointer text-[0.68rem] text-white transition-all duration-150"
+                  style={{
+                    background: "linear-gradient(180deg, rgba(110,140,186,1), rgba(96,120,164,1))",
+                    opacity: canSubmitUrl ? 1 : 0.45,
+                  }}
+                >
+                  {importUrlMutation.isPending ? "Importing" : "Import URL"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="px-1 text-[0.66rem] leading-[1.35]" style={{ color: V.textDim }}>
+              Import PNG/JSON files or paste a Chub character URL.
+            </div>
+          )}
+        </div>
 
         <input
           ref={fileInputRef}
@@ -346,30 +458,26 @@ function ChubCharacterPanel({
             e.target.value = "";
           }}
         />
+
         {statusMessage && (
           <div
-            className="px-[0.5rem] py-[0.35rem] rounded-md text-[0.72rem] flex items-center justify-between gap-[0.35rem]"
+            className="px-[0.55rem] py-[0.38rem] rounded-md text-[0.72rem] flex items-center justify-between gap-[0.45rem] border"
             style={{
-              background:
-                statusMessage.type === "success"
-                  ? "rgba(60,180,100,0.12)"
-                  : statusMessage.type === "warn"
-                    ? "rgba(200,160,50,0.12)"
-                    : "rgba(200,60,60,0.12)",
-              color:
-                statusMessage.type === "success"
-                  ? "#6cc090"
-                  : statusMessage.type === "warn"
-                    ? "#c8a050"
-                    : "#c06060",
+              background: statusTone?.bg,
+              borderColor: statusTone?.border,
+              color: statusTone?.text,
             }}
           >
-            <span>{statusMessage.text}</span>
+            <span className="flex items-center gap-[0.35rem] min-w-0">
+              <StatusDot />
+              <span className="truncate">{statusMessage.text}</span>
+            </span>
             {statusMessage.action && (
               <button
+                type="button"
                 onClick={statusMessage.action.onClick}
-                className="px-[0.4rem] py-[0.2rem] border-none rounded-sm cursor-pointer text-[0.68rem] font-normal whitespace-nowrap"
-                style={{ background: "rgba(200,160,50,0.2)", color: "#d4b060" }}
+                className="px-[0.45rem] py-[0.2rem] border-none rounded-sm cursor-pointer text-[0.68rem] font-normal whitespace-nowrap"
+                style={{ background: statusTone?.actionBg, color: statusTone?.actionText }}
               >
                 {statusMessage.action.label}
               </button>
@@ -768,6 +876,59 @@ function DeleteIcon() {
       <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
     </svg>
   );
+}
+
+function CreateIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+function FileImportIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z" />
+      <path d="M14 2v7h7" />
+      <path d="M12 12v6" />
+      <path d="m9.5 15 2.5 3 2.5-3" />
+    </svg>
+  );
+}
+
+function LinkImportIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 13a5 5 0 0 1 0-7l1.5-1.5a5 5 0 1 1 7 7L17 13" />
+      <path d="M14 11a5 5 0 0 1 0 7L12.5 19.5a5 5 0 0 1-7-7L7 11" />
+    </svg>
+  );
+}
+
+function UrlInputIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "rgba(190, 210, 255, 0.8)" }}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3a14.5 14.5 0 0 1 0 18" />
+      <path d="M12 3a14.5 14.5 0 0 0 0 18" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
+function StatusDot() {
+  return <span className="w-[5px] h-[5px] rounded-full bg-current shrink-0" />;
 }
 
 // ─── Character editor loader ─────────────────────────────────────────────────

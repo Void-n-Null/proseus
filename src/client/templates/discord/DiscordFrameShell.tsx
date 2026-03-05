@@ -1,6 +1,5 @@
 import React from "react";
 import { siGithub, siGithubsponsors } from "simple-icons";
-import { MessageCircle } from "lucide-react";
 
 /**
  * Discord Frame Shell
@@ -37,9 +36,9 @@ const SI_LINKS = [
 /** Community link uses a Lucide icon instead */
 const COMMUNITY_LINK = {
   label: "Community",
-  href: "https://discord.gg/proseus",
+  href: "https://discord.gg/dURy5kKqbr",
   color: "#ffffff",
-  bg: "#5865F2",
+  bg: "#222222",
 } as const;
 
 export default function DiscordFrameShell({
@@ -106,7 +105,7 @@ export default function DiscordFrameShell({
           </a>
         ))}
 
-        {/* Community (Lucide chat bubble) */}
+        {/* Community */}
         <a
           href={COMMUNITY_LINK.href}
           target="_blank"
@@ -120,7 +119,12 @@ export default function DiscordFrameShell({
           }}
           aria-label={COMMUNITY_LINK.label}
         >
-          <MessageCircle size={20} />
+          <img
+            src="/icons/discord-chat.svg"
+            alt=""
+            aria-hidden="true"
+            style={{ width: 32, height: 32, display: "block" }}
+          />
         </a>
 
         {/* Add server button */}

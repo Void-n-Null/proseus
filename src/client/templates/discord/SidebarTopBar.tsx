@@ -17,8 +17,8 @@ export default function SidebarTopBar({
   setView: (view: SidebarView) => void;
 }) {
   return (
-    <div className="shrink-0 h-12 px-2 flex items-center" style={{ borderBottom: "1px solid #404040" }}>
-      <div className="flex w-full h-[28px] rounded bg-[#1e1f22] overflow-hidden">
+    <div className="shrink-0 h-12 px-2 flex items-center border-b border-[rgba(255,255,255,0.075)]" >
+      <div className="flex w-full h-[28px] rounded bg-[rgba(255,255,255,0.04)] overflow-hidden">
         <TopBarButton
           label="Characters"
           active={view === "characters"}

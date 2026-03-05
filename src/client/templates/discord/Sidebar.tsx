@@ -9,6 +9,7 @@ import ModelDashboard from "../../components/model/ModelDashboard.tsx";
 import PromptTemplateModal from "../../components/prompt-template/PromptTemplateModal.tsx";
 import DiscordDMList from "./DMList.tsx";
 import SidebarTopBar from "./SidebarTopBar.tsx";
+import { LucideBubbles } from "lucide-react";
 
 /**
  * Discord sidebar layout.
@@ -88,7 +89,7 @@ export default function DiscordSidebar({
   // ── Chats view: Discord-style nav + DM list ──
   return (
     <div
-      className="w-full sm:w-[240px] sm:min-w-[260px] h-full flex flex-col"
+      className="w-full sm:w-[240px] sm:min-w-[260px] h-full flex flex-col relative z-20"
       style={{
         background: "var(--color-surface)",
         fontFamily: "var(--discord-font, 'Noto Sans', sans-serif)",
@@ -96,14 +97,14 @@ export default function DiscordSidebar({
     >
       <SidebarTopBar view={view} setView={setView} />
 
-      {/* ── Scrollable area: nav rows + separator + DM list ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      {/* ── Sidebar body: static nav rows + scrollable DM list ── */}
+      <div className="flex-1 min-h-0 flex flex-col">
         {/* Nav rows */}
         <div className="flex flex-col px-2 pt-3 pb-1 gap-[2px]">
           {/* Settings → Prompt template config */}
           <NavRow
-            icon={<SettingsIcon />}
-            label="Settings"
+            icon={<LucideBubbles />}
+            label="Prompt"
             onClick={() => setPromptOpen(true)}
           />
 
@@ -172,11 +173,13 @@ export default function DiscordSidebar({
         <div className="mx-2 my-1 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }} />
 
         {/* DM list */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
         <DiscordDMList
           activeChatId={activeChatId}
           onSelectChat={onSelectChat}
           onChatCreated={onChatCreated}
         />
+        </div>
       </div>
 
       {/* Model dashboard modal (portable — rendered here, opens on demand) */}

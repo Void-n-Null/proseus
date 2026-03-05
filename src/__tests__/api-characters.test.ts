@@ -220,12 +220,12 @@ describe("Characters API routes", () => {
       for (const item of data.characters) {
         expect(item.id).toBeTruthy();
         expect(item.name).toBeTruthy();
+        expect(item).toHaveProperty("description");
         expect(item).toHaveProperty("avatar_url");
         expect(item).toHaveProperty("tags");
         expect(item).toHaveProperty("creator");
         expect(item).toHaveProperty("created_at");
         // Should NOT have full card fields
-        expect(item).not.toHaveProperty("description");
         expect(item).not.toHaveProperty("personality");
         expect(item).not.toHaveProperty("first_mes");
       }

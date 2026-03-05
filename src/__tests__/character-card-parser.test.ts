@@ -615,8 +615,9 @@ describe("character DB operations", () => {
     expect(list[0]!.name).toBe("Second");
     expect(list[1]!.name).toBe("First");
 
-    // List items should not have full character data
-    expect((list[0] as unknown as Record<string, unknown>)["description"]).toBeUndefined();
+    // List items keep lightweight preview data, but not the full card payload.
+    expect(list[0]!.description).toBe(sampleCard.description);
+    expect((list[0] as unknown as Record<string, unknown>)["personality"]).toBeUndefined();
   });
 
   test("deleteCharacter: removes character", async () => {

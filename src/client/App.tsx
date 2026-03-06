@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useChatList } from "./hooks/useChat.ts";
+import { useCharacters } from "./hooks/useCharacters.ts";
 import { useRoute } from "./hooks/useRoute.ts";
 import { useIsMobile } from "./hooks/useMediaQuery.ts";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight.ts";
@@ -12,25 +13,34 @@ import { useOAuthCallback } from "./hooks/useOAuthCallback.ts";
 import { useDesignTemplateId } from "./hooks/useDesignTemplate.ts";
 import {
   applyDesignTemplate,
+  getStoredDesignTemplateChoice,
   setStoredDesignTemplateId,
 } from "./lib/design-templates.ts";
+import ModelSelector from "./components/model/ModelSelector.tsx";
+import { TemplatePickerGrid } from "./components/design-template/TemplatePicker.tsx";
 import { getTemplate } from "./templates/index.ts";
 import DiscordFrameShell from "./templates/discord/DiscordFrameShell.tsx";
 import type { SidebarView } from "./templates/types.ts";
-import {
-  DESIGN_TEMPLATES,
-  type DesignTemplateId,
-} from "../shared/design-templates.ts";
+import { type DesignTemplateId } from "../shared/design-templates.ts";
 
-const ONBOARDING_DISMISSED_KEY = "proseus:onboarding-dismissed";
+const ONBOARDING_COMPLETE_KEY = "proseus:onboarding-complete";
+const LEGACY_ONBOARDING_DISMISSED_KEY = "proseus:onboarding-dismissed";
 
-function getInitialOnboardingState(): boolean {
+function getInitialOnboardingCompleteState(): boolean {
   if (typeof window === "undefined") return true;
-  return window.localStorage.getItem(ONBOARDING_DISMISSED_KEY) !== "1";
+  return (
+    window.localStorage.getItem(ONBOARDING_COMPLETE_KEY) === "1" ||
+    window.localStorage.getItem(LEGACY_ONBOARDING_DISMISSED_KEY) === "1"
+  );
 }
 
 export default function App() {
   const { data: chatData, isLoading, isFetching, refetch } = useChatList();
+  const {
+    data: characterData,
+    isLoading: isLoadingCharacters,
+    isFetching: isFetchingCharacters,
+  } = useCharacters();
   const { route, navigateToChat, navigateHome, replaceRoute } = useRoute();
   const [sidebarView, setSidebarView] = useState<SidebarView>(
     // Default to "chats" if we loaded with a chat URL, otherwise "characters"
@@ -41,7 +51,14 @@ export default function App() {
   const template = getTemplate(designTemplateId);
   const { oauthState, dismissOAuth } = useOAuthCallback();
   const isMobile = useIsMobile();
-  const [showOnboarding, setShowOnboarding] = useState(getInitialOnboardingState);
+  const [onboardingComplete, setOnboardingComplete] = useState(
+    getInitialOnboardingCompleteState,
+  );
+  const [pendingTemplateSelection, setPendingTemplateSelection] =
+    useState<DesignTemplateId | null>(() => {
+      if (typeof window === "undefined") return null;
+      return getStoredDesignTemplateChoice();
+    });
   useVisualViewportHeight(isMobile);
 
   const appViewportStyle = isMobile
@@ -84,17 +101,28 @@ export default function App() {
   }, []);
 
   const chats = chatData?.chats ?? [];
-  const shouldShowOnboarding = showOnboarding && chats.length === 0;
+  const characters = characterData?.characters ?? [];
+  const shouldShowOnboarding =
+    !isLoading &&
+    !isFetching &&
+    !isLoadingCharacters &&
+    !isFetchingCharacters &&
+    !onboardingComplete &&
+    chats.length === 0 &&
+    characters.length === 0;
 
   const handleSelectDesignTemplate = useCallback((id: DesignTemplateId) => {
     setStoredDesignTemplateId(id);
     applyDesignTemplate(id);
+    setPendingTemplateSelection(id);
   }, []);
 
-  const handleDismissOnboarding = useCallback(() => {
-    window.localStorage.setItem(ONBOARDING_DISMISSED_KEY, "1");
-    setShowOnboarding(false);
-  }, []);
+  const handleCompleteOnboarding = useCallback(() => {
+    if (!pendingTemplateSelection) return;
+    window.localStorage.setItem(ONBOARDING_COMPLETE_KEY, "1");
+    window.localStorage.setItem(LEGACY_ONBOARDING_DISMISSED_KEY, "1");
+    setOnboardingComplete(true);
+  }, [pendingTemplateSelection]);
 
   // Validate the chat ID from the URL against the actual chat list.
   // If the URL points to a chat that doesn't exist, silently redirect home.
@@ -201,17 +229,6 @@ export default function App() {
               chatCount={chats.length}
             />
 
-            {shouldShowOnboarding && (
-              <div className="border-b border-border bg-background/95 px-3 py-3">
-                <WelcomeCard
-                  designTemplateId={designTemplateId}
-                  onSelectDesignTemplate={handleSelectDesignTemplate}
-                  onDismiss={handleDismissOnboarding}
-                  compact
-                />
-              </div>
-            )}
-
             <div className="flex-1 min-h-0">
               {sidebarView === "characters"
                 ? renderCharacters()
@@ -274,29 +291,22 @@ export default function App() {
               />
             ) : (
               <CenterMessage>
-                {shouldShowOnboarding ? (
-                  <WelcomeCard
-                    designTemplateId={designTemplateId}
-                    onSelectDesignTemplate={handleSelectDesignTemplate}
-                    onDismiss={handleDismissOnboarding}
-                  />
-                ) : (
-                  <>
-                    <p className="text-base">
-                      {chats.length > 0
-                        ? "Select a chat or start one from a character"
-                        : "Import a character to get started"}
-                    </p>
-                    <p className="text-[0.82rem] text-text-dim mt-2">
-                      Drag and drop a PNG character card into the sidebar, or use the
-                      Import button.
-                    </p>
-                  </>
-                )}
+                <HomeEmptyState
+                  chatCount={chats.length}
+                  characterCount={characters.length}
+                />
               </CenterMessage>
             )}
           </div>
         </div>
+      )}
+      {shouldShowOnboarding && (
+        <FirstLaunchOverlay
+          selectedTemplateId={pendingTemplateSelection}
+          activeTemplateId={designTemplateId}
+          onSelectDesignTemplate={handleSelectDesignTemplate}
+          onContinue={handleCompleteOnboarding}
+        />
       )}
     </Shell>
   );
@@ -379,82 +389,129 @@ function CenterMessage({ children }: { children: React.ReactNode }) {
   );
 }
 
-function WelcomeCard({
-  designTemplateId,
-  onSelectDesignTemplate,
-  onDismiss,
-  compact = false,
+function HomeEmptyState({
+  chatCount,
+  characterCount,
 }: {
-  designTemplateId: DesignTemplateId;
-  onSelectDesignTemplate: (id: DesignTemplateId) => void;
-  onDismiss: () => void;
-  compact?: boolean;
+  chatCount: number;
+  characterCount: number;
 }) {
+  const hasChats = chatCount > 0;
+  const hasCharacters = characterCount > 0;
+
   return (
-    <div className="w-full max-w-3xl rounded-2xl border border-border bg-surface/80 p-5 text-left shadow-[0_18px_45px_oklch(0_0_0_/_0.18)]">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-text-dim">
-            First Launch
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold text-text-body">
-            Make Proseus feel like home
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-            Pick the look you want, connect a provider in the model dashboard, then
-            import a character card to start your first chat. Your data stays local,
-            and exports are built in when you want a backup.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="self-start rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-dim transition-colors hover:border-border-subtle hover:text-text-body"
-        >
-          Hide guide
-        </button>
-      </div>
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        {Object.values(DESIGN_TEMPLATES).map((template) => {
-          const active = template.id === designTemplateId;
-          return (
-            <button
-              key={template.id}
-              type="button"
-              onClick={() => onSelectDesignTemplate(template.id)}
-              className={[
-                "rounded-xl border px-4 py-4 text-left transition-all",
-                active
-                  ? "border-primary bg-primary/10 text-text-body shadow-[0_0_0_1px_oklch(0.7_0.15_280_/_0.25)]"
-                  : "border-border bg-background/70 text-text-muted hover:border-border-subtle hover:bg-surface-hover hover:text-text-body",
-              ].join(" ")}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-semibold">{template.label}</span>
-                {active && (
-                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-primary">
-                    Active
-                  </span>
-                )}
-              </div>
-              <p className="mt-2 text-xs leading-5 text-text-dim">
-                {template.description}
-              </p>
-            </button>
-          );
-        })}
-      </div>
-
-      {!compact && (
-        <div className="mt-5 grid gap-2 text-sm text-text-muted">
-          <p>1. Open the model dashboard and connect the provider you want to use.</p>
-          <p>2. Import a PNG or JSON character card from the Characters sidebar.</p>
-          <p>3. Start chatting, then export a `.chat`, `.jsonl`, or `.txt` backup anytime.</p>
+    <div className="flex max-w-xl flex-col items-center">
+      <p className="text-base text-text-body">
+        {hasChats
+          ? "Select a chat or start one from a character"
+          : hasCharacters
+          ? "Select a character to start your first chat"
+          : "Import a character to get started"}
+      </p>
+      <p className="mt-2 text-[0.82rem] leading-6 text-text-dim">
+        {hasChats
+          ? "Pick a conversation from the sidebar, or click a character to open a fresh thread."
+          : hasCharacters
+          ? "Your characters are already waiting in the sidebar. Click one to begin a new conversation or continue an existing thread."
+          : "Open the model dashboard, connect a provider, then import a PNG or JSON character card from the Characters sidebar."}
+      </p>
+      {!hasChats && !hasCharacters && (
+        <div className="mt-5">
+          <ModelSelector className="h-10 px-4 text-sm" />
         </div>
       )}
     </div>
+  );
+}
+
+function FirstLaunchOverlay({
+  selectedTemplateId,
+  activeTemplateId,
+  onSelectDesignTemplate,
+  onContinue,
+}: {
+  selectedTemplateId: DesignTemplateId | null;
+  activeTemplateId: DesignTemplateId;
+  onSelectDesignTemplate: (id: DesignTemplateId) => void;
+  onContinue: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-40 flex items-center justify-center bg-[radial-gradient(circle_at_top,oklch(0.26_0.08_285_/_0.42),transparent_40%),oklch(0_0_0_/_0.76)] px-4 py-6 backdrop-blur-md"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-6xl rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,oklch(0.14_0.02_280),oklch(0.1_0.015_275))] shadow-[0_40px_120px_oklch(0_0_0_/_0.55)]"
+      >
+        <div className="border-b border-white/8 px-6 py-6 sm:px-8">
+          <div className="max-w-3xl">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.32em] text-white/55">
+              First Launch
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">
+              What should Proseus look like?
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-white/72 sm:text-[0.95rem]">
+              Pick the interface that feels most familiar, then connect your
+              model provider and import a character. The app will preview your
+              selection live behind this overlay before you step inside.
+            </p>
+          </div>
+        </div>
+
+        <div className="px-6 py-6 sm:px-8">
+          <TemplatePickerGrid
+            activeId={activeTemplateId}
+            onSelect={onSelectDesignTemplate}
+            embedded
+          />
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.03] p-5 text-left">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-white/55">
+                Step 1
+              </p>
+              <h3 className="mt-2 text-lg font-semibold text-white">
+                Connect a provider in the model dashboard
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-white/68">
+                This is the same control you will use later in the app. Hook up a
+                provider now so your first conversation is one click away.
+              </p>
+              <div className="mt-4">
+                <ModelSelector className="h-10 px-4 text-sm" />
+              </div>
+            </div>
+
+            <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.03] p-5 text-left">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-white/55">
+                Step 2
+              </p>
+              <h3 className="mt-2 text-lg font-semibold text-white">
+                Lock in your visual vibe
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-white/68">
+                Choose one of the templates above. You can change it later from
+                the chat header or theme controls at any time.
+              </p>
+              <button
+                type="button"
+                disabled={!selectedTemplateId}
+                onClick={onContinue}
+                className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-semibold text-black transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/45"
+              >
+                {selectedTemplateId ? "Get Started" : "Select a template to continue"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

@@ -34,6 +34,20 @@ function renderTokenOverrides(tokenOverrides: Partial<Record<string, string>>): 
   return [":root {", ...lines, "}"].join("\n");
 }
 
+function getPersistedDesignTemplateId(): DesignTemplateId | null {
+  const stored = localStorage.getItem(DESIGN_TEMPLATE_STORAGE_KEY);
+  if (stored && isDesignTemplateId(stored)) return stored;
+
+  const legacy = localStorage.getItem(LEGACY_DESIGN_PACK_STORAGE_KEY);
+  if (legacy && isDesignTemplateId(legacy)) {
+    localStorage.setItem(DESIGN_TEMPLATE_STORAGE_KEY, legacy);
+    localStorage.removeItem(LEGACY_DESIGN_PACK_STORAGE_KEY);
+    return legacy;
+  }
+
+  return null;
+}
+
 export function applyDesignTemplate(id: DesignTemplateId): void {
   const template = DESIGN_TEMPLATES[id];
   const css = renderTokenOverrides(template.tokenOverrides);
@@ -53,17 +67,11 @@ export function applyDesignTemplate(id: DesignTemplateId): void {
 }
 
 export function getStoredDesignTemplateId(): DesignTemplateId {
-  const stored = localStorage.getItem(DESIGN_TEMPLATE_STORAGE_KEY);
-  if (stored && isDesignTemplateId(stored)) return stored;
+  return getPersistedDesignTemplateId() ?? "forge";
+}
 
-  const legacy = localStorage.getItem(LEGACY_DESIGN_PACK_STORAGE_KEY);
-  if (legacy && isDesignTemplateId(legacy)) {
-    localStorage.setItem(DESIGN_TEMPLATE_STORAGE_KEY, legacy);
-    localStorage.removeItem(LEGACY_DESIGN_PACK_STORAGE_KEY);
-    return legacy;
-  }
-
-  return "forge";
+export function getStoredDesignTemplateChoice(): DesignTemplateId | null {
+  return getPersistedDesignTemplateId();
 }
 
 export function getActiveDesignTemplateId(): DesignTemplateId {

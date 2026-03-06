@@ -2,11 +2,12 @@ import React, { useCallback, useRef, useState } from "react";
 import type { SidebarLayoutProps } from "../types.ts";
 import { useDesignTemplateId } from "../../hooks/useDesignTemplate.ts";
 import { setStoredDesignTemplateId, applyDesignTemplate } from "../../lib/design-templates.ts";
-import { DESIGN_TEMPLATES, type DesignTemplateId } from "../../../shared/design-templates.ts";
+import type { DesignTemplateId } from "../../../shared/design-templates.ts";
 import { api } from "../../api/client.ts";
 import { getFilenameFromDisposition, triggerDownload } from "../../lib/download.ts";
 import ModelDashboard from "../../components/model/ModelDashboard.tsx";
 import PromptTemplateModal from "../../components/prompt-template/PromptTemplateModal.tsx";
+import TemplatePickerModal from "../../components/design-template/TemplatePicker.tsx";
 import DiscordDMList from "./DMList.tsx";
 import SidebarTopBar from "./SidebarTopBar.tsx";
 import { LucideBubbles } from "lucide-react";
@@ -30,13 +31,11 @@ export default function DiscordSidebar({
 }: SidebarLayoutProps) {
   // ── Theme switching ──
   const designTemplateId = useDesignTemplateId();
-  const [themeOpen, setThemeOpen] = useState(false);
-  const themeRef = useRef<HTMLDivElement | null>(null);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
 
   const selectTheme = useCallback((id: DesignTemplateId) => {
     setStoredDesignTemplateId(id);
     applyDesignTemplate(id);
-    setThemeOpen(false);
   }, []);
 
   // ── Model dashboard ──
@@ -108,34 +107,11 @@ export default function DiscordSidebar({
             onClick={() => setPromptOpen(true)}
           />
 
-          {/* Theme → submenu */}
-          <div className="relative" ref={themeRef}>
-            <NavRow
-              icon={<ThemeIcon />}
-              label="Theme"
-              active={themeOpen}
-              onClick={() => setThemeOpen((o) => !o)}
-            />
-            {themeOpen && (
-              <div className="absolute left-full top-0 ml-1 min-w-[10rem] bg-[#111214] border border-[#1f2023] rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.6)] z-30 p-1">
-                {Object.values(DESIGN_TEMPLATES).map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => selectTheme(t.id as DesignTemplateId)}
-                    className={`w-full text-left px-2 py-1.5 text-xs rounded-sm transition-colors flex items-center gap-2 ${
-                      t.id === designTemplateId
-                        ? "text-white bg-[#5865F2]"
-                        : "text-[#b5bac1] hover:text-white hover:bg-[#5865F2]"
-                    }`}
-                  >
-                    {t.id === designTemplateId && <CheckIcon />}
-                    <span className={t.id === designTemplateId ? "" : "ml-[20px]"}>{t.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <NavRow
+            icon={<ThemeIcon />}
+            label="Themes"
+            onClick={() => setTemplatePickerOpen(true)}
+          />
 
           {/* Change Model */}
           <NavRow
@@ -187,6 +163,13 @@ export default function DiscordSidebar({
 
       {/* Prompt template modal (portable — same pattern as ModelDashboard) */}
       <PromptTemplateModal open={promptOpen} onOpenChange={setPromptOpen} chatId={activeChatId} />
+
+      <TemplatePickerModal
+        open={templatePickerOpen}
+        onOpenChange={setTemplatePickerOpen}
+        activeId={designTemplateId}
+        onSelect={selectTheme}
+      />
     </div>
   );
 }
@@ -262,14 +245,6 @@ function ExportIcon() {
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 20 20" fill="none">
-      <path d="M4 10l4 4L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

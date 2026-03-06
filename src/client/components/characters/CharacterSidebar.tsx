@@ -355,6 +355,7 @@ function CharacterCard({
   const [hovered, setHovered] = useState(false);
   const [showPopover, setShowPopover] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const continueButtonRef = useRef<HTMLButtonElement>(null);
   const { data: recentChatData } = useRecentChatForCharacter(character.id);
   const recentChat = recentChatData?.chat ?? null;
 
@@ -376,6 +377,12 @@ function CharacterCard({
     };
   }, [showPopover]);
 
+  useEffect(() => {
+    if (showPopover) {
+      continueButtonRef.current?.focus();
+    }
+  }, [showPopover]);
+
   const handleClick = () => {
     if (showPopover) return;
     if (recentChat) {
@@ -390,8 +397,7 @@ function CharacterCard({
       ref={cardRef}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className={`rounded-md transition-[background] duration-150 ${showPopover ? "cursor-default bg-surface-hover" : "cursor-pointer"} ${hovered && !showPopover ? "bg-surface-hover" : ""} ${!hovered && !showPopover ? "bg-transparent" : ""}`}
-      onClick={handleClick}
+      className={`group relative rounded-md transition-[background,box-shadow] duration-150 ${showPopover ? "bg-surface-hover" : "bg-transparent hover:bg-surface-hover focus-within:bg-surface-hover"} ${!showPopover ? "focus-within:shadow-[0_0_0_1px_var(--color-border),0_0_0_3px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]" : ""}`}
     >
       {showPopover && recentChat ? (
         <div
@@ -399,71 +405,88 @@ function CharacterCard({
           className="p-[0.35rem] flex flex-row gap-1"
         >
           <button
+            ref={continueButtonRef}
+            type="button"
             onClick={() => {
               setShowPopover(false);
               onContinueChat(recentChat.id);
             }}
             className="flex-1 min-w-0 px-[0.6rem] py-[0.5rem] bg-primary text-white border-none rounded-sm cursor-pointer text-[0.72rem] text-center whitespace-nowrap"
             title={`Continue "${recentChat.name}"`}
+            aria-label={`Continue chat ${recentChat.name} with ${character.name}`}
           >
             ↩ Continue
           </button>
           <button
+            type="button"
             onClick={() => {
               setShowPopover(false);
               onStartChat();
             }}
             className="flex-1 px-[0.6rem] py-[0.5rem] bg-transparent text-text-muted border border-border rounded-sm cursor-pointer text-[0.72rem] text-center whitespace-nowrap"
+            aria-label={`Start a new chat with ${character.name}`}
           >
             + New
           </button>
         </div>
       ) : (
-        <div className="flex items-center gap-2 p-2 relative">
-          {character.avatar_url ? (
-            <Avatar src={character.avatar_url} alt={character.name} size={36} />
-          ) : (
-            <div className="w-9 h-9 rounded-md bg-surface-raised flex items-center justify-center text-[0.85rem] font-medium text-text-muted shrink-0">
-              {character.name.charAt(0).toUpperCase()}
-            </div>
-          )}
-
-          <div className="flex-1 min-w-0">
-            <div className="text-[0.8rem] font-normal text-text-body whitespace-nowrap overflow-hidden text-ellipsis">
-              {character.name}
-            </div>
-            {character.creator && (
-              <div className="text-[0.68rem] text-text-dim whitespace-nowrap overflow-hidden text-ellipsis">
-                by {character.creator}
+        <>
+          <button
+            type="button"
+            onClick={handleClick}
+            disabled={isCreatingChat}
+            aria-haspopup={recentChat ? "dialog" : undefined}
+            aria-expanded={recentChat ? showPopover : undefined}
+            aria-label={
+              recentChat
+                ? `Choose how to chat with ${character.name}`
+                : `Start chat with ${character.name}`
+            }
+            className="flex w-full items-center gap-2 p-2 pr-14 text-left outline-none disabled:cursor-wait disabled:opacity-70"
+          >
+            {character.avatar_url ? (
+              <Avatar src={character.avatar_url} alt={character.name} size={36} />
+            ) : (
+              <div className="w-9 h-9 rounded-md bg-surface-raised flex items-center justify-center text-[0.85rem] font-medium text-text-muted shrink-0">
+                {character.name.charAt(0).toUpperCase()}
               </div>
             )}
-          </div>
 
-          {hovered && (
-            <div className="absolute top-[0.35rem] right-[0.35rem] flex gap-[0.2rem]">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                }}
-                className="w-5 h-5 p-0 bg-none border-none cursor-pointer text-text-dim text-[0.65rem] flex items-center justify-center rounded-sm transition-[color] duration-150 hover:text-primary"
-                title="Edit character"
-              >
-                ✎
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-                className="w-5 h-5 p-0 bg-none border-none cursor-pointer text-text-dim text-[0.75rem] flex items-center justify-center rounded-sm transition-[color] duration-150 hover:text-destructive"
-                title="Delete character"
-              >
-                &times;
-              </button>
+            <div className="flex-1 min-w-0">
+              <div className="text-[0.8rem] font-normal text-text-body whitespace-nowrap overflow-hidden text-ellipsis">
+                {character.name}
+              </div>
+              {character.creator && (
+                <div className="text-[0.68rem] text-text-dim whitespace-nowrap overflow-hidden text-ellipsis">
+                  by {character.creator}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </button>
+
+          <div
+            className={`absolute top-[0.35rem] right-[0.35rem] flex gap-[0.2rem] transition-opacity ${hovered ? "opacity-100" : "opacity-0 pointer-events-none"} group-focus-within:opacity-100 group-focus-within:pointer-events-auto`}
+          >
+            <button
+              type="button"
+              onClick={onEdit}
+              className="w-5 h-5 p-0 bg-none border-none cursor-pointer text-text-dim text-[0.65rem] flex items-center justify-center rounded-sm transition-[color] duration-150 hover:text-primary focus-visible:text-primary focus-visible:outline-none"
+              title="Edit character"
+              aria-label={`Edit ${character.name}`}
+            >
+              ✎
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="w-5 h-5 p-0 bg-none border-none cursor-pointer text-text-dim text-[0.75rem] flex items-center justify-center rounded-sm transition-[color] duration-150 hover:text-destructive focus-visible:text-destructive focus-visible:outline-none"
+              title="Delete character"
+              aria-label={`Delete ${character.name}`}
+            >
+              &times;
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

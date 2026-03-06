@@ -576,6 +576,7 @@ function ChubCharacterCard({
   const [hovered, setHovered] = useState(false);
   const [showPopover, setShowPopover] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const continueButtonRef = useRef<HTMLButtonElement>(null);
   const { data: recentChatData } = useRecentChatForCharacter(character.id);
   const recentChat = recentChatData?.chat ?? null;
 
@@ -595,6 +596,12 @@ function ChubCharacterCard({
       document.removeEventListener("mousedown", handleMouseDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
+  }, [showPopover]);
+
+  useEffect(() => {
+    if (showPopover) {
+      continueButtonRef.current?.focus();
+    }
   }, [showPopover]);
 
   const handleClick = () => {
@@ -621,142 +628,161 @@ function ChubCharacterCard({
       ref={cardRef}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={handleClick}
-      className="rounded-lg overflow-hidden flex flex-col transition-colors duration-150 relative"
+      className="group rounded-lg overflow-hidden flex flex-col transition-colors duration-150 relative"
       style={{
         background: hovered || showPopover ? C.cardBgHover : C.cardBg,
         border: `1px solid ${C.headerBorder}`,
         cursor: showPopover ? "default" : "pointer",
       }}
     >
-      {/* ── Header: name + tag count ── */}
-      <div
-        className="flex items-center justify-between px-3 py-[0.4rem]"
-        style={{
-          background: C.headerBg,
-          borderBottom: `1px solid ${C.headerBorder}`,
-        }}
-      >
-        <span
-          className="text-[0.9rem] font-bold leading-tight truncate"
-          style={{ color: V.textBody }}
+      {!showPopover && (
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={isCreatingChat}
+          aria-haspopup={recentChat ? "dialog" : undefined}
+          aria-expanded={recentChat ? showPopover : undefined}
+          aria-label={
+            recentChat
+              ? `Choose how to chat with ${character.name}`
+              : `Start chat with ${character.name}`
+          }
+          className="block w-full text-left outline-none disabled:cursor-wait disabled:opacity-70 focus-visible:ring-2 focus-visible:ring-[color:var(--sidebar-primary)] focus-visible:ring-inset"
         >
-          {character.name}
-        </span>
-        {character.tags.length > 0 && (
-          <span
-            className="text-[0.68rem] shrink-0 flex items-center gap-1"
-            style={{ color: V.textMuted }}
-            title={`${character.tags.length} tags`}
-          >
-            <TagIcon />
-            {character.tags.length}
-          </span>
-        )}
-      </div>
-
-      {/* ── Body: image + content side by side ── */}
-      <div className="flex" style={{ minHeight: 200, maxHeight: 200 }}>
-        {/* Left: avatar image with stat overlay */}
-        <div className="shrink-0 relative" style={{ width: 160 }}>
-          {character.avatar_url ? (
-            <Avatar
-              src={character.avatar_url}
-              alt={character.name}
-              width={160}
-              height="100%"
-              borderRadius="0"
-              className="absolute inset-0"
-              style={{ width: "100%", height: "100%" }}
-            />
-          ) : (
-            <div
-              className="w-full h-full flex items-center justify-center text-[2rem] font-medium"
-              style={{ background: V.tagBg, color: V.textDim }}
-            >
-              {character.name.charAt(0).toUpperCase()}
-            </div>
-          )}
-
-          {/* Bottom stat overlay on image */}
+          {/* ── Header: name + tag count ── */}
           <div
-            className="absolute bottom-0 left-0 right-0 flex items-center justify-around px-1 py-[0.3rem]"
-            style={{ background: C.statBarBg }}
+            className="flex items-center justify-between px-3 py-[0.4rem]"
+            style={{
+              background: C.headerBg,
+              borderBottom: `1px solid ${C.headerBorder}`,
+            }}
           >
-            <span className="flex items-center gap-[3px] text-[0.6rem]" style={{ color: C.statText }}>
-              <HeartIcon /> {character.tags.length}
-            </span>
-            <span className="flex items-center gap-[3px] text-[0.6rem]" style={{ color: C.statText }}>
-              <DownloadIcon /> --
-            </span>
-            <span className="flex items-center gap-[3px] text-[0.6rem]" style={{ color: C.statText }}>
-              <TokenIcon /> --
-            </span>
-          </div>
-        </div>
-
-        {/* Right: description + tags + creator */}
-        <div className="flex-1 min-w-0 flex flex-col p-2.5 gap-2">
-          {/* Description */}
-          {descPreview && (
-            <p
-              className="text-[0.72rem] leading-[1.45] m-0"
-              style={{ color: C.descText }}
+            <span
+              className="text-[0.9rem] font-bold leading-tight truncate"
+              style={{ color: V.textBody }}
             >
-              {descPreview}
-            </p>
-          )}
-
-          {/* Tags row */}
-          {visibleTags.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1 mt-auto">
-              <span className="text-[0.7rem] mr-[2px]" style={{ color: C.fireEmoji }}>
-                🔥
+              {character.name}
+            </span>
+            {character.tags.length > 0 && (
+              <span
+                className="text-[0.68rem] shrink-0 flex items-center gap-1"
+                style={{ color: V.textMuted }}
+                title={`${character.tags.length} tags`}
+              >
+                <TagIcon />
+                {character.tags.length}
               </span>
-              {visibleTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-[0.4rem] py-[0.1rem] rounded-[3px] text-[0.6rem] leading-[1.4] truncate max-w-[5.5rem] border"
-                  style={{
-                    background: C.tagChipBg,
-                    color: C.tagChipText,
-                    borderColor: C.tagChipBorder,
-                  }}
-                >
-                  {tag}
-                </span>
-              ))}
-              {extraTagCount > 0 && (
-                <span
-                  className="px-[0.3rem] py-[0.1rem] text-[0.58rem] leading-[1.4]"
-                  style={{ color: V.textDim }}
-                >
-                  +{extraTagCount}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Creator + age */}
-          <div className="flex items-center gap-1.5 text-[0.68rem]" style={{ color: C.ageText }}>
-            {character.creator && (
-              <span style={{ color: C.creatorText }}>@{character.creator}</span>
             )}
-            <span>{relativeTime(character.created_at)}</span>
           </div>
-        </div>
-      </div>
+
+          {/* ── Body: image + content side by side ── */}
+          <div className="flex" style={{ minHeight: 200, maxHeight: 200 }}>
+            {/* Left: avatar image with stat overlay */}
+            <div className="shrink-0 relative" style={{ width: 160 }}>
+              {character.avatar_url ? (
+                <Avatar
+                  src={character.avatar_url}
+                  alt={character.name}
+                  width={160}
+                  height="100%"
+                  borderRadius="0"
+                  className="absolute inset-0"
+                  style={{ width: "100%", height: "100%" }}
+                />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center text-[2rem] font-medium"
+                  style={{ background: V.tagBg, color: V.textDim }}
+                >
+                  {character.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              {/* Bottom stat overlay on image */}
+              <div
+                className="absolute bottom-0 left-0 right-0 flex items-center justify-around px-1 py-[0.3rem]"
+                style={{ background: C.statBarBg }}
+              >
+                <span className="flex items-center gap-[3px] text-[0.6rem]" style={{ color: C.statText }}>
+                  <HeartIcon /> {character.tags.length}
+                </span>
+                <span className="flex items-center gap-[3px] text-[0.6rem]" style={{ color: C.statText }}>
+                  <DownloadIcon /> --
+                </span>
+                <span className="flex items-center gap-[3px] text-[0.6rem]" style={{ color: C.statText }}>
+                  <TokenIcon /> --
+                </span>
+              </div>
+            </div>
+
+            {/* Right: description + tags + creator */}
+            <div className="flex-1 min-w-0 flex flex-col p-2.5 gap-2">
+              {/* Description */}
+              {descPreview && (
+                <p
+                  className="text-[0.72rem] leading-[1.45] m-0"
+                  style={{ color: C.descText }}
+                >
+                  {descPreview}
+                </p>
+              )}
+
+              {/* Tags row */}
+              {visibleTags.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1 mt-auto">
+                  <span className="text-[0.7rem] mr-[2px]" style={{ color: C.fireEmoji }}>
+                    🔥
+                  </span>
+                  {visibleTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-[0.4rem] py-[0.1rem] rounded-[3px] text-[0.6rem] leading-[1.4] truncate max-w-[5.5rem] border"
+                      style={{
+                        background: C.tagChipBg,
+                        color: C.tagChipText,
+                        borderColor: C.tagChipBorder,
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  {extraTagCount > 0 && (
+                    <span
+                      className="px-[0.3rem] py-[0.1rem] text-[0.58rem] leading-[1.4]"
+                      style={{ color: V.textDim }}
+                    >
+                      +{extraTagCount}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Creator + age */}
+              <div className="flex items-center gap-1.5 text-[0.68rem]" style={{ color: C.ageText }}>
+                {character.creator && (
+                  <span style={{ color: C.creatorText }}>@{character.creator}</span>
+                )}
+                <span>{relativeTime(character.created_at)}</span>
+              </div>
+            </div>
+          </div>
+        </button>
+      )}
 
       {/* ── Hover actions ── */}
-      {hovered && !showPopover && (
+      {!showPopover && (
         <div
-          className="absolute top-[0.35rem] right-[0.35rem] flex gap-[3px]"
-          onClick={(e) => e.stopPropagation()}
+          className={`absolute top-[0.35rem] right-[0.35rem] flex gap-[3px] transition-opacity ${hovered ? "opacity-100" : "opacity-0 pointer-events-none"} group-focus-within:opacity-100 group-focus-within:pointer-events-auto`}
         >
-          <ActionBtn title="Edit" onClick={onEdit}>
+          <ActionBtn title="Edit" onClick={onEdit} ariaLabel={`Edit ${character.name}`}>
             <EditIcon />
           </ActionBtn>
-          <ActionBtn title="Delete" onClick={onDelete} destructive>
+          <ActionBtn
+            title="Delete"
+            onClick={onDelete}
+            destructive
+            ariaLabel={`Delete ${character.name}`}
+          >
             <DeleteIcon />
           </ActionBtn>
         </div>
@@ -770,22 +796,27 @@ function ChubCharacterCard({
           onClick={(e) => e.stopPropagation()}
         >
           <button
+            ref={continueButtonRef}
+            type="button"
             onClick={() => {
               setShowPopover(false);
               onContinueChat(recentChat.id);
             }}
             className="flex-1 px-3 py-2 border-none rounded-md cursor-pointer text-[0.78rem] text-white font-medium"
             style={{ background: V.primary }}
+            aria-label={`Continue chat ${recentChat.name} with ${character.name}`}
           >
             ↩ Continue
           </button>
           <button
+            type="button"
             onClick={() => {
               setShowPopover(false);
               onStartChat();
             }}
             className="flex-1 px-3 py-2 rounded-md cursor-pointer text-[0.78rem] font-medium border"
             style={{ background: "transparent", color: V.tagText, borderColor: V.border }}
+            aria-label={`Start a new chat with ${character.name}`}
           >
             + New Chat
           </button>
@@ -830,18 +861,22 @@ function ActionBtn({
   title,
   onClick,
   destructive,
+  ariaLabel,
   children,
 }: {
   title: string;
   onClick: () => void;
   destructive?: boolean;
+  ariaLabel: string;
   children: React.ReactNode;
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       title={title}
-      className="w-[22px] h-[22px] p-0 border-none cursor-pointer flex items-center justify-center rounded-[4px] transition-colors duration-150"
+      aria-label={ariaLabel}
+      className="w-[22px] h-[22px] p-0 border-none cursor-pointer flex items-center justify-center rounded-[4px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--sidebar-primary)]"
       style={{ background: V.tagBg, color: destructive ? V.destructive : V.textMuted }}
     >
       {children}

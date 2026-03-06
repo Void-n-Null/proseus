@@ -361,6 +361,7 @@ export default function ChatImportModal({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close import chat modal"
             className="p-1 rounded text-text-dim hover:text-text-body hover:bg-surface-hover transition-colors cursor-pointer"
           >
             <X width={16} height={16} />

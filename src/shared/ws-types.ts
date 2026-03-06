@@ -14,15 +14,6 @@ export type ClientWsMessage =
       nodeId: string;
     }
   | {
-      type: "ai-stream";
-      chatId: string;
-      parentId: string;
-      speakerId: string;
-      model: string;
-      nodeId: string;
-      provider?: ProviderName;
-    }
-  | {
       type: "generate";
       chatId: string;
       model: string;

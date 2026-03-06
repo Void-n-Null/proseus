@@ -81,11 +81,6 @@ interface TreeData {
 interface UseStreamSocketReturn {
   status: ConnectionStatus;
   sendTestStream: (parentId: string, speakerId: string) => void;
-  sendAIStream: (
-    parentId: string,
-    speakerId: string,
-    model: string,
-  ) => void;
   /** Trigger generation — server resolves parentId and speakerId from DB. */
   sendGenerate: (model: string, provider?: ProviderName, regenerate?: boolean, targetNodeId?: string) => void;
   cancelStream: () => void;
@@ -544,23 +539,6 @@ export function useStreamSocket(
     [chatId, guardConcurrentStreamRequest],
   );
 
-  const sendAIStream = useCallback(
-    (parentId: string, speakerId: string, model: string) => {
-      if (!chatId) return;
-      if (!guardConcurrentStreamRequest("starting another stream")) return;
-      const nodeId = generateId();
-      wsSend(wsRef.current, {
-        type: "ai-stream",
-        chatId,
-        parentId,
-        speakerId,
-        model,
-        nodeId,
-      });
-    },
-    [chatId, guardConcurrentStreamRequest],
-  );
-
   const sendGenerate = useCallback(
     (model: string, provider?: ProviderName, regenerate?: boolean, targetNodeId?: string) => {
       if (!chatId) return;
@@ -587,7 +565,6 @@ export function useStreamSocket(
   return {
     status,
     sendTestStream,
-    sendAIStream,
     sendGenerate,
     cancelStream,
   };

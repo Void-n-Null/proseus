@@ -247,33 +247,6 @@ export class StreamManager {
     return streamId;
   }
 
-  // ── AI stream (OpenRouter) ─────────────────────────────────
-
-  /**
-   * Start a real AI stream via OpenRouter.
-   *
-   * Loads the active path from the DB to build the message history,
-   * then streams the model's response token-by-token over WebSocket.
-   * On completion, persists the full response as a ChatNode using
-   * the client-provided nodeId.
-   *
-   * @param nodeId - Client-provided ID for the node to be created.
-   */
-  async startAIStream(
-    chatId: string,
-    parentId: string,
-    speakerId: string,
-    model: string,
-    nodeId: string,
-    provider: ProviderName = "openrouter",
-  ): Promise<string | null> {
-    if (!(await this.hasApiKey(provider))) return null;
-    if (this.chatStreams.has(chatId)) return null;
-    const prompt = assemblePrompt(this.db, chatId, parentId);
-    if (!prompt || prompt.messages.length === 0) return null;
-    return this.beginAIStream(chatId, parentId, speakerId, model, nodeId, provider, prompt);
-  }
-
   private async runAIStream(stream: ActiveStream, prompt: AssembledPrompt): Promise<void> {
     const aiModel = await createModel(this.db, stream.provider ?? "openrouter", stream.model ?? "");
     stream.assistantPrefill = prompt.assistantPrefill;

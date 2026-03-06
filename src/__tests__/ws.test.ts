@@ -26,7 +26,6 @@
  *
  *  ── Message Delegation ──
  *  - test-stream delegates to streamManager.startTestStream
- *  - ai-stream delegates to streamManager.startAIStream
  *  - generate delegates to streamManager.startGeneration
  *  - generate with error result sends stream:error to client
  *  - cancel-stream delegates to streamManager.cancelStream
@@ -90,14 +89,6 @@ function createMockWs(): MockWs {
 
 interface MockStreamManagerCalls {
   startTestStream: Array<{ chatId: string; parentId: string; speakerId: string; nodeId: string }>;
-  startAIStream: Array<{
-    chatId: string;
-    parentId: string;
-    speakerId: string;
-    model: string;
-    nodeId: string;
-    provider?: string;
-  }>;
   startGeneration: Array<{
     chatId: string;
     model: string;
@@ -122,14 +113,13 @@ function createMockStreamManager(options?: {
   } | null;
   /** What startGeneration returns */
   generateResult?: { streamId: string } | { error: string };
-  /** If true, startAIStream throws */
-  aiStreamThrows?: boolean;
+  /** If true, startGeneration throws */
+  generateThrows?: boolean;
   /** If true, startTestStream throws */
   testStreamThrows?: boolean;
 }) {
   const calls: MockStreamManagerCalls = {
     startTestStream: [],
-    startAIStream: [],
     startGeneration: [],
     cancelStream: [],
     getActiveStream: [],
@@ -145,18 +135,6 @@ function createMockStreamManager(options?: {
       if (options?.testStreamThrows) throw new Error("test-stream mock error");
       return "mock-stream-id";
     },
-    async startAIStream(
-      chatId: string,
-      parentId: string,
-      speakerId: string,
-      model: string,
-      nodeId: string,
-      provider?: string,
-    ) {
-      calls.startAIStream.push({ chatId, parentId, speakerId, model, nodeId, provider });
-      if (options?.aiStreamThrows) throw new Error("ai-stream mock error");
-      return "mock-stream-id";
-    },
     async startGeneration(
       chatId: string,
       model: string,
@@ -166,6 +144,7 @@ function createMockStreamManager(options?: {
       targetNodeId?: string,
     ) {
       calls.startGeneration.push({ chatId, model, nodeId, provider, regenerate, targetNodeId });
+      if (options?.generateThrows) throw new Error("generate mock error");
       return options?.generateResult ?? { streamId: "mock-stream-id" };
     },
     cancelStream(chatId: string) {
@@ -282,21 +261,6 @@ describe("WebSocket handler", () => {
       expect(msgs).toHaveLength(1);
       expect(msgs[0]!.type).toBe("error");
       expect(msgs[0]!.error).toContain("parentId");
-    });
-
-    test("ai-stream missing model sends error response", async () => {
-      await sendMsg(handler, ws, {
-        type: "ai-stream",
-        chatId: "abc",
-        parentId: "p1",
-        speakerId: "s1",
-        nodeId: "n1",
-      });
-
-      const msgs = ws.getSentMessages();
-      expect(msgs).toHaveLength(1);
-      expect(msgs[0]!.type).toBe("error");
-      expect(msgs[0]!.error).toContain("model");
     });
 
     test("generate missing model sends error response", async () => {
@@ -509,50 +473,6 @@ describe("WebSocket handler", () => {
       });
     });
 
-    test("ai-stream delegates to streamManager.startAIStream", async () => {
-      const { manager, calls } = createMockStreamManager();
-      const handler = createWebSocketHandler(manager as any);
-      const ws = createMockWs();
-
-      await sendMsg(handler, ws, {
-        type: "ai-stream",
-        chatId: "chat-1",
-        parentId: "parent-1",
-        speakerId: "speaker-1",
-        model: "gpt-4",
-        nodeId: "node-1",
-        provider: "openai",
-      });
-
-      expect(calls.startAIStream).toHaveLength(1);
-      expect(calls.startAIStream[0]).toEqual({
-        chatId: "chat-1",
-        parentId: "parent-1",
-        speakerId: "speaker-1",
-        model: "gpt-4",
-        nodeId: "node-1",
-        provider: "openai",
-      });
-    });
-
-    test("ai-stream without provider passes undefined", async () => {
-      const { manager, calls } = createMockStreamManager();
-      const handler = createWebSocketHandler(manager as any);
-      const ws = createMockWs();
-
-      await sendMsg(handler, ws, {
-        type: "ai-stream",
-        chatId: "chat-1",
-        parentId: "parent-1",
-        speakerId: "speaker-1",
-        model: "gpt-4",
-        nodeId: "node-1",
-      });
-
-      expect(calls.startAIStream).toHaveLength(1);
-      expect(calls.startAIStream[0]!.provider).toBeUndefined();
-    });
-
     test("generate delegates to streamManager.startGeneration", async () => {
       const { manager, calls } = createMockStreamManager();
       const handler = createWebSocketHandler(manager as any);
@@ -687,23 +607,21 @@ describe("WebSocket handler", () => {
       expect(errors[0]!.error).toBe("test-stream mock error");
     });
 
-    test("streamManager throws during ai-stream — error sent to client", async () => {
-      const { manager } = createMockStreamManager({ aiStreamThrows: true });
+    test("streamManager throws during generate — error sent to client", async () => {
+      const { manager } = createMockStreamManager({ generateThrows: true });
       const handler = createWebSocketHandler(manager as any);
       const ws = createMockWs();
 
       await sendMsg(handler, ws, {
-        type: "ai-stream",
+        type: "generate",
         chatId: "chat-1",
-        parentId: "p1",
-        speakerId: "s1",
         model: "test-model",
         nodeId: "n1",
       });
 
       const errors = ws.getSentByType("error");
       expect(errors).toHaveLength(1);
-      expect(errors[0]!.error).toBe("ai-stream mock error");
+      expect(errors[0]!.error).toBe("generate mock error");
     });
 
     test("rapid subscribe/unsubscribe cycling — no leaked state", async () => {

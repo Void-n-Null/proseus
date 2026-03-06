@@ -50,17 +50,6 @@ function validateMessage(
       if (!isString(raw.nodeId)) return `${type}: missing string 'nodeId'`;
       return raw as unknown as ClientWsMessage;
 
-    case "ai-stream":
-      if (!isString(raw.chatId)) return `${type}: missing string 'chatId'`;
-      if (!isString(raw.parentId)) return `${type}: missing string 'parentId'`;
-      if (!isString(raw.speakerId))
-        return `${type}: missing string 'speakerId'`;
-      if (!isString(raw.model)) return `${type}: missing string 'model'`;
-      if (!isString(raw.nodeId)) return `${type}: missing string 'nodeId'`;
-      if (!isOptionalString(raw.provider))
-        return `${type}: 'provider' must be a string if provided`;
-      return raw as unknown as ClientWsMessage;
-
     case "generate":
       if (!isString(raw.chatId)) return `${type}: missing string 'chatId'`;
       if (!isString(raw.model)) return `${type}: missing string 'model'`;
@@ -165,18 +154,6 @@ export function createWebSocketHandler(streamManager: StreamManager) {
               msg.parentId,
               msg.speakerId,
               msg.nodeId,
-            );
-            break;
-          }
-
-          case "ai-stream": {
-            await streamManager.startAIStream(
-              msg.chatId,
-              msg.parentId,
-              msg.speakerId,
-              msg.model,
-              msg.nodeId,
-              msg.provider,
             );
             break;
           }

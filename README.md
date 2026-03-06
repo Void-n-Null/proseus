@@ -98,6 +98,8 @@ Docker runs with LAN binding enabled so published ports are reachable from the h
 
 ## Quality checks
 
+Run these before shipping changes:
+
 ```bash
 bun run typecheck
 bun test

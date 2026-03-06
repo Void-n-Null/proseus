@@ -283,6 +283,17 @@ describe("useStreamSocket", () => {
         chatId: "chat-1",
         streamId: "stream-1",
         nodeId: "node-1",
+        node: createNode({
+          id: "node-1",
+          parent_id: "root",
+          speaker_id: "speaker-2",
+          message: "Hello world",
+        }),
+        updatedParent: createNode({
+          id: "root",
+          child_ids: ["node-1"],
+          active_child_index: 0,
+        }),
       });
     });
 
@@ -291,7 +302,6 @@ describe("useStreamSocket", () => {
       client.getQueryData<TreeData>(["chat-tree", "chat-1"])?.nodes.get("node-1")
         ?.message,
     ).toBe("Hello world");
-    expect(invalidateCalls).toContainEqual({ queryKey: ["chat-tree", "chat-1"] });
     expect(invalidateCalls).toContainEqual({ queryKey: ["chats"] });
   });
 

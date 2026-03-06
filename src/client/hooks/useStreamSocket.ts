@@ -194,6 +194,30 @@ function removePlaceholderNode(
   qc.setQueryData<TreeData>(treeKey, { ...current, nodes: newNodes });
 }
 
+/**
+ * Reconcile a completed stream directly into the cached tree.
+ * Returns false when the tree cache is unavailable and a refetch is needed.
+ */
+function reconcileCompletedStream(
+  qc: ReturnType<typeof useQueryClient>,
+  chatId: string,
+  node: ChatNode,
+  updatedParent: ChatNode | null,
+): boolean {
+  const treeKey = ["chat-tree", chatId];
+  const current = qc.getQueryData<TreeData>(treeKey);
+  if (!current) return false;
+
+  const newNodes = new Map(current.nodes);
+  newNodes.set(node.id, node);
+  if (updatedParent) {
+    newNodes.set(updatedParent.id, updatedParent);
+  }
+
+  qc.setQueryData<TreeData>(treeKey, { ...current, nodes: newNodes });
+  return true;
+}
+
 /** Send a message on a WebSocket if it's open. */
 function wsSend(ws: WebSocket | null, msg: ClientWsMessage): void {
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -381,29 +405,20 @@ export function useStreamSocket(
         case "stream:end":
         case "stream:cancelled": {
           clearPlaceholderRetryTimers();
-          const finalContent = finalizeSession();
-
-          const meta = useStreamingStore.getState().meta;
-          if (meta && currentChatId) {
-            const treeKey = ["chat-tree", currentChatId];
-            const current = qc.getQueryData<TreeData>(treeKey);
-            if (current) {
-              const node = current.nodes.get(meta.nodeId);
-              if (node) {
-                const newNodes = new Map(current.nodes);
-                newNodes.set(meta.nodeId, { ...node, message: finalContent });
-                qc.setQueryData<TreeData>(treeKey, {
-                  ...current,
-                  nodes: newNodes,
-                });
-              }
-            }
-          }
+          finalizeSession();
 
           storeStopRef.current();
 
           if (currentChatId) {
-            qc.invalidateQueries({ queryKey: ["chat-tree", currentChatId] });
+            const reconciled = reconcileCompletedStream(
+              qc,
+              currentChatId,
+              msg.node,
+              msg.updatedParent,
+            );
+            if (!reconciled) {
+              qc.invalidateQueries({ queryKey: ["chat-tree", currentChatId] });
+            }
             qc.invalidateQueries({ queryKey: ["chats"] });
           }
           break;

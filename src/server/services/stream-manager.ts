@@ -24,7 +24,7 @@ import { addMessage, getChatTree } from "../db/messages.ts";
 import { getChat } from "../db/chats.ts";
 import { getActivePath } from "../../shared/tree.ts";
 import type { ChatNode } from "../../shared/types.ts";
-import { assemblePrompt } from "./chat-pipeline.ts";
+import { assemblePrompt, type AssembledPrompt } from "./chat-pipeline.ts";
 import type { ProviderName } from "../../shared/providers.ts";
 import { createModel } from "../lib/llm.ts";
 import { getApiKey } from "../db/connections.ts";
@@ -88,6 +88,12 @@ interface ActiveStream {
   streamResult?: ReturnType<typeof streamText>;
   /** Safety-net timeout that forces cancellation after MAX_STREAM_DURATION_MS. */
   durationTimeout?: Timer;
+}
+
+interface PreparedGeneration {
+  parentId: string;
+  speakerId: string;
+  prompt: AssembledPrompt;
 }
 
 // ── Test content ───────────────────────────────────────────────
@@ -157,49 +163,20 @@ export class StreamManager {
   ): Promise<{ streamId: string } | { error: string }> {
     if (!(await this.hasApiKey(provider))) return { error: `No API key configured for ${provider}` };
     if (this.chatStreams.has(chatId)) return { error: "Chat already streaming" };
+    const prepared = this.prepareGeneration(chatId, regenerate, targetNodeId);
+    if ("error" in prepared) return prepared;
 
-    const chat = getChat(this.db, chatId);
-    if (!chat?.root_node_id) return { error: "Chat has no messages" };
-
-    const treeRecord = getChatTree(this.db, chatId);
-    const nodesMap = new Map<string, ChatNode>(Object.entries(treeRecord));
-    const pathIds = getActivePath(chat.root_node_id, nodesMap);
-
-    if (pathIds.length === 0) return { error: "Chat has no active path" };
-
-    let parentId: string;
-    if (regenerate && targetNodeId) {
-      // Per-message regenerate: branch from the parent of the specified node.
-      // The target node might be anywhere in the tree, not just on the active path.
-      const targetNode = nodesMap.get(targetNodeId);
-      if (!targetNode) return { error: "Target node not found" };
-      if (!targetNode.parent_id) return { error: "Cannot regenerate root node" };
-      parentId = targetNode.parent_id;
-    } else if (regenerate) {
-      // Legacy regenerate: branch from the parent of the active path leaf
-      if (pathIds.length < 2) return { error: "Cannot regenerate: no parent to branch from" };
-      parentId = pathIds[pathIds.length - 2]!;
-    } else {
-      parentId = pathIds[pathIds.length - 1]!;
-    }
-
-    // Resolve speakerId: first non-user speaker in the chat
-    const speakerRows = this.db
-      .query(
-        `SELECT s.id FROM chat_speakers cs
-         JOIN speakers s ON s.id = cs.speaker_id
-         WHERE cs.chat_id = $chatId AND s.is_user = 0
-         LIMIT 1`,
-      )
-      .get({ $chatId: chatId }) as { id: string } | null;
-
-    if (!speakerRows) return { error: "Chat has no bot speaker" };
-    const speakerId = speakerRows.id;
-
-    // Delegate to the existing startAIStream with resolved values
-    const streamId = await this.startAIStream(chatId, parentId, speakerId, model, nodeId, provider);
-    if (!streamId) return { error: "Failed to start stream" };
-    return { streamId };
+    return {
+      streamId: this.beginAIStream(
+        chatId,
+        prepared.parentId,
+        prepared.speakerId,
+        model,
+        nodeId,
+        provider,
+        prepared.prompt,
+      ),
+    };
   }
 
   // ── Test stream ────────────────────────────────────────────
@@ -292,76 +269,13 @@ export class StreamManager {
   ): Promise<string | null> {
     if (!(await this.hasApiKey(provider))) return null;
     if (this.chatStreams.has(chatId)) return null;
-
-    const streamId = generateId();
-    const abortController = new AbortController();
-
-    const stream: ActiveStream = {
-      id: streamId,
-      chatId,
-      parentId,
-      speakerId,
-      nodeId,
-      content: "",
-      startedAt: Date.now(),
-      abortController,
-      assistantPrefill: null,
-      provider,
-      model,
-    };
-
-    this.activeStreams.set(streamId, stream);
-    this.chatStreams.set(chatId, streamId);
-
-    this.publish(chatId, {
-      type: "stream:start",
-      chatId,
-      streamId,
-      parentId,
-      speakerId,
-      nodeId,
-    });
-
-    // Run the AI stream asynchronously
-    this.runAIStream(stream, model, provider).catch((err) => {
-      // Only broadcast error if the stream is still active (not cancelled)
-      if (this.activeStreams.has(streamId)) {
-        // Clear duration timeout if set
-        if (stream.durationTimeout) {
-          clearTimeout(stream.durationTimeout);
-          stream.durationTimeout = undefined;
-        }
-
-        const error = extractErrorMessage(err);
-        console.warn(`[stream] Stream ${streamId} failed:`, error);
-
-
-        this.publish(chatId, {
-          type: "stream:error",
-          chatId,
-          streamId,
-          error,
-        });
-        this.activeStreams.delete(streamId);
-        this.chatStreams.delete(chatId);
-      }
-    });
-
-    return streamId;
+    const prompt = assemblePrompt(this.db, chatId, parentId);
+    if (!prompt || prompt.messages.length === 0) return null;
+    return this.beginAIStream(chatId, parentId, speakerId, model, nodeId, provider, prompt);
   }
 
-  private async runAIStream(
-    stream: ActiveStream,
-    model: string,
-    provider: ProviderName = "openrouter",
-  ): Promise<void> {
-    const aiModel = await createModel(this.db, provider, model);
-
-    const prompt = assemblePrompt(this.db, stream.chatId, stream.parentId);
-    if (!prompt || prompt.messages.length === 0) {
-      throw new Error("Chat has no messages or could not assemble prompt");
-    }
-
+  private async runAIStream(stream: ActiveStream, prompt: AssembledPrompt): Promise<void> {
+    const aiModel = await createModel(this.db, stream.provider ?? "openrouter", stream.model ?? "");
     stream.assistantPrefill = prompt.assistantPrefill;
 
     const finalMessages = prompt.assistantPrefill
@@ -450,6 +364,121 @@ export class StreamManager {
     }
   }
 
+  private resolveBotSpeakerId(chatId: string): string | null {
+    const row = this.db
+      .query(
+        `SELECT s.id FROM chat_speakers cs
+         JOIN speakers s ON s.id = cs.speaker_id
+         WHERE cs.chat_id = $chatId AND s.is_user = 0
+         LIMIT 1`,
+      )
+      .get({ $chatId: chatId }) as { id: string } | null;
+
+    return row?.id ?? null;
+  }
+
+  private prepareGeneration(
+    chatId: string,
+    regenerate?: boolean,
+    targetNodeId?: string,
+  ): PreparedGeneration | { error: string } {
+    const chat = getChat(this.db, chatId);
+    if (!chat?.root_node_id) return { error: "Chat has no messages" };
+
+    const treeRecord = getChatTree(this.db, chatId);
+    const nodesMap = new Map<string, ChatNode>(Object.entries(treeRecord));
+    const pathIds = getActivePath(chat.root_node_id, nodesMap);
+    if (pathIds.length === 0) return { error: "Chat has no active path" };
+
+    let parentId: string;
+    if (regenerate && targetNodeId) {
+      // Per-message regenerate: branch from the parent of the specified node.
+      // The target node might be anywhere in the tree, not just on the active path.
+      const targetNode = nodesMap.get(targetNodeId);
+      if (!targetNode) return { error: "Target node not found" };
+      if (!targetNode.parent_id) return { error: "Cannot regenerate root node" };
+      parentId = targetNode.parent_id;
+    } else if (regenerate) {
+      // Legacy regenerate: branch from the parent of the active path leaf
+      if (pathIds.length < 2) return { error: "Cannot regenerate: no parent to branch from" };
+      parentId = pathIds[pathIds.length - 2]!;
+    } else {
+      parentId = pathIds[pathIds.length - 1]!;
+    }
+
+    const speakerId = this.resolveBotSpeakerId(chatId);
+    if (!speakerId) return { error: "Chat has no bot speaker" };
+
+    const prompt = assemblePrompt(this.db, chatId, parentId);
+    if (!prompt || prompt.messages.length === 0) {
+      return { error: "Chat has no messages or could not assemble prompt" };
+    }
+
+    return { parentId, speakerId, prompt };
+  }
+
+  private beginAIStream(
+    chatId: string,
+    parentId: string,
+    speakerId: string,
+    model: string,
+    nodeId: string,
+    provider: ProviderName,
+    prompt: AssembledPrompt,
+  ): string {
+    const streamId = generateId();
+    const abortController = new AbortController();
+
+    const stream: ActiveStream = {
+      id: streamId,
+      chatId,
+      parentId,
+      speakerId,
+      nodeId,
+      content: "",
+      startedAt: Date.now(),
+      abortController,
+      assistantPrefill: null,
+      provider,
+      model,
+    };
+
+    this.activeStreams.set(streamId, stream);
+    this.chatStreams.set(chatId, streamId);
+
+    this.publish(chatId, {
+      type: "stream:start",
+      chatId,
+      streamId,
+      parentId,
+      speakerId,
+      nodeId,
+    });
+
+    this.runAIStream(stream, prompt).catch((err) => {
+      if (this.activeStreams.has(streamId)) {
+        if (stream.durationTimeout) {
+          clearTimeout(stream.durationTimeout);
+          stream.durationTimeout = undefined;
+        }
+
+        const error = extractErrorMessage(err);
+        console.warn(`[stream] Stream ${streamId} failed:`, error);
+
+        this.publish(chatId, {
+          type: "stream:error",
+          chatId,
+          streamId,
+          error,
+        });
+        this.activeStreams.delete(streamId);
+        this.chatStreams.delete(chatId);
+      }
+    });
+
+    return streamId;
+  }
+
   // ── Cancel ─────────────────────────────────────────────────
 
   /**
@@ -502,6 +531,8 @@ export class StreamManager {
         chatId,
         streamId,
         nodeId: result.node.id,
+        node: result.node,
+        updatedParent: result.updated_parent,
       });
     } else {
       // Nothing generated — roll back the optimistic placeholder
@@ -586,6 +617,8 @@ export class StreamManager {
       chatId: stream.chatId,
       streamId,
       nodeId: result.node.id,
+      node: result.node,
+      updatedParent: result.updated_parent,
     });
 
     this.activeStreams.delete(streamId);

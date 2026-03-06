@@ -1,6 +1,7 @@
-// ── Client -> Server ───────────────────────────────────────────
-
 import type { ProviderName } from "./providers.ts";
+import type { ChatNode } from "./types.ts";
+
+// ── Client -> Server ───────────────────────────────────────────
 
 export type ClientWsMessage =
   | { type: "subscribe"; chatId: string }
@@ -61,12 +62,16 @@ export type ServerWsMessage =
       chatId: string;
       streamId: string;
       nodeId: string;
+      node: ChatNode;
+      updatedParent: ChatNode | null;
     }
   | {
       type: "stream:cancelled";
       chatId: string;
       streamId: string;
       nodeId: string;
+      node: ChatNode;
+      updatedParent: ChatNode | null;
     }
   | {
       type: "stream:error";

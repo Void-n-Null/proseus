@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo, type ReactNode } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { useChatList } from "./hooks/useChat.ts";
+import { motion } from "motion/react";
+import { useChatList, useUpdateChat } from "./hooks/useChat.ts";
 import { useCharacters } from "./hooks/useCharacters.ts";
 import { useRoute } from "./hooks/useRoute.ts";
 import { useIsMobile } from "./hooks/useMediaQuery.ts";
@@ -17,11 +17,26 @@ import {
   setStoredDesignTemplateId,
 } from "./lib/design-templates.ts";
 import ModelSelector from "./components/model/ModelSelector.tsx";
-import { TemplatePickerGrid } from "./components/design-template/TemplatePicker.tsx";
+import ModelDashboard from "./components/model/ModelDashboard.tsx";
+import PromptTemplateModal from "./components/prompt-template/PromptTemplateModal.tsx";
+import TemplatePickerModal, {
+  TemplatePickerGrid,
+} from "./components/design-template/TemplatePicker.tsx";
+import TopDock from "./components/navigation/TopDock.tsx";
+import MobileSlideUpSheet from "./components/ui/mobile-slide-up-sheet.tsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "./components/ui/dialog.tsx";
 import { getTemplate } from "./templates/index.ts";
 import DiscordFrameShell from "./templates/discord/DiscordFrameShell.tsx";
 import type { SidebarView } from "./templates/types.ts";
 import { type DesignTemplateId } from "../shared/design-templates.ts";
+import { api } from "./api/client.ts";
+import { getFilenameFromDisposition, triggerDownload } from "./lib/download.ts";
+import { toast } from "sonner";
 
 const ONBOARDING_COMPLETE_KEY = "proseus:onboarding-complete";
 const LEGACY_ONBOARDING_DISMISSED_KEY = "proseus:onboarding-dismissed";
@@ -42,11 +57,14 @@ export default function App() {
     isFetching: isFetchingCharacters,
   } = useCharacters();
   const { route, navigateToChat, navigateHome, replaceRoute } = useRoute();
-  const [sidebarView, setSidebarView] = useState<SidebarView>(
-    // Default to "chats" if we loaded with a chat URL, otherwise "characters"
-    route.chatId ? "chats" : "characters",
+  const [activeLibraryPanel, setActiveLibraryPanel] = useState<SidebarView | null>(
+    null,
   );
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [topBarCollapsed, setTopBarCollapsed] = useState(false);
+  const [modelDashboardOpen, setModelDashboardOpen] = useState(false);
+  const [promptTemplateOpen, setPromptTemplateOpen] = useState(false);
+  const [themePickerOpen, setThemePickerOpen] = useState(false);
+  const [isExportingChat, setIsExportingChat] = useState(false);
   const designTemplateId = useDesignTemplateId();
   const template = getTemplate(designTemplateId);
   const { oauthState, dismissOAuth } = useOAuthCallback();
@@ -59,6 +77,7 @@ export default function App() {
       if (typeof window === "undefined") return null;
       return getStoredDesignTemplateChoice();
     });
+  const updateChatMutation = useUpdateChat();
   useVisualViewportHeight(isMobile);
 
   const appViewportStyle = isMobile
@@ -71,33 +90,46 @@ export default function App() {
   const handleChatCreated = useCallback(
     (chatId: string) => {
       navigateToChat(chatId);
-      setSidebarView("chats");
-      if (template.sidebarMode === "toggle") {
-        setSidebarCollapsed(true);
-      }
+      setActiveLibraryPanel(null);
       refetch();
     },
-    [navigateToChat, refetch, template.sidebarMode],
+    [navigateToChat, refetch],
   );
 
   const handleSelectChat = useCallback(
     (chatId: string) => {
       navigateToChat(chatId);
-      // In toggle-mode templates, auto-collapse sidebar when a chat is opened
-      if (template.sidebarMode === "toggle") {
-        setSidebarCollapsed(true);
-      }
+      setActiveLibraryPanel(null);
     },
-    [navigateToChat, template.sidebarMode],
+    [navigateToChat],
   );
 
-  const handleCloseChat = useCallback(() => {
-    navigateHome();
-  }, [navigateHome]);
+  const handleToggleTopBarCollapsed = useCallback(() => {
+    setTopBarCollapsed((collapsed) => {
+      const next = !collapsed;
+      if (next) {
+        setActiveLibraryPanel(null);
+      }
+      return next;
+    });
+  }, []);
 
-  /** Desktop toggle-mode: show/hide the sidebar without closing the chat. */
-  const handleDesktopToggleSidebar = useCallback(() => {
-    setSidebarCollapsed((c) => !c);
+  const handleToggleLibraryPanel = useCallback((view: SidebarView) => {
+    setTopBarCollapsed(false);
+    setActiveLibraryPanel((current) => (current === view ? null : view));
+  }, []);
+
+  const handleOpenChatLibrary = useCallback(() => {
+    setTopBarCollapsed(false);
+    setActiveLibraryPanel("chats");
+  }, []);
+  const handleMobileBackToChatList = useCallback(() => {
+    navigateHome();
+    setTopBarCollapsed(false);
+    setActiveLibraryPanel("chats");
+  }, [navigateHome]);
+  const handleShowTopDock = useCallback(() => {
+    setTopBarCollapsed(false);
   }, []);
 
   const chats = chatData?.chats ?? [];
@@ -132,6 +164,78 @@ export default function App() {
     if (chats.some((c) => c.id === activeChatId)) return activeChatId;
     return null;
   }, [activeChatId, chats]);
+  const activeChat = useMemo(
+    () => chats.find((chat) => chat.id === resolvedChatId) ?? null,
+    [chats, resolvedChatId],
+  );
+  const promptEnabled = resolvedChatId !== null;
+  const chatManagementEnabled = resolvedChatId !== null;
+
+  const handleOpenModelDashboard = useCallback(() => {
+    setModelDashboardOpen(true);
+  }, []);
+
+  const handleOpenThemePicker = useCallback(() => {
+    setThemePickerOpen(true);
+  }, []);
+
+  const handleOpenPromptTemplate = useCallback(() => {
+    if (!resolvedChatId) return;
+    setPromptTemplateOpen(true);
+  }, [resolvedChatId]);
+
+  const handleRenameActiveChat = useCallback(
+    async (name: string) => {
+      if (!resolvedChatId) return;
+      const nextName = name.trim();
+      if (!nextName || nextName === (activeChat?.name ?? "").trim()) return;
+
+      try {
+        await updateChatMutation.mutateAsync({ id: resolvedChatId, name: nextName });
+        toast.success("Chat renamed");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        toast.error("Rename failed", { description: message });
+        throw err;
+      }
+    },
+    [activeChat?.name, resolvedChatId, updateChatMutation],
+  );
+
+  const handleExportActiveChat = useCallback(
+    async (format: "chat" | "jsonl" | "txt") => {
+      if (!resolvedChatId) return;
+
+      const fallbackBase = (activeChat?.name || "chat")
+        .trim()
+        .replace(/[^a-zA-Z0-9._-]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "") || "chat";
+      const extension = format === "chat" ? "chat" : format;
+      const fallbackName = `${fallbackBase}-${new Date().toISOString().slice(0, 10)}.${extension}`;
+
+      setIsExportingChat(true);
+      try {
+        const result =
+          format === "chat"
+            ? await api.chats.exportChat(resolvedChatId)
+            : format === "jsonl"
+              ? await api.chats.exportJsonl(resolvedChatId)
+              : await api.chats.exportTxt(resolvedChatId);
+        const filename = getFilenameFromDisposition(
+          result.contentDisposition,
+          fallbackName,
+        );
+        triggerDownload(result.blob, filename);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        toast.error("Export failed", { description: message });
+      } finally {
+        setIsExportingChat(false);
+      }
+    },
+    [activeChat?.name, resolvedChatId],
+  );
 
   // If the URL had an invalid chat ID and data has loaded, fix the URL.
   useEffect(() => {
@@ -139,12 +243,6 @@ export default function App() {
       replaceRoute({ page: "home", chatId: null });
     }
   }, [isLoading, isFetching, activeChatId, resolvedChatId, replaceRoute]);
-
-  // ── Sidebar view-switching (also un-collapses in toggle mode) ──
-  const handleSetView = useCallback((view: SidebarView) => {
-    setSidebarView(view);
-    setSidebarCollapsed(false);
-  }, []);
 
   // ── Render-prop factories for the three sidebar panels ──
   // These let the template's Sidebar component compose the actual panel
@@ -171,14 +269,90 @@ export default function App() {
   );
 
   const SidebarComponent = template.Sidebar;
+  const DesktopTopBarComponent = template.DesktopTopBar;
 
   const isDiscord = designTemplateId === "discord";
+  const hasDiscordDesktopSidebar = isDiscord && !isMobile;
+  const canHideTopDock = !hasDiscordDesktopSidebar && resolvedChatId !== null;
+  const topDockHidden = canHideTopDock && topBarCollapsed;
+  const modalPanelView =
+    hasDiscordDesktopSidebar && activeLibraryPanel === "chats"
+      ? null
+      : activeLibraryPanel;
+  useEffect(() => {
+    if (!canHideTopDock && topBarCollapsed) {
+      setTopBarCollapsed(false);
+    }
+  }, [canHideTopDock, topBarCollapsed]);
+
+  const desktopTopBar = !isMobile && !topDockHidden && DesktopTopBarComponent ? (
+    <DesktopTopBarComponent
+      activePanel={modalPanelView}
+      onTogglePanel={handleToggleLibraryPanel}
+      chatCount={chats.length}
+      activeChatName={activeChat?.name ?? null}
+      collapsed={topBarCollapsed}
+      allowCollapse={canHideTopDock}
+      showChatsButton={!hasDiscordDesktopSidebar}
+      promptEnabled={promptEnabled}
+      chatManagementEnabled={chatManagementEnabled}
+      onOpenThemePicker={handleOpenThemePicker}
+      isExportingChat={isExportingChat}
+      isRenamingChat={updateChatMutation.isPending}
+      onOpenModelDashboard={handleOpenModelDashboard}
+      onOpenPromptTemplate={handleOpenPromptTemplate}
+      onRenameChat={handleRenameActiveChat}
+      onExportChat={handleExportActiveChat}
+      onToggleCollapsed={
+        hasDiscordDesktopSidebar ? undefined : handleToggleTopBarCollapsed
+      }
+    />
+  ) : null;
+  const mobileTopBar = !topDockHidden ? (
+    <div className="shrink-0 border-b border-border bg-[linear-gradient(180deg,color-mix(in_oklab,var(--color-surface)_78%,transparent),color-mix(in_oklab,var(--color-background)_96%,black))] px-3 py-2.5">
+      <TopDock
+        variant={isDiscord ? "discord" : "default"}
+        density="regular"
+        collapsed={topBarCollapsed}
+        allowCollapse={canHideTopDock}
+        showChatsButton
+        activePanel={activeLibraryPanel}
+        chatCount={chats.length}
+        activeChatName={activeChat?.name ?? null}
+        promptEnabled={promptEnabled}
+        chatManagementEnabled={chatManagementEnabled}
+        onOpenThemePicker={handleOpenThemePicker}
+        isExportingChat={isExportingChat}
+        isRenamingChat={updateChatMutation.isPending}
+        onOpenModelDashboard={handleOpenModelDashboard}
+        onOpenPromptTemplate={handleOpenPromptTemplate}
+        onRenameChat={handleRenameActiveChat}
+        onExportChat={handleExportActiveChat}
+        onTogglePanel={handleToggleLibraryPanel}
+        onToggleCollapsed={handleToggleTopBarCollapsed}
+      />
+    </div>
+  ) : null;
 
   /** Picks the outer shell: DiscordFrameShell on desktop-discord, plain div otherwise. */
   const Shell = isDiscord && !isMobile ? DiscordFrameShell : PassthroughShell;
+  const libraryPanelContent = modalPanelView ? (
+    <SidebarComponent
+      view={modalPanelView}
+      setView={handleToggleLibraryPanel}
+      chatCount={chats.length}
+      activeChatId={resolvedChatId}
+      isLoading={isLoading}
+      onChatCreated={handleChatCreated}
+      onSelectChat={handleSelectChat}
+      renderCharacters={renderCharacters}
+      renderPersonas={renderPersonas}
+      renderChats={renderChats}
+    />
+  ) : null;
 
   return (
-    <Shell style={appViewportStyle}>
+    <Shell style={appViewportStyle} topBar={desktopTopBar}>
       {/* OAuth callback feedback */}
       {oauthState.status === "exchanging" && (
         <div className="flex items-center gap-3 px-4 py-2.5 bg-surface border-b border-border text-sm text-text-body shrink-0">
@@ -213,92 +387,99 @@ export default function App() {
         </div>
       )}
 
-      {/* Main content */}
-      {isMobile ? (
-        /* ── Mobile: stacked navigation ──
-           Sidebar is the base layer (always rendered, full width).
-           Chat slides over it as a full-screen overlay from the right.
-           Mobile uses its own header + tabs — the template Sidebar is
-           desktop-only so we render sub-components directly here. */
-        <div className="flex-1 min-h-0 relative overflow-hidden">
-          {/* Base layer — sidebar plus local mobile nav header */}
-          <div className="absolute inset-0 flex flex-col">
-            <MobileHeader
-              view={sidebarView}
-              setView={setSidebarView}
-              chatCount={chats.length}
+      {isMobile && mobileTopBar}
+
+      <div className="flex-1 min-h-0 flex">
+        {hasDiscordDesktopSidebar && (
+          <SidebarComponent
+            view="chats"
+            setView={handleToggleLibraryPanel}
+            chatCount={chats.length}
+            activeChatId={resolvedChatId}
+            isLoading={isLoading}
+            onChatCreated={handleChatCreated}
+            onSelectChat={handleSelectChat}
+            renderCharacters={renderCharacters}
+            renderPersonas={renderPersonas}
+            renderChats={renderChats}
+          />
+        )}
+
+        <div className="flex-1 min-w-0">
+          {isLoading ? (
+            <CenterMessage>Loading...</CenterMessage>
+          ) : resolvedChatId ? (
+            <ChatPage
+              chatId={resolvedChatId}
+              onBack={
+                isMobile
+                  ? handleMobileBackToChatList
+                  : hasDiscordDesktopSidebar
+                    ? undefined
+                    : handleOpenChatLibrary
+              }
+              topDockHidden={topDockHidden}
+              onShowTopDock={topDockHidden ? handleShowTopDock : undefined}
             />
-
-            <div className="flex-1 min-h-0">
-              {sidebarView === "characters"
-                ? renderCharacters()
-                : sidebarView === "personas"
-                  ? renderPersonas()
-                  : renderChats()}
-            </div>
-          </div>
-
-          {/* Chat overlay — slides in from right */}
-          <AnimatePresence>
-            {resolvedChatId && (
-              <motion.div
-                key="chat-overlay"
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
-                transition={{ type: "tween", duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-                className="absolute inset-0 bg-background z-10"
-              >
-                {isLoading ? (
-                  <CenterMessage>Loading...</CenterMessage>
-                ) : (
-                  <ChatPage
-                    chatId={resolvedChatId}
-                    onBack={handleCloseChat}
-                  />
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      ) : (
-        /* ── Desktop: side-by-side panels ── */
-        <div className="flex-1 min-h-0 flex">
-          {/* Sidebar — delegated to the template's Sidebar component */}
-          {(template.sidebarMode === "always" || !resolvedChatId || !sidebarCollapsed) && (
-            <SidebarComponent
-              view={sidebarView}
-              setView={handleSetView}
-              chatCount={chats.length}
-              activeChatId={resolvedChatId}
-              isLoading={isLoading}
-              onChatCreated={handleChatCreated}
-              onSelectChat={handleSelectChat}
-              renderCharacters={renderCharacters}
-              renderPersonas={renderPersonas}
-              renderChats={renderChats}
-            />
-          )}
-
-          {/* Chat area */}
-          <div className="flex-1 min-w-0">
-            {isLoading ? (
-              <CenterMessage>Loading...</CenterMessage>
-            ) : resolvedChatId ? (
-              <ChatPage
-                chatId={resolvedChatId}
-                onBack={template.sidebarMode === "toggle" ? handleDesktopToggleSidebar : undefined}
+          ) : (
+            <CenterMessage>
+              <HomeEmptyState
+                chatCount={chats.length}
+                characterCount={characters.length}
               />
-            ) : (
-              <CenterMessage>
-                <HomeEmptyState
-                  chatCount={chats.length}
-                  characterCount={characters.length}
-                />
-              </CenterMessage>
-            )}
-          </div>
+            </CenterMessage>
+          )}
         </div>
+      </div>
+
+      {isMobile ? (
+        <MobileSlideUpSheet
+          open={activeLibraryPanel !== null}
+          onClose={() => setActiveLibraryPanel(null)}
+        >
+          <div className="h-full">{libraryPanelContent}</div>
+        </MobileSlideUpSheet>
+      ) : (
+        <Dialog
+          open={modalPanelView !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setActiveLibraryPanel(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-[min(96vw,44rem)] border-none bg-transparent p-0 shadow-none">
+            <DialogHeader className="sr-only">
+              <DialogTitle>
+                {modalPanelView === "characters"
+                  ? "Characters"
+                  : modalPanelView === "personas"
+                    ? "Personas"
+                    : "Chats"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="h-[min(85vh,48rem)] min-h-[24rem] overflow-hidden rounded-[1.5rem] border border-border bg-background shadow-[0_24px_80px_oklch(0_0_0_/_0.32)]">
+              {libraryPanelContent}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+      <ModelDashboard
+        open={modelDashboardOpen}
+        onOpenChange={setModelDashboardOpen}
+      />
+      <TemplatePickerModal
+        open={themePickerOpen}
+        onOpenChange={setThemePickerOpen}
+        activeId={designTemplateId}
+        onSelect={handleSelectDesignTemplate}
+      />
+      {resolvedChatId && (
+        <PromptTemplateModal
+          open={promptTemplateOpen}
+          onOpenChange={setPromptTemplateOpen}
+          chatId={resolvedChatId}
+        />
       )}
       {shouldShowOnboarding && (
         <FirstLaunchOverlay
@@ -312,70 +493,19 @@ export default function App() {
   );
 }
 
-// ─── Mobile header with inline tab buttons ──────────────────────────────────
-
-function MobileHeader({
-  view,
-  setView,
-  chatCount,
-}: {
-  view: SidebarView;
-  setView: (view: SidebarView) => void;
-  chatCount: number;
-}) {
-  return (
-    <div className="flex items-center justify-between px-3 min-h-[44px] bg-[oklch(0.06_0.01_250)] border-b border-border shrink-0">
-      <span className="text-[1rem] font-light tracking-[0.25em] text-text-muted font-display">
-        PROSEUS
-      </span>
-      <div className="flex gap-[2px] bg-surface rounded-md p-[2px]">
-        <ToggleButton active={view === "characters"} onClick={() => setView("characters")} label="Characters" />
-        <ToggleButton active={view === "personas"} onClick={() => setView("personas")} label="Personas" />
-        <ToggleButton
-          active={view === "chats"}
-          onClick={() => setView("chats")}
-          label={`Chats${chatCount > 0 ? ` (${chatCount})` : ""}`}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ─── Shared small components ────────────────────────────────────────────────
-
-function ToggleButton({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-[0.6rem] py-[0.3rem] border-none rounded-sm cursor-pointer text-[0.72rem] transition-all ${
-        active
-          ? "bg-surface-raised text-text-body font-normal"
-          : "bg-transparent text-text-dim font-light"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
 /** Default app shell — plain div with bg-background, no frame gutters. */
 function PassthroughShell({
   children,
   style,
+  topBar,
 }: {
   children: React.ReactNode;
   style?: React.CSSProperties;
+  topBar?: React.ReactNode;
 }) {
   return (
     <div className="font-body text-foreground bg-background h-dvh flex flex-col" style={style}>
+      {topBar}
       {children}
     </div>
   );
@@ -410,10 +540,10 @@ function HomeEmptyState({
       </p>
       <p className="mt-2 text-[0.82rem] leading-6 text-text-dim">
         {hasChats
-          ? "Pick a conversation from the sidebar, or click a character to open a fresh thread."
+          ? "Open Chats from the top dock to resume a conversation, or open Characters to start a fresh thread."
           : hasCharacters
-          ? "Your characters are already waiting in the sidebar. Click one to begin a new conversation or continue an existing thread."
-          : "Open the model dashboard, connect a provider, then import a PNG or JSON character card from the Characters sidebar."}
+          ? "Use the top dock to open Characters, then begin a new conversation or continue an existing thread."
+          : "Open the model dashboard, connect a provider, then use Characters in the top dock to import a PNG or JSON character card."}
       </p>
       {!hasChats && !hasCharacters && (
         <div className="mt-5">

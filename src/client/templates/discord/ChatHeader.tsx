@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import type { ChatHeaderLayoutProps } from "../../components/chat/chat-header/types.ts";
 import { Avatar } from "../../components/ui/avatar.tsx";
-import TemplatePickerModal from "../../components/design-template/TemplatePicker.tsx";
 
 /**
  * Discord-style chat header.
@@ -13,40 +12,13 @@ export default function DiscordChatHeader({
   chatName,
   isMobile,
   onBack,
+  topDockHidden,
+  onShowTopDock,
   characterName,
   characterAvatarUrl,
   characterColor,
-  isExporting,
-  onExport,
-  onOpenModelDashboard,
-  onOpenPromptTemplate,
-  designTemplateId,
-  onSelectDesignTemplate,
 }: ChatHeaderLayoutProps) {
   const displayName = characterName ?? chatName;
-
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [exportSubmenuOpen, setExportSubmenuOpen] = useState(false);
-  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onMouseDown = (e: MouseEvent) => {
-      if (!(e.target instanceof Node)) return;
-      if (!menuRef.current?.contains(e.target)) {
-        setMenuOpen(false);
-        setExportSubmenuOpen(false);
-      }
-    };
-    window.addEventListener("mousedown", onMouseDown);
-    return () => window.removeEventListener("mousedown", onMouseDown);
-  }, [menuOpen]);
-
-  const closeAll = () => {
-    setMenuOpen(false);
-    setExportSubmenuOpen(false);
-  };
 
   /* ---- shared icon-button style ---- */
   const iconBtn =
@@ -107,129 +79,31 @@ export default function DiscordChatHeader({
             </svg>
           </div>
         )}
-
-        {/* Hamburger menu */}
-        <div className="relative" ref={menuRef}>
+        {topDockHidden && onShowTopDock && (
           <button
             type="button"
-            onClick={() => {
-              setMenuOpen((o) => !o);
-              if (menuOpen) {
-                setExportSubmenuOpen(false);
-              }
-            }}
-            className={iconBtn}
-            aria-label="Menu"
-            title="Menu"
+            onClick={onShowTopDock}
+            className={`${iconBtn} border border-[#2b2d31] bg-[#23252a] px-2.5`}
+            aria-label="Open dock"
+            title="Open dock"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            <MenuIcon />
           </button>
-
-          {menuOpen && (
-            <div className="absolute right-0 top-[calc(100%+4px)] min-w-[13rem] bg-[#111214] border border-[#1f2023] rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.6)] z-20 p-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setTemplatePickerOpen(true);
-                  closeAll();
-                }}
-                className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors flex items-center gap-2"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="5" />
-                  <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
-                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                  <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
-                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                </svg>
-                Themes
-              </button>
-
-              {/* Change Model */}
-              <button
-                type="button"
-                onClick={() => {
-                  onOpenModelDashboard();
-                  closeAll();
-                }}
-                className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors flex items-center gap-2"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                  <line x1="8" y1="21" x2="16" y2="21" />
-                  <line x1="12" y1="17" x2="12" y2="21" />
-                </svg>
-                Change Model
-              </button>
-
-              {/* Edit Prompt */}
-              <button
-                type="button"
-                onClick={() => {
-                  onOpenPromptTemplate?.();
-                  closeAll();
-                }}
-                className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors flex items-center gap-2"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                </svg>
-                Edit Prompt
-              </button>
-
-              {/* Divider */}
-              <div className="my-1 border-t border-[#1f2023]" />
-
-              {/* Export Chat */}
-              <div className="relative">
-                <button
-                  type="button"
-                  disabled={isExporting}
-                  onClick={() => {
-                    setExportSubmenuOpen((o) => !o);
-                  }}
-                  className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors flex items-center justify-between disabled:opacity-40 disabled:cursor-wait"
-                >
-                  <span className="flex items-center gap-2">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    {isExporting ? "Exporting..." : "Export Chat"}
-                  </span>
-                  <svg width="12" height="12" viewBox="0 0 20 20" fill="none">
-                    <path d="M12.5 5L7.5 10L12.5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-
-                {exportSubmenuOpen && (
-                  <div className="absolute right-full top-0 mr-1 min-w-[11rem] bg-[#111214] border border-[#1f2023] rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.6)] z-30 p-1">
-                    <button type="button" onClick={() => { onExport("chat"); closeAll(); }} className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors">
-                      Proseus archive (.chat)
-                    </button>
-                    <button type="button" onClick={() => { onExport("jsonl"); closeAll(); }} className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors">
-                      JSONL (SillyTavern)
-                    </button>
-                    <button type="button" onClick={() => { onExport("txt"); closeAll(); }} className="w-full text-left px-2 py-1.5 text-xs text-[#b5bac1] hover:text-white hover:bg-[#5865F2] rounded-sm transition-colors">
-                      Text transcript (.txt)
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
-      <TemplatePickerModal
-        open={templatePickerOpen}
-        onOpenChange={setTemplatePickerOpen}
-        activeId={designTemplateId}
-        onSelect={onSelectDesignTemplate}
-      />
     </div>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 7h16M4 12h16M4 17h16"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

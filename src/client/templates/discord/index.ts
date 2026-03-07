@@ -6,6 +6,7 @@ import DiscordChatHeader from "./ChatHeader.tsx";
 import DiscordRegenerateButton from "./RegenerateButton.tsx";
 import DiscordMessageActions from "./MessageActions.tsx";
 import DiscordSidebar from "./Sidebar.tsx";
+import DiscordDesktopTopBar from "./DesktopTopBar.tsx";
 
 /**
  * Discord-style audio visualizer.
@@ -110,11 +111,11 @@ export const discordTemplate: TemplateModule = {
   RegenerateButton: DiscordRegenerateButton,
   MessageActions: DiscordMessageActions,
   Sidebar: DiscordSidebar,
+  DesktopTopBar: DiscordDesktopTopBar,
   messageListClassName: "w-full",
   placeholder: (personaName, { isDisconnected }) => {
     if (isDisconnected) return "Reconnecting to server...";
     return personaName ? `Message @${personaName}` : "Message ...";
   },
   drawVisualizer: drawDiscordVisualizer,
-  sidebarMode: "always",
 };

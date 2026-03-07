@@ -5,6 +5,7 @@ import ChubHeader from "./ChubHeader.tsx";
 import ChubRegenerateButton from "./RegenerateButton.tsx";
 import ChubMessageActions from "./MessageActions.tsx";
 import ChubSidebar from "./ChubSidebar.tsx";
+import ChubDesktopTopBar from "./DesktopTopBar.tsx";
 
 /**
  * Chub template — shares Forge's layout structure with a custom sidebar.
@@ -20,11 +21,11 @@ export const chubTemplate: TemplateModule = {
   RegenerateButton: ChubRegenerateButton,
   MessageActions: ChubMessageActions,
   Sidebar: ChubSidebar,
+  DesktopTopBar: ChubDesktopTopBar,
   messageListClassName: "w-full sm:w-[60vw]",
   placeholder: (_personaName, { isDisconnected, isStreaming }) => {
     if (isDisconnected) return "Reconnecting to server...";
     if (isStreaming) return "Generating...";
     return "Send a message...";
   },
-  sidebarMode: "toggle",
 };

@@ -15,11 +15,11 @@ import { useChatList, useDeleteChat } from "../../hooks/useChat.ts";
 export default function DiscordDMList({
   activeChatId,
   onSelectChat,
-  onChatCreated,
+  onStartNewChat,
 }: {
   activeChatId: string | null;
   onSelectChat: (id: string) => void;
-  onChatCreated: (chatId: string) => void;
+  onStartNewChat: () => void;
 }) {
   const { data } = useChatList();
   const deleteMutation = useDeleteChat();
@@ -36,10 +36,7 @@ export default function DiscordDMList({
         </span>
         <button
           type="button"
-          onClick={() => {
-            /* The + button could switch to characters to start a new chat.
-               For now it's a visual affordance — wiring deferred. */
-          }}
+          onClick={onStartNewChat}
           className="flex items-center justify-center w-4 h-4 text-[#949ba4] hover:text-[#dbdee1] transition-colors"
           title="New DM"
         >

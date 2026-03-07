@@ -5,6 +5,8 @@ export interface ChatHeaderLayoutProps {
   chatName: string;
   isMobile: boolean;
   onBack?: () => void;
+  topDockHidden?: boolean;
+  onShowTopDock?: () => void;
 
   /* Character info (for templates that show the avatar in the header) */
   characterName: string | null;
@@ -14,6 +16,8 @@ export interface ChatHeaderLayoutProps {
   /* Export */
   isExporting: boolean;
   onExport: (format: "chat" | "jsonl" | "txt") => void;
+  isRenamingChat?: boolean;
+  onRenameChat?: (name: string) => void | Promise<void>;
 
   /* Model dashboard */
   onOpenModelDashboard: () => void;

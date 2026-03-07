@@ -45,6 +45,26 @@ export interface SidebarLayoutProps {
   renderChats: (tabs?: ReactNode) => ReactNode;
 }
 
+export interface DesktopTopBarProps {
+  activePanel: SidebarView | null;
+  onTogglePanel: (view: SidebarView) => void;
+  chatCount: number;
+  activeChatName: string | null;
+  collapsed: boolean;
+  allowCollapse: boolean;
+  showChatsButton: boolean;
+  promptEnabled?: boolean;
+  chatManagementEnabled?: boolean;
+  onOpenThemePicker?: () => void;
+  isExportingChat?: boolean;
+  isRenamingChat?: boolean;
+  onOpenModelDashboard?: () => void;
+  onOpenPromptTemplate?: () => void;
+  onRenameChat?: (name: string) => void | Promise<void>;
+  onExportChat?: (format: "chat" | "jsonl" | "txt") => void;
+  onToggleCollapsed?: () => void;
+}
+
 // ─── Template module ────────────────────────────────────────────────────────
 
 /**
@@ -94,6 +114,9 @@ export interface TemplateModule {
    */
   Sidebar: ComponentType<SidebarLayoutProps>;
 
+  /** Optional desktop-only top bar used for global navigation. */
+  DesktopTopBar?: ComponentType<DesktopTopBarProps>;
+
   /** Tailwind className for the message list width container. */
   messageListClassName: string;
 
@@ -113,15 +136,4 @@ export interface TemplateModule {
    */
   drawVisualizer?: VisualizerDrawFn;
 
-  /**
-   * Controls how the sidebar behaves on desktop when this template is active.
-   *
-   * - `"always"` — sidebar is always visible alongside the chat (e.g. Discord).
-   * - `"toggle"` — sidebar is collapsible; the chat header's back button
-   *   toggles it (e.g. Forge, Chub).
-   *
-   * On mobile the sidebar behaviour is the same regardless of this setting
-   * (full-screen overlay with slide-in chat).
-   */
-  sidebarMode: "always" | "toggle";
 }

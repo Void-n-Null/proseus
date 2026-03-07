@@ -44,9 +44,11 @@ const COMMUNITY_LINK = {
 export default function DiscordFrameShell({
   children,
   style,
+  topBar,
 }: {
   children: React.ReactNode;
   style?: React.CSSProperties;
+  topBar?: React.ReactNode;
 }) {
   return (
     <div
@@ -166,6 +168,15 @@ export default function DiscordFrameShell({
           </svg>
         </button>
       </div>
+
+      {topBar && (
+        <div
+          className="absolute top-0 right-0"
+          style={{ left: GUTTER_LEFT, height: GUTTER_TOP }}
+        >
+          {topBar}
+        </div>
+      )}
 
       {/* ── Main content area ── */}
       <div className="bg-background h-full flex flex-col overflow-hidden rounded-tl-xl border-l border-t border-white/5">

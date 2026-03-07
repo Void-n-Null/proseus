@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useCallback, useState } from "react";
-import { useChat } from "../../hooks/useChat.ts";
+import { useChat, useUpdateChat } from "../../hooks/useChat.ts";
 import { useChatTree } from "../../hooks/useChatTree.ts";
 import { useActivePath } from "../../hooks/useActivePath.ts";
 import { useStreamSocket } from "../../hooks/useStreamSocket.ts";
@@ -25,11 +25,15 @@ interface ChatPageProps {
   chatId: string;
   /** Called when the mobile back button is tapped to dismiss the chat overlay. */
   onBack?: () => void;
+  topDockHidden?: boolean;
+  onShowTopDock?: () => void;
 }
 
 export default function ChatPage({
   chatId,
   onBack,
+  topDockHidden,
+  onShowTopDock,
 }: ChatPageProps) {
   const { data: chatData } = useChat(chatId);
   const { data: treeData } = useChatTree(chatId);
@@ -105,6 +109,7 @@ export default function ChatPage({
   const [modelBrowserOpen, setModelBrowserOpen] = useState(false);
   const [promptTemplateOpen, setPromptTemplateOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const updateChatMutation = useUpdateChat();
 
   const handleSelectDesignTemplate = useCallback((templateId: DesignTemplateId) => {
     setStoredDesignTemplateId(templateId);
@@ -161,6 +166,24 @@ export default function ChatPage({
     [chatData?.chat.name, chatId],
   );
 
+  const handleRenameChat = useCallback(
+    async (name: string) => {
+      const nextName = name.trim();
+      if (!nextName || nextName === (chatData?.chat.name ?? "").trim()) return;
+
+      try {
+        await updateChatMutation.mutateAsync({ id: chatId, name: nextName });
+        toast.success("Chat renamed");
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Unknown error";
+        toast.error("Rename failed", { description: message });
+        throw err;
+      }
+    },
+    [chatData?.chat.name, chatId, updateChatMutation],
+  );
+
   if (!chatData || !treeData) {
     return (
       <div className="flex items-center justify-center h-full text-[#666]">
@@ -175,11 +198,15 @@ export default function ChatPage({
         chatName={chatData.chat.name}
         isMobile={isMobile}
         onBack={onBack}
+        topDockHidden={topDockHidden}
+        onShowTopDock={onShowTopDock}
         characterName={characterSpeaker?.name ?? null}
         characterAvatarUrl={characterSpeaker?.avatar_url ?? null}
         characterColor={characterSpeaker?.color ?? null}
         isExporting={isExporting}
         onExport={(format) => void handleExport(format)}
+        isRenamingChat={updateChatMutation.isPending}
+        onRenameChat={handleRenameChat}
         onOpenModelDashboard={() => setModelBrowserOpen(true)}
         onOpenPromptTemplate={() => setPromptTemplateOpen(true)}
         designTemplateId={designTemplateId}

@@ -69,70 +69,27 @@ function relativeTime(timestamp: number): string {
 
 export default function ChubSidebar({
   view,
-  setView,
-  chatCount,
   renderPersonas,
   renderChats,
   onChatCreated,
 }: SidebarLayoutProps) {
-  const tabs = <ChubTabBar view={view} setView={setView} chatCount={chatCount} />;
-
   if (view !== "characters") {
     return (
       <div style={{ ...SIDEBAR_VAR_REBIND, display: "contents" }}>
-        {view === "personas" ? renderPersonas(tabs) : renderChats(tabs)}
+        {view === "personas" ? renderPersonas() : renderChats()}
       </div>
     );
   }
 
-  return <ChubCharacterPanel onChatCreated={onChatCreated} tabs={tabs} />;
-}
-
-// ─── Tab bar ─────────────────────────────────────────────────────────────────
-
-function ChubTabBar({
-  view,
-  setView,
-  chatCount,
-}: {
-  view: string;
-  setView: (v: "characters" | "chats" | "personas") => void;
-  chatCount: number;
-}) {
-  return (
-    <div className="flex gap-[2px] rounded-md p-[2px]" style={{ background: V.surface }}>
-      {(
-        [
-          ["characters", "Characters"],
-          ["personas", "Personas"],
-          ["chats", `Chats${chatCount > 0 ? ` (${chatCount})` : ""}`],
-        ] as const
-      ).map(([id, label]) => (
-        <button
-          key={id}
-          onClick={() => setView(id as "characters" | "personas" | "chats")}
-          className="px-[0.6rem] py-[0.3rem] border-none rounded-sm cursor-pointer text-[0.72rem] transition-all"
-          style={{
-            background: view === id ? V.surface : "transparent",
-            color: view === id ? V.textBody : V.textDim,
-            fontWeight: view === id ? 500 : 300,
-          }}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  );
+  return <ChubCharacterPanel onChatCreated={onChatCreated} />;
 }
 
 // ─── Character panel (full import + list) ────────────────────────────────────
 
 function ChubCharacterPanel({
   onChatCreated,
-  tabs,
 }: {
   onChatCreated: (chatId: string) => void;
-  tabs: React.ReactNode;
 }) {
   const { data, isLoading } = useCharacters();
   const importMutation = useImportCharacter();
@@ -284,11 +241,6 @@ function ChubCharacterPanel({
       {editingCharacterId && (
         <CharacterEditorLoader id={editingCharacterId} onClose={() => setEditingCharacterId(null)} />
       )}
-
-      {/* Tab bar */}
-      <div className="px-2 py-2 border-b" style={{ borderColor: V.border }}>
-        {tabs}
-      </div>
 
       {/* Header */}
       <div className="px-3 py-2.5 border-b flex flex-col gap-2.5" style={{ borderColor: V.border }}>

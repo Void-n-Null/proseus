@@ -1,19 +1,18 @@
-# Proseus
+Proseus is a local-first modern AI chat interface for character cards. It is built to feel fast, flexible, and deeply customizable, with a polished workflow and stack optimized for responsive streaming chat and a focus on user experience. 
 
-Proseus is a modern AI chat app for character cards, personas, prompt control, and branching conversations. It is built to feel fast, flexible, and deeply customizable, with a polished local-first workflow and a stack optimized for responsive streaming chat.
+It provides easy connection to a large selection of LLM APIs including Anthropic, OpenRouter, OpenAI, and many more.
 
 ## Why Proseus
 
-- Fast, modern foundation: built with Bun, React 19, Hono, TanStack Query, Tailwind 4, and WebSocket streaming.
-- Highly optimized chat flow: responsive streaming, efficient local state, and branch-aware conversations that stay smooth as chats evolve.
-- Character-first design: import character cards, assign personas, and keep long-running conversations organized around the people you actually chat with.
-- Deep prompt customization: tune prompt templates, post-history instructions, assistant prefill, and model selection without fighting the UI.
+- **Fast, modern foundation**: built with a modern stack including bun and react.
+- **Highly optimized chat flow**: server-side stream management, efficient local state, and branch-aware conversations. Proseus avoids common issues with chat interfaces who handle streaming purely on the browser, such as incomplete messages if the browser refreshes mid generation.
+- **Deep prompt customization**: tune prompt templates, post-history instructions, assistant prefill, and model selection without fighting the UI.
 - Familiar chat ergonomics: customization inspired by the interfaces people already love, without losing clarity or performance.
 - Practical interoperability: export chats as Proseus archives, plain text, or SillyTavern-compatible `.jsonl`.
 
 ## What Proseus Is
 
-`v1.0` is meant to be a polished release focused on a great chat experience, strong local ownership, and a UI that feels modern instead of retrofitted.
+Proseus is meant to be a polished application focused on a great chat experience, strong local ownership, and a UI that feels modern instead of retrofitted. It is designed to be an improvement in the speed and user experience over other applications in the character chat interface space.
 
 Proseus currently focuses on:
 
@@ -22,7 +21,6 @@ Proseus currently focuses on:
 - Configurable prompt templates
 - Streaming chat generation over WebSocket
 - Branching conversations with alternate message paths
-- Model connections for `OpenRouter`, `Anthropic`, `OpenAI`, `Gemini`, and `xAI`
 - UI customization and chat workflows inspired by popular roleplay and power-user chat tools
 - Local export and backup workflows
 
@@ -64,28 +62,6 @@ bun run start:lan
 3. Import a PNG or JSON character card from the Characters sidebar, or create your own setup manually.
 4. Optionally create or select a persona for the chat.
 5. Start chatting, branch when needed, and export a backup when you want one.
-
-## Core Concepts
-
-### Character cards
-
-Proseus is built around character-driven chats. You can import standard character card assets and use them as the basis for persistent conversations, alternate greetings, and prompt composition.
-
-### Personas
-
-Personas let you define the user side of the conversation instead of treating every chat as the same generic speaker. They can be reused across chats and swapped per conversation.
-
-### Prompt templates
-
-Prompt assembly is configurable rather than hidden. Proseus exposes the main prompt structure, character fields, persona content, post-history instructions, and assistant prefill so you can tune behavior without rewriting the whole stack.
-
-### Branching conversations
-
-Chats are stored as trees, not just flat logs. That makes it possible to regenerate messages, preserve alternate outcomes, and move through conversation branches without losing prior paths.
-
-### Interface customization
-
-Proseus aims for the best parts of popular chat interfaces: fast navigation, clear chat structure, flexible workflows, and room to shape the experience around how you actually write, roleplay, and iterate.
 
 ## Data Storage And Security
 
@@ -154,4 +130,4 @@ The image starts with LAN binding enabled so published ports are reachable from 
 
 ## Contributing
 
-Contributor workflow, local development checks, and pull request expectations live in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+Contributor workflow, local development checks, and pull request expectations live in [CONTRIBUTING.md](./CONTRIBUTING.md).
